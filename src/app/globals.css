@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+:root {
+  --color-bg: #071019;
+  --color-bg-secondary: #0b1520;
+  --color-panel: #0f1a25;
+  --color-panel-elevated: #13212d;
+  --color-border: #22313d;
+  --color-border-subtle: #1a2833;
+
+  --color-primary: #16d8c4;
+  --color-primary-soft: #16d8c4;
+  --color-secondary: #25b7f2;
+  --color-success: #68d56b;
+  --color-warning: #e9ba4d;
+  --color-error: #f26060;
+
+  --color-text: #f5f7f9;
+  --color-text-secondary: #9aa7b3;
+  --color-text-muted: #687684;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+}
+
+@theme inline {
+  --color-bg: var(--color-bg);
+  --color-bg-secondary: var(--color-bg-secondary);
+  --color-panel: var(--color-panel);
+  --color-panel-elevated: var(--color-panel-elevated);
+  --color-border: var(--color-border);
+  --color-border-subtle: var(--color-border-subtle);
+
+  --color-primary: var(--color-primary);
+  --color-secondary: var(--color-secondary);
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-error: var(--color-error);
+
+  --color-text: var(--color-text);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-mono-tabular);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-primary) 35%, transparent);
+  color: var(--color-text);
+}
+
+.bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(34, 49, 61, 0.35) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(34, 49, 61, 0.35) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.tabular-nums-font {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 999px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
