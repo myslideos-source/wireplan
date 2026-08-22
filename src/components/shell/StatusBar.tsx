@@ -7,7 +7,7 @@ export function StatusBar() {
         <CheckCircle2 className="h-3.5 w-3.5 text-success" />
         Keine Fehler
       </div>
-      <div className="text-text-muted">WIREPLAN v0.1 — Phase 1</div>
+      <div className="text-text-muted">WIREPLAN v0.1 — Phase 7</div>
       <div className="flex items-center gap-1.5">
         <CloudCheck className="h-3.5 w-3.5 text-success" />
         Änderungen gespeichert
