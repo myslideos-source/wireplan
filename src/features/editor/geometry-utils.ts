@@ -1,4 +1,18 @@
-import type { Point, Wall } from "@/domain";
+import type { Point, Wall, Room, ElectricalDevice, DeviceMount } from "@/domain";
+
+/** Resolves any wall- or point-mounted fixture (device or distribution
+ * board) to a plan position. Returns null if its wall no longer exists
+ * (e.g. removed by a room merge). */
+export function mountPosition(mount: DeviceMount, walls: Wall[]): Point | null {
+  if (mount.kind === "point") return mount.position;
+  const wall = walls.find((w) => w.id === mount.wallId);
+  if (!wall) return null;
+  return pointAtOffset(wall, mount.offset);
+}
+
+export function devicePosition(device: ElectricalDevice, walls: Wall[]): Point | null {
+  return mountPosition(device.mount, walls);
+}
 
 /** All current mock walls are axis-aligned; these helpers assume that. */
 export function wallOrientation(wall: Wall): "h" | "v" {
@@ -215,6 +229,16 @@ export function wallMatchesSegment(
     (close(wall.start, segment.start) && close(wall.end, segment.end)) ||
     (close(wall.start, segment.end) && close(wall.end, segment.start))
   );
+}
+
+/** Walls that trace a room's own polygon boundary — used to restrict
+ * where a fixture like the distribution board (§45) may be placed. */
+export function roomWalls(walls: Wall[], room: Room): Wall[] {
+  const edges = room.polygon.map((point, i) => ({
+    start: point,
+    end: room.polygon[(i + 1) % room.polygon.length],
+  }));
+  return walls.filter((wall) => edges.some((edge) => wallMatchesSegment(wall, edge)));
 }
 
 /** Projects `point` onto the closest point of a wall's centerline,

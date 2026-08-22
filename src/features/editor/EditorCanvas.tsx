@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, type MouseEvent as ReactMouseEvent } from "react";
-import type { ElectricalDevice, Wall } from "@/domain";
+import type { ElectricalDevice } from "@/domain";
 import { useEditorStore, type EditorTool } from "./store";
 import {
   wallOrientation,
@@ -9,19 +9,12 @@ import {
   wallsBoundingBox,
   boundingBoxOfPoints,
   polygonCentroid,
+  devicePosition,
 } from "./geometry-utils";
 import { formatArea } from "@/lib/utils";
 import { DeviceSymbol } from "./DeviceSymbol";
 
 const PLACEABLE_DEVICE_TOOLS: EditorTool[] = ["outlet", "light", "switch", "sensor", "network"];
-
-function devicePosition(device: ElectricalDevice, walls: Wall[]) {
-  const mount = device.mount;
-  if (mount.kind === "point") return mount.position;
-  const wall = walls.find((w) => w.id === mount.wallId);
-  if (!wall) return null;
-  return pointAtOffset(wall, mount.offset);
-}
 
 export function EditorCanvas() {
   const walls = useEditorStore((state) => state.walls);
@@ -35,6 +28,8 @@ export function EditorCanvas() {
   const activeTool = useEditorStore((state) => state.activeTool);
   const focusTarget = useEditorStore((state) => state.focusTarget);
   const addDeviceAtPoint = useEditorStore((state) => state.addDeviceAtPoint);
+  const distributionBoard = useEditorStore((state) => state.distributionBoard);
+  const placeDistributionBoard = useEditorStore((state) => state.placeDistributionBoard);
 
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -66,6 +61,7 @@ export function EditorCanvas() {
   const placingDeviceType = PLACEABLE_DEVICE_TOOLS.includes(activeTool)
     ? (activeTool as ElectricalDevice["type"])
     : null;
+  const placingBoard = activeTool === "board";
 
   function toSvgPoint(event: ReactMouseEvent) {
     const svg = svgRef.current;
@@ -85,13 +81,18 @@ export function EditorCanvas() {
       if (point) addDeviceAtPoint(placingDeviceType, point);
       return;
     }
+    if (placingBoard) {
+      const point = toSvgPoint(event);
+      if (point) placeDistributionBoard(point);
+      return;
+    }
     if (canSelect) select(null);
   }
 
   return (
     <div
       className="relative h-full w-full overflow-hidden bg-bg-secondary"
-      style={{ cursor: placingDeviceType ? "crosshair" : undefined }}
+      style={{ cursor: placingDeviceType || placingBoard ? "crosshair" : undefined }}
     >
       <svg ref={svgRef} viewBox={viewBox} className="h-full w-full" onClick={handleBackgroundClick}>
         <defs>
@@ -203,6 +204,45 @@ export function EditorCanvas() {
             })}
           </g>
         )}
+
+        {layers.elektro && distributionBoard && (() => {
+          const wall = walls.find((w) => w.id === distributionBoard.wallId);
+          if (!wall) return null;
+          const center = pointAtOffset(wall, distributionBoard.offset);
+          const orientation = wallOrientation(wall);
+          const depth = 250;
+          const width = orientation === "h" ? distributionBoard.width : depth;
+          const height = orientation === "h" ? depth : distributionBoard.width;
+          const isSelected = selected?.type === "board";
+          return (
+            <g
+              className={canSelect ? "cursor-pointer" : undefined}
+              onClick={(event) => {
+                if (!canSelect) return;
+                event.stopPropagation();
+                select({ type: "board" });
+              }}
+            >
+              <rect
+                x={center.x - width / 2}
+                y={center.y - height / 2}
+                width={width}
+                height={height}
+                fill="rgba(104,213,107,0.12)"
+                stroke={isSelected ? "#16d8c4" : "#68d56b"}
+                strokeWidth={isSelected ? 36 : 24}
+              />
+              <text x={center.x} y={center.y} textAnchor="middle" pointerEvents="none">
+                <tspan x={center.x} dy={-60} fontSize={230} fontWeight={600} fill="#68d56b">
+                  Verteiler / Schaltschrank
+                </tspan>
+                <tspan x={center.x} dy={280} fontSize={200} fill="#9aa7b3">
+                  Loxone Miniserver
+                </tspan>
+              </text>
+            </g>
+          );
+        })()}
 
         {layers.elektro &&
           devices.map((device) => {

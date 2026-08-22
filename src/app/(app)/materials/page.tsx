@@ -4,8 +4,9 @@ export default function MaterialsPage() {
   return (
     <ComingSoon
       title="Materialliste"
-      description="Die automatische Material- und Loxone-Stückliste aus Ihrer Elektro- und Routingplanung folgt in Phase 9."
+      description="Eine Kabel-Materialliste (Typen und Gesamtlängen) ist bereits im Kabelrouting verfügbar. Die volle Stückliste inklusive Loxone-Hardware folgt in Phase 9."
       flag="MATERIAL_CALCULATION"
+      cta={{ label: "Zum Kabelrouting", href: "/routing" }}
     />
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { MousePointer2, Plug, Lightbulb, ToggleLeft, Radar, Wifi, Trash2, type LucideIcon } from "lucide-react";
+import { MousePointer2, Plug, Lightbulb, ToggleLeft, Radar, Wifi, Trash2, Server, type LucideIcon } from "lucide-react";
 import { Badge, Button } from "@/components/ui";
 import { wallLengthMeters, DEVICE_TYPE_LABELS, DEVICE_WATTAGE, type ElectricalDeviceType } from "@/domain";
 import { isFeatureEnabled } from "@/lib/feature-flags";
@@ -41,18 +41,27 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
+/**
+ * `<label>` only wraps an actual form control (input/select) — one is
+ * genuinely being labelled. A row whose control is a button/badge uses a
+ * plain `<div>` instead: wrapping a button in a label with unrelated text
+ * corrupts its accessible name (confirmed via Playwright's role query
+ * returning zero matches for a button that plainly has that text).
+ */
 function FieldRow({
   label,
   children,
+  as: Tag = "label",
 }: {
   label: string;
   children: ReactNode;
+  as?: "label" | "div";
 }) {
   return (
-    <label className="flex items-center justify-between gap-3 text-sm">
+    <Tag className="flex items-center justify-between gap-3 text-sm">
       <span className="text-text-secondary">{label}</span>
       {children}
-    </label>
+    </Tag>
   );
 }
 
@@ -76,6 +85,10 @@ export function EditorInspector() {
   const setRoomCircuit = useEditorStore((state) => state.setRoomCircuit);
   const deleteDevice = useEditorStore((state) => state.deleteDevice);
   const select = useEditorStore((state) => state.select);
+  const technikraumRoomId = useEditorStore((state) => state.technikraumRoomId);
+  const setTechnikraum = useEditorStore((state) => state.setTechnikraum);
+  const distributionBoard = useEditorStore((state) => state.distributionBoard);
+  const deleteDistributionBoard = useEditorStore((state) => state.deleteDistributionBoard);
 
   const electricalEnabled = isFeatureEnabled("ELECTRICAL_EDITOR");
   const loxoneEnabled = isFeatureEnabled("LOXONE");
@@ -143,6 +156,58 @@ export function EditorInspector() {
           >
             <Trash2 className="h-3.5 w-3.5" />
             Gerät löschen
+          </Button>
+        </div>
+      </aside>
+    );
+  }
+
+  if (selected.type === "board") {
+    if (!distributionBoard) return null;
+    const room = rooms.find((r) => r.id === distributionBoard.roomId);
+    const wall = walls.find((w) => w.id === distributionBoard.wallId);
+    return (
+      <aside className="w-80 shrink-0 overflow-y-auto border-l border-border bg-bg-secondary scrollbar-thin">
+        <div className="flex items-center gap-2 border-b border-border px-5 py-4">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-success/10 text-success">
+            <Server className="h-4 w-4" />
+          </span>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
+              Verteiler
+            </p>
+            <h2 className="text-sm font-semibold text-text">Schaltschrank</h2>
+          </div>
+        </div>
+        <Section title="Schaltschrank">
+          <FieldRow label="Raum">
+            <span className="text-sm text-text">{room?.name ?? "—"}</span>
+          </FieldRow>
+          <FieldRow label="Breite">
+            <span className="tabular-nums-font text-sm text-text">
+              {formatNumber(distributionBoard.width / 1000, 2)} m
+            </span>
+          </FieldRow>
+          <FieldRow label="Höhe">
+            <span className="tabular-nums-font text-sm text-text">
+              {formatNumber(distributionBoard.height / 1000, 2)} m
+            </span>
+          </FieldRow>
+          <FieldRow label="Wand">
+            <span className="text-sm text-text">{wall?.id ?? "—"}</span>
+          </FieldRow>
+        </Section>
+        <div className="px-5 py-4">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              deleteDistributionBoard();
+              select(null);
+            }}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Schaltschrank entfernen
           </Button>
         </div>
       </aside>
@@ -259,6 +324,19 @@ export function EditorInspector() {
             />
             <span className="text-xs text-text-muted">m</span>
           </div>
+        </FieldRow>
+        <FieldRow label="Technikraum" as="div">
+          {technikraumRoomId === room.id ? (
+            <Badge tone="success">Festgelegt</Badge>
+          ) : (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setTechnikraum(room.id)}
+            >
+              Als Technikraum festlegen
+            </Button>
+          )}
         </FieldRow>
       </Section>
 

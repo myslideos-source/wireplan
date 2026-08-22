@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { Construction } from "lucide-react";
-import { Card, Badge } from "@/components/ui";
+import { Card, Badge, Button } from "@/components/ui";
 import type { FeatureFlag } from "@/lib/feature-flags";
 import { PHASE_BY_FLAG } from "@/lib/feature-flags";
 
@@ -7,10 +8,12 @@ export function ComingSoon({
   title,
   description,
   flag,
+  cta,
 }: {
   title: string;
   description: string;
   flag?: FeatureFlag;
+  cta?: { label: string; href: string };
 }) {
   return (
     <div className="flex h-full items-center justify-center p-8">
@@ -26,6 +29,13 @@ export function ComingSoon({
           <Badge tone="neutral">
             Demnächst — Phase {PHASE_BY_FLAG[flag]} · {flag}
           </Badge>
+        )}
+        {cta && (
+          <Link href={cta.href}>
+            <Button variant="secondary" size="sm">
+              {cta.label}
+            </Button>
+          </Link>
         )}
       </Card>
     </div>

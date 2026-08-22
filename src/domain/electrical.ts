@@ -75,3 +75,18 @@ export interface Circuit {
   label: string;
   rcd: string;
 }
+
+/**
+ * The distribution board / Loxone Miniserver enclosure (§45-46). Wall-
+ * mounted like a device, but it's a fixture rather than a placeable tool
+ * category, and every cable route (Phase 7) starts from it.
+ */
+export interface DistributionBoard {
+  id: string;
+  floorId: string;
+  roomId: string;
+  wallId: string;
+  offset: number;
+  width: number;
+  height: number;
+}

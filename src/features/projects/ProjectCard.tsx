@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, ArrowUpRight, Building2, ScanSearch } from "lucide-react";
+import { MapPin, ArrowUpRight, Building2, ScanSearch, Cable } from "lucide-react";
 import { Card, CardContent, GeometryStatusBadge } from "@/components/ui";
 import type { Project } from "@/domain";
 import { formatLength } from "@/lib/utils";
@@ -39,6 +39,13 @@ export function ProjectHeroCard({ project }: { project: Project }) {
             >
               <ScanSearch className="h-4 w-4" />
               KI-Analyse ansehen
+            </Link>
+            <Link
+              href={`/routing?project=${project.id}`}
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-border px-4 py-2 text-sm font-medium text-text transition-colors hover:border-primary/60 hover:text-primary"
+            >
+              <Cable className="h-4 w-4" />
+              Kabelrouting
             </Link>
           </div>
         </CardContent>

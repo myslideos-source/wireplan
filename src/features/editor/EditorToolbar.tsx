@@ -9,6 +9,7 @@ import {
   ToggleLeft,
   Radar,
   Wifi,
+  Server,
   Home,
   Cable,
   Eye,
@@ -25,6 +26,7 @@ interface ToolDef {
   icon: LucideIcon;
   flag?: FeatureFlag;
   note?: string;
+  requiresTechnikraum?: boolean;
 }
 
 const TOOLS: ToolDef[] = [
@@ -36,6 +38,14 @@ const TOOLS: ToolDef[] = [
   { id: "switch", label: "Schalter", icon: ToggleLeft, flag: "ELECTRICAL_EDITOR" },
   { id: "sensor", label: "Sensor", icon: Radar, flag: "ELECTRICAL_EDITOR" },
   { id: "network", label: "Netzwerk", icon: Wifi, flag: "ELECTRICAL_EDITOR" },
+  {
+    id: "board",
+    label: "Schaltschrank",
+    icon: Server,
+    flag: "ELECTRICAL_EDITOR",
+    requiresTechnikraum: true,
+    note: "Zuerst Technikraum festlegen",
+  },
   { id: "smarthome", label: "Smart Home", icon: Home, flag: "LOXONE" },
   { id: "cable", label: "Kabel / Leitung", icon: Cable, flag: "CABLE_ROUTING" },
 ];
@@ -52,6 +62,7 @@ export function EditorToolbar() {
   const setTool = useEditorStore((state) => state.setTool);
   const layers = useEditorStore((state) => state.layers);
   const toggleLayer = useEditorStore((state) => state.toggleLayer);
+  const technikraumRoomId = useEditorStore((state) => state.technikraumRoomId);
 
   return (
     <aside className="flex w-56 shrink-0 flex-col gap-6 overflow-y-auto border-r border-border bg-bg-secondary p-3 scrollbar-thin">
@@ -61,7 +72,9 @@ export function EditorToolbar() {
         </p>
         <div className="flex flex-col gap-0.5">
           {TOOLS.map((tool) => {
-            const enabled = !tool.flag || isFeatureEnabled(tool.flag);
+            const flagEnabled = !tool.flag || isFeatureEnabled(tool.flag);
+            const missingTechnikraum = tool.requiresTechnikraum && technikraumRoomId === null;
+            const enabled = flagEnabled && !missingTechnikraum;
             const Icon = tool.icon;
             const disabled = !enabled;
             return (
@@ -70,9 +83,11 @@ export function EditorToolbar() {
                 type="button"
                 disabled={disabled}
                 title={
-                  disabled
+                  !flagEnabled
                     ? `${tool.note ?? "Folgt in einer späteren Phase"} — Demnächst`
-                    : undefined
+                    : missingTechnikraum
+                      ? tool.note
+                      : undefined
                 }
                 onClick={() => setTool(tool.id)}
                 className={cn(

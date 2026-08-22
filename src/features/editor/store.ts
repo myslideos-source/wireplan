@@ -1,10 +1,21 @@
 "use client";
 
 import { create } from "zustand";
-import type { Wall, Room, Opening, Point, ElectricalDevice, ElectricalDeviceType } from "@/domain";
+import type {
+  Wall,
+  Room,
+  Opening,
+  Point,
+  ElectricalDevice,
+  ElectricalDeviceType,
+  DistributionBoard,
+  Cable,
+  RoutingMode,
+} from "@/domain";
 import { polygonAreaSqMeters, DEVICE_MOUNT_KIND, DEVICE_DEFAULT_HEIGHT } from "@/domain";
 import type { FloorGeometry } from "./mock-geometry";
 import type { FlaggedArea, FlaggedAreaTarget } from "@/features/plan-analysis/types";
+import { computeCables } from "@/features/routing/compute-cables";
 import {
   isAxisAlignedRectangle,
   splitRectangle,
@@ -15,6 +26,7 @@ import {
   isPointInPolygon,
   pointAtOffset,
   wallNormal,
+  roomWalls,
   type SplitDirection,
 } from "./geometry-utils";
 
@@ -27,6 +39,7 @@ export type EditorTool =
   | "switch"
   | "sensor"
   | "network"
+  | "board"
   | "smarthome"
   | "cable";
 
@@ -36,7 +49,10 @@ export type Selection =
   | { type: "room"; id: string }
   | { type: "wall"; id: string }
   | { type: "device"; id: string }
+  | { type: "board" }
   | null;
+
+export const DISTRIBUTION_BOARD_ID = "distribution-board";
 
 let nextGeneratedId = 1;
 function generateId(prefix: string): string {
@@ -56,6 +72,10 @@ interface EditorState {
   openings: Opening[];
   devices: ElectricalDevice[];
   roomCircuits: Record<string, string | null>;
+  technikraumRoomId: string | null;
+  distributionBoard: DistributionBoard | null;
+  cables: Cable[];
+  routingMode: RoutingMode;
   hydrate: (geometry: FloorGeometry) => void;
 
   selected: Selection;
@@ -76,6 +96,11 @@ interface EditorState {
   addDeviceAtPoint: (type: ElectricalDeviceType, point: Point) => boolean;
   deleteDevice: (id: string) => void;
   setRoomCircuit: (roomId: string, circuitId: string | null) => void;
+  setTechnikraum: (roomId: string) => void;
+  placeDistributionBoard: (point: Point) => boolean;
+  deleteDistributionBoard: () => void;
+  setRoutingMode: (mode: RoutingMode) => void;
+  calculateRouting: () => boolean;
   splitRoom: (
     roomId: string,
     direction: SplitDirection,
@@ -105,6 +130,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   openings: [],
   devices: [],
   roomCircuits: {},
+  technikraumRoomId: null,
+  distributionBoard: null,
+  cables: [],
+  routingMode: "Decke",
   hydrate: (geometry) => {
     // Re-hydrate whenever a different floor's geometry is passed in (e.g.
     // navigating from one project's editor to another's without a full
@@ -117,6 +146,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       openings: geometry.openings,
       devices: [],
       roomCircuits: {},
+      technikraumRoomId: null,
+      distributionBoard: null,
+      cables: [],
       selected: null,
     });
   },
@@ -222,6 +254,56 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       roomCircuits: { ...state.roomCircuits, [roomId]: circuitId },
     })),
 
+  setTechnikraum: (roomId) => set({ technikraumRoomId: roomId }),
+
+  placeDistributionBoard: (point) => {
+    const state = get();
+    const technikraum = state.rooms.find((r) => r.id === state.technikraumRoomId);
+    if (!technikraum) return false;
+
+    // Restrict placement to walls that actually border the Technikraum
+    // (§45) rather than any wall on the floor.
+    const candidateWalls = roomWalls(state.walls, technikraum);
+    const wall = findNearestWall(candidateWalls, point);
+    if (!wall) return false;
+    const { offset } = closestPointOnWall(wall, point);
+
+    const board: DistributionBoard = {
+      id: DISTRIBUTION_BOARD_ID,
+      floorId: state.floorId ?? "",
+      roomId: technikraum.id,
+      wallId: wall.id,
+      offset,
+      width: 600,
+      height: 800,
+    };
+    set({ distributionBoard: board, cables: [] });
+    return true;
+  },
+
+  deleteDistributionBoard: () =>
+    set((state) => ({
+      distributionBoard: null,
+      cables: [],
+      selected: state.selected?.type === "board" ? null : state.selected,
+    })),
+
+  setRoutingMode: (mode) => set({ routingMode: mode }),
+
+  calculateRouting: () => {
+    const state = get();
+    if (!state.distributionBoard) return false;
+    const cables = computeCables(
+      state.devices,
+      state.distributionBoard,
+      state.walls,
+      state.rooms,
+      state.routingMode,
+    );
+    set({ cables });
+    return true;
+  },
+
   splitRoom: (roomId, direction, ratio, nameA, nameB) => {
     const room = get().rooms.find((r) => r.id === roomId);
     if (!room || !isAxisAlignedRectangle(room.polygon)) return false;
@@ -293,6 +375,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             (device) => !(device.mount.kind === "wall" && device.mount.wallId === removedWall.id),
           )
         : current.devices,
+      distributionBoard:
+        removedWall && current.distributionBoard?.wallId === removedWall.id
+          ? null
+          : current.distributionBoard,
+      cables:
+        removedWall && current.distributionBoard?.wallId === removedWall.id
+          ? []
+          : current.cables,
       selected: null,
     }));
     return true;
