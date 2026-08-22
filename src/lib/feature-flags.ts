@@ -24,7 +24,10 @@ function isOn(raw: string | undefined, defaultValue = false): boolean {
 // read as undefined in the browser. Each flag is therefore spelled out
 // literally here rather than looked up in a loop.
 export const featureFlags: Record<FeatureFlag, boolean> = {
-  AI_PLAN_ANALYSIS: isOn(process.env.NEXT_PUBLIC_FEATURE_AI_PLAN_ANALYSIS),
+  // The Phase 2 KI-Analyse screen (original-vs-digital compare, confidence
+  // sidebar) is implemented against demo data, so this defaults on — the
+  // screen itself always discloses that it's demo data, not a real result.
+  AI_PLAN_ANALYSIS: isOn(process.env.NEXT_PUBLIC_FEATURE_AI_PLAN_ANALYSIS, true),
   // The Phase 4 interactive review tools (split/merge rooms, wall
   // correction, delete opening) are implemented, so this defaults on —
   // unlike the flags below, which still gate genuinely unbuilt phases.

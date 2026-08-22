@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { UploadCloud, FileText, X, Sparkles } from "lucide-react";
 import { Button, Modal, Badge } from "@/components/ui";
 import { isFeatureEnabled } from "@/lib/feature-flags";
@@ -14,7 +15,14 @@ interface StagedFile {
   valid: boolean;
 }
 
-function UploadPlanDialogContent({ onClose }: { onClose: () => void }) {
+function UploadPlanDialogContent({
+  projectId,
+  onClose,
+}: {
+  projectId: string;
+  onClose: () => void;
+}) {
+  const router = useRouter();
   const [files, setFiles] = React.useState<StagedFile[]>([]);
   const [dragActive, setDragActive] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -111,6 +119,10 @@ function UploadPlanDialogContent({ onClose }: { onClose: () => void }) {
           type="button"
           disabled={files.length === 0 || files.some((f) => !f.valid) || !aiEnabled}
           title={!aiEnabled ? "KI-Analyse folgt in Phase 2 — Demnächst" : undefined}
+          onClick={() => {
+            onClose();
+            router.push(`/analysis?project=${projectId}`);
+          }}
         >
           {aiEnabled ? "Analyse starten" : "Analyse starten — Demnächst"}
         </Button>
@@ -120,8 +132,10 @@ function UploadPlanDialogContent({ onClose }: { onClose: () => void }) {
 }
 
 export function UploadPlanDialog({
+  projectId,
   className,
 }: {
+  projectId: string;
   className?: string;
 }) {
   const [open, setOpen] = React.useState(false);
@@ -138,7 +152,7 @@ export function UploadPlanDialog({
         title="Grundriss hochladen"
         description="Unterstützte Formate: PDF, PNG, JPG, JPEG."
       >
-        <UploadPlanDialogContent onClose={() => setOpen(false)} />
+        <UploadPlanDialogContent projectId={projectId} onClose={() => setOpen(false)} />
       </Modal>
     </>
   );

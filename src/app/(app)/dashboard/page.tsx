@@ -33,7 +33,7 @@ export default async function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <UploadPlanDialog />
+          <UploadPlanDialog projectId={project.id} />
           <NewProjectDialog />
         </div>
       </div>
