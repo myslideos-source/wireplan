@@ -13,21 +13,24 @@ export type FeatureFlag =
   | "PDF_EXPORT"
   | "CONSTRUCTION_MODE";
 
-function readFlag(name: string, fallback: boolean): boolean {
-  const raw = process.env[`NEXT_PUBLIC_FEATURE_${name}`];
-  if (raw === undefined) return fallback;
+function isOn(raw: string | undefined): boolean {
   return raw === "true" || raw === "1";
 }
 
+// Next.js only inlines NEXT_PUBLIC_* env vars into the client bundle when
+// they're accessed as a literal `process.env.NEXT_PUBLIC_X` expression —
+// a dynamic/computed key is invisible to its compiler and would silently
+// read as undefined in the browser. Each flag is therefore spelled out
+// literally here rather than looked up in a loop.
 export const featureFlags: Record<FeatureFlag, boolean> = {
-  AI_PLAN_ANALYSIS: readFlag("AI_PLAN_ANALYSIS", false),
-  AI_REVIEW: readFlag("AI_REVIEW", false),
-  ELECTRICAL_EDITOR: readFlag("ELECTRICAL_EDITOR", false),
-  CABLE_ROUTING: readFlag("CABLE_ROUTING", false),
-  LOXONE: readFlag("LOXONE", false),
-  MATERIAL_CALCULATION: readFlag("MATERIAL_CALCULATION", false),
-  PDF_EXPORT: readFlag("PDF_EXPORT", false),
-  CONSTRUCTION_MODE: readFlag("CONSTRUCTION_MODE", false),
+  AI_PLAN_ANALYSIS: isOn(process.env.NEXT_PUBLIC_FEATURE_AI_PLAN_ANALYSIS),
+  AI_REVIEW: isOn(process.env.NEXT_PUBLIC_FEATURE_AI_REVIEW),
+  ELECTRICAL_EDITOR: isOn(process.env.NEXT_PUBLIC_FEATURE_ELECTRICAL_EDITOR),
+  CABLE_ROUTING: isOn(process.env.NEXT_PUBLIC_FEATURE_CABLE_ROUTING),
+  LOXONE: isOn(process.env.NEXT_PUBLIC_FEATURE_LOXONE),
+  MATERIAL_CALCULATION: isOn(process.env.NEXT_PUBLIC_FEATURE_MATERIAL_CALCULATION),
+  PDF_EXPORT: isOn(process.env.NEXT_PUBLIC_FEATURE_PDF_EXPORT),
+  CONSTRUCTION_MODE: isOn(process.env.NEXT_PUBLIC_FEATURE_CONSTRUCTION_MODE),
 };
 
 export function isFeatureEnabled(flag: FeatureFlag): boolean {

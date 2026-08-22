@@ -1,6 +1,7 @@
+import { ScanSearch } from "lucide-react";
 import { getProjects, getProject } from "@/lib/mock-data";
 import { getAnalysisForProject } from "@/features/plan-analysis/mock-analysis";
-import { ProjectPicker } from "@/features/plan-analysis/ProjectPicker";
+import { EntityProjectPicker } from "@/components/shell/EntityProjectPicker";
 import { AnalysisScreen } from "@/features/plan-analysis/AnalysisScreen";
 import { NoAnalysisYet } from "@/features/plan-analysis/NoAnalysisYet";
 
@@ -21,11 +22,17 @@ export default async function AnalysisPage({
       })),
     );
     return (
-      <ProjectPicker
+      <EntityProjectPicker
+        title="KI-Analyse"
+        subtitle="Wählen Sie ein Projekt, um den Original-vs-Digital-Vergleich zu öffnen."
         projects={projects}
         availableProjectIds={availability
           .filter((entry) => entry.available)
           .map((entry) => entry.id)}
+        basePath="/analysis"
+        icon={ScanSearch}
+        availableLabel="Analyse öffnen"
+        unavailableLabel="Noch keine Analyse"
       />
     );
   }
