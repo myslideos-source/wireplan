@@ -1,3 +1,4 @@
+import type { MouseEvent as ReactMouseEvent } from "react";
 import type { ElectricalDevice, Point } from "@/domain";
 
 const RADIUS = 130;
@@ -64,23 +65,30 @@ export function DeviceSymbol({
   selected,
   clickable,
   onSelect,
+  onDragStart,
 }: {
   device: ElectricalDevice;
   position: Point;
   selected: boolean;
   clickable: boolean;
   onSelect: () => void;
+  onDragStart?: (event: ReactMouseEvent) => void;
 }) {
   const color = DEVICE_COLORS[device.type];
 
   return (
     <g
       transform={`translate(${position.x} ${position.y})`}
-      className={clickable ? "cursor-pointer" : undefined}
+      className={clickable ? "cursor-grab" : undefined}
       onClick={(event) => {
         if (!clickable) return;
         event.stopPropagation();
         onSelect();
+      }}
+      onMouseDown={(event) => {
+        if (!clickable || !onDragStart) return;
+        event.stopPropagation();
+        onDragStart(event);
       }}
     >
       <circle

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, type MouseEvent as ReactMouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import type { ElectricalDevice } from "@/domain";
 import { useEditorStore, type EditorTool } from "./store";
 import {
@@ -32,8 +32,13 @@ export function EditorCanvas() {
   const placeDistributionBoard = useEditorStore((state) => state.placeDistributionBoard);
   const smartHomeDevices = useEditorStore((state) => state.smartHomeDevices);
   const addSmartHomeDeviceAtPoint = useEditorStore((state) => state.addSmartHomeDeviceAtPoint);
+  const moveDeviceToPoint = useEditorStore((state) => state.moveDeviceToPoint);
+  const moveSmartHomeDeviceToPoint = useEditorStore((state) => state.moveSmartHomeDeviceToPoint);
 
   const svgRef = useRef<SVGSVGElement>(null);
+  const [dragging, setDragging] = useState<
+    { kind: "board" } | { kind: "device"; id: string } | { kind: "smarthome"; id: string } | null
+  >(null);
 
   const box = useMemo(() => {
     if (focusTarget?.type === "room") {
@@ -66,7 +71,7 @@ export function EditorCanvas() {
   const placingBoard = activeTool === "board";
   const placingSmartHome = activeTool === "smarthome";
 
-  function toSvgPoint(event: ReactMouseEvent) {
+  function toSvgPoint(event: { clientX: number; clientY: number }) {
     const svg = svgRef.current;
     if (!svg) return null;
     const point = svg.createSVGPoint();
@@ -77,6 +82,28 @@ export function EditorCanvas() {
     const transformed = point.matrixTransform(ctm.inverse());
     return { x: transformed.x, y: transformed.y };
   }
+
+  useEffect(() => {
+    if (!dragging) return;
+    const current = dragging;
+    function handleMove(event: MouseEvent) {
+      const point = toSvgPoint(event);
+      if (!point) return;
+      if (current.kind === "board") placeDistributionBoard(point);
+      else if (current.kind === "device") moveDeviceToPoint(current.id, point);
+      else moveSmartHomeDeviceToPoint(current.id, point);
+    }
+    function handleUp() {
+      setDragging(null);
+    }
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dragging]);
 
   function handleBackgroundClick(event: ReactMouseEvent) {
     if (placingDeviceType) {
@@ -227,11 +254,16 @@ export function EditorCanvas() {
           const isSelected = selected?.type === "board";
           return (
             <g
-              className={canSelect ? "cursor-pointer" : undefined}
+              className={canSelect ? "cursor-grab" : undefined}
               onClick={(event) => {
                 if (!canSelect) return;
                 event.stopPropagation();
                 select({ type: "board" });
+              }}
+              onMouseDown={(event) => {
+                if (!canSelect) return;
+                event.stopPropagation();
+                setDragging({ kind: "board" });
               }}
             >
               <rect
@@ -268,6 +300,7 @@ export function EditorCanvas() {
                 selected={isSelected}
                 clickable={canSelect}
                 onSelect={() => select({ type: "device", id: device.id })}
+                onDragStart={() => setDragging({ kind: "device", id: device.id })}
               />
             );
           })}
@@ -278,11 +311,16 @@ export function EditorCanvas() {
             return (
               <g
                 key={device.id}
-                className={canSelect ? "cursor-pointer" : undefined}
+                className={canSelect ? "cursor-grab" : undefined}
                 onClick={(event) => {
                   if (!canSelect) return;
                   event.stopPropagation();
                   select({ type: "smarthome", id: device.id });
+                }}
+                onMouseDown={(event) => {
+                  if (!canSelect) return;
+                  event.stopPropagation();
+                  setDragging({ kind: "smarthome", id: device.id });
                 }}
               >
                 <circle

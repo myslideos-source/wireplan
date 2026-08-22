@@ -136,11 +136,13 @@ interface EditorState {
   updateWallThickness: (id: string, thicknessMm: number) => void;
   deleteOpening: (id: string) => void;
   addDeviceAtPoint: (type: ElectricalDeviceType, point: Point) => boolean;
+  moveDeviceToPoint: (deviceId: string, point: Point) => void;
   deleteDevice: (id: string) => void;
   assignDeviceSmartHomeModel: (deviceId: string, modelId: string | null) => void;
   assignBoardSmartHomeModel: (modelId: string | null) => void;
   setSmartHomePlacementModelId: (modelId: string) => void;
   addSmartHomeDeviceAtPoint: (point: Point) => boolean;
+  moveSmartHomeDeviceToPoint: (deviceId: string, point: Point) => void;
   deleteSmartHomeDevice: (id: string) => void;
   setSmartHomeDeviceModel: (deviceId: string, modelId: string) => void;
   setRoomCircuit: (roomId: string, circuitId: string | null) => void;
@@ -322,6 +324,51 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     return true;
   },
 
+  moveDeviceToPoint: (deviceId, point) => {
+    const state = get();
+    const device = state.devices.find((d) => d.id === deviceId);
+    if (!device) return;
+
+    if (device.mount.kind === "wall") {
+      const wall = findNearestWall(state.walls, point);
+      if (!wall) return;
+      const { offset } = closestPointOnWall(wall, point);
+      const wallPoint = pointAtOffset(wall, offset);
+      const normal = wallNormal(wall);
+      const probeDistance = 150;
+      const sideA = { x: wallPoint.x + normal.x * probeDistance, y: wallPoint.y + normal.y * probeDistance };
+      const sideB = { x: wallPoint.x - normal.x * probeDistance, y: wallPoint.y - normal.y * probeDistance };
+      const room =
+        state.rooms.find((r) => isPointInPolygon(sideA, r.polygon)) ??
+        state.rooms.find((r) => isPointInPolygon(sideB, r.polygon));
+      set((s) => ({
+        devices: s.devices.map((d) =>
+          d.id === deviceId
+            ? {
+                ...d,
+                mount: { kind: "wall", wallId: wall.id, offset, height: device.mount.height },
+                roomId: room?.id ?? null,
+              }
+            : d,
+        ),
+      }));
+      return;
+    }
+
+    const room = state.rooms.find((r) => isPointInPolygon(point, r.polygon));
+    set((s) => ({
+      devices: s.devices.map((d) =>
+        d.id === deviceId
+          ? {
+              ...d,
+              mount: { kind: "point", position: point, height: device.mount.height },
+              roomId: room?.id ?? null,
+            }
+          : d,
+      ),
+    }));
+  },
+
   deleteDevice: (id) =>
     set((state) => ({
       devices: state.devices.filter((device) => device.id !== id),
@@ -371,6 +418,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     };
     set((s) => ({ smartHomeDevices: [...s.smartHomeDevices, device] }));
     return true;
+  },
+
+  moveSmartHomeDeviceToPoint: (deviceId, point) => {
+    const state = get();
+    const room = state.rooms.find((r) => isPointInPolygon(point, r.polygon));
+    set((s) => ({
+      smartHomeDevices: s.smartHomeDevices.map((device) =>
+        device.id === deviceId
+          ? { ...device, position: point, roomId: room?.id ?? null }
+          : device,
+      ),
+    }));
   },
 
   deleteSmartHomeDevice: (id) =>
