@@ -19,9 +19,9 @@ export function MaterialListTab({ cables }: { cables: Cable[] }) {
   return (
     <div className="flex flex-col gap-3 px-5 py-4">
       <p className="text-xs text-text-muted">
-        Automatisch aus der Kabelliste berechnet (§54). Loxone-Hardware
-        (Miniserver, Extensions, …) folgt in Phase 8, sobald echte
-        Geräte-Zuordnung existiert.
+        Automatisch aus der Kabelliste berechnet (§54). Zugewiesene
+        Loxone-Hardware (Miniserver, Tree-Geräte, …) sehen Sie im Tab
+        „Loxone“.
       </p>
       {[...totalsByType.entries()].map(([type, meters]) => (
         <div

@@ -26,6 +26,9 @@ export interface ElectricalDevice {
   mount: DeviceMount;
   /** Which room this device counts toward for circuit/wattage totals. */
   roomId: string | null;
+  /** Which Loxone (or other smart-home system) hardware realizes this
+   * device, if any — references a SmartHomeDeviceModel id. */
+  smartHomeModelId?: string;
 }
 
 export const DEVICE_TYPE_LABELS: Record<ElectricalDeviceType, string> = {
@@ -89,4 +92,7 @@ export interface DistributionBoard {
   offset: number;
   width: number;
   height: number;
+  /** Which Loxone (or other smart-home system) controller hardware sits
+   * in this enclosure, if assigned — references a SmartHomeDeviceModel id. */
+  smartHomeModelId?: string;
 }

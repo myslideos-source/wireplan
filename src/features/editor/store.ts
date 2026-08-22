@@ -95,6 +95,8 @@ interface EditorState {
   deleteOpening: (id: string) => void;
   addDeviceAtPoint: (type: ElectricalDeviceType, point: Point) => boolean;
   deleteDevice: (id: string) => void;
+  assignDeviceSmartHomeModel: (deviceId: string, modelId: string | null) => void;
+  assignBoardSmartHomeModel: (modelId: string | null) => void;
   setRoomCircuit: (roomId: string, circuitId: string | null) => void;
   setTechnikraum: (roomId: string) => void;
   placeDistributionBoard: (point: Point) => boolean;
@@ -253,6 +255,27 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set((state) => ({
       roomCircuits: { ...state.roomCircuits, [roomId]: circuitId },
     })),
+
+  assignDeviceSmartHomeModel: (deviceId, modelId) =>
+    set((state) => ({
+      devices: state.devices.map((device) =>
+        device.id === deviceId
+          ? { ...device, smartHomeModelId: modelId ?? undefined }
+          : device,
+      ),
+    })),
+
+  assignBoardSmartHomeModel: (modelId) =>
+    set((state) =>
+      state.distributionBoard
+        ? {
+            distributionBoard: {
+              ...state.distributionBoard,
+              smartHomeModelId: modelId ?? undefined,
+            },
+          }
+        : {},
+    ),
 
   setTechnikraum: (roomId) => set({ technikraumRoomId: roomId }),
 

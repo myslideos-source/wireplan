@@ -3,7 +3,17 @@
 import type { ReactNode } from "react";
 import { MousePointer2, Plug, Lightbulb, ToggleLeft, Radar, Wifi, Trash2, Server, type LucideIcon } from "lucide-react";
 import { Badge, Button } from "@/components/ui";
-import { wallLengthMeters, DEVICE_TYPE_LABELS, DEVICE_WATTAGE, type ElectricalDeviceType } from "@/domain";
+import {
+  wallLengthMeters,
+  DEVICE_TYPE_LABELS,
+  DEVICE_WATTAGE,
+  getSmartHomeCatalog,
+  findSmartHomeModel,
+  LOXONE_SYSTEM,
+  DEVICE_TYPE_SMART_HOME_CATEGORIES,
+  DISTRIBUTION_BOARD_SMART_HOME_CATEGORIES,
+  type ElectricalDeviceType,
+} from "@/domain";
 import { isFeatureEnabled } from "@/lib/feature-flags";
 import { formatArea, formatNumber } from "@/lib/utils";
 import { MOCK_CIRCUITS, getCircuit } from "@/features/electrical/mock-circuits";
@@ -74,6 +84,40 @@ function DemoField({ value }: { value: string }) {
   );
 }
 
+/** Loxone (or future system) hardware picker, narrowed to the categories
+ * relevant for the given context (a device type or the distribution
+ * board) rather than showing the entire catalog everywhere. */
+function SmartHomeModelSelect({
+  categories,
+  value,
+  onChange,
+}: {
+  categories: string[];
+  value: string | undefined;
+  onChange: (modelId: string | null) => void;
+}) {
+  const options = getSmartHomeCatalog(LOXONE_SYSTEM.id).filter((model) =>
+    categories.includes(model.category),
+  );
+  if (options.length === 0) {
+    return <DemoField value="—" />;
+  }
+  return (
+    <select
+      value={value ?? ""}
+      onChange={(event) => onChange(event.target.value || null)}
+      className={inputClass}
+    >
+      <option value="">— keins —</option>
+      {options.map((model) => (
+        <option key={model.id} value={model.id}>
+          {model.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 export function EditorInspector() {
   const selected = useEditorStore((state) => state.selected);
   const rooms = useEditorStore((state) => state.rooms);
@@ -89,9 +133,10 @@ export function EditorInspector() {
   const setTechnikraum = useEditorStore((state) => state.setTechnikraum);
   const distributionBoard = useEditorStore((state) => state.distributionBoard);
   const deleteDistributionBoard = useEditorStore((state) => state.deleteDistributionBoard);
+  const assignDeviceSmartHomeModel = useEditorStore((state) => state.assignDeviceSmartHomeModel);
+  const assignBoardSmartHomeModel = useEditorStore((state) => state.assignBoardSmartHomeModel);
 
   const electricalEnabled = isFeatureEnabled("ELECTRICAL_EDITOR");
-  const loxoneEnabled = isFeatureEnabled("LOXONE");
 
   if (!selected) {
     return (
@@ -145,6 +190,15 @@ export function EditorInspector() {
             <span className="text-sm text-text">{room?.name ?? "—"}</span>
           </FieldRow>
         </Section>
+        <Section title="Smart Home (Loxone)">
+          <FieldRow label="Loxone-Gerät">
+            <SmartHomeModelSelect
+              categories={DEVICE_TYPE_SMART_HOME_CATEGORIES[device.type] ?? []}
+              value={device.smartHomeModelId}
+              onChange={(modelId) => assignDeviceSmartHomeModel(device.id, modelId)}
+            />
+          </FieldRow>
+        </Section>
         <div className="px-5 py-4">
           <Button
             variant="secondary"
@@ -195,6 +249,15 @@ export function EditorInspector() {
           </FieldRow>
           <FieldRow label="Wand">
             <span className="text-sm text-text">{wall?.id ?? "—"}</span>
+          </FieldRow>
+        </Section>
+        <Section title="Smart Home (Loxone)">
+          <FieldRow label="Loxone-Gerät">
+            <SmartHomeModelSelect
+              categories={DISTRIBUTION_BOARD_SMART_HOME_CATEGORIES}
+              value={distributionBoard.smartHomeModelId}
+              onChange={(modelId) => assignBoardSmartHomeModel(modelId)}
+            />
           </FieldRow>
         </Section>
         <div className="px-5 py-4">
@@ -397,14 +460,33 @@ export function EditorInspector() {
         <FieldRow label="Beschattung">
           <DemoField value="—" />
         </FieldRow>
-        <button
-          type="button"
-          disabled={!loxoneEnabled}
-          title="Demnächst — Phase 8"
-          className="mt-1 flex items-center justify-center rounded-[var(--radius-sm)] border border-border px-3 py-1.5 text-xs font-medium text-text-secondary disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Loxone Geräte zuweisen — Demnächst
-        </button>
+        <div className="flex flex-col gap-1.5 border-t border-border pt-3">
+          <p className="text-xs font-medium text-text-secondary">
+            Zugewiesene Loxone-Geräte
+          </p>
+          {roomDevices.filter((d) => d.smartHomeModelId).length === 0 ? (
+            <p className="text-xs text-text-muted">
+              Noch keinem Gerät in diesem Raum ist Loxone-Hardware zugewiesen.
+              Wählen Sie dazu ein Gerät im Grundriss aus.
+            </p>
+          ) : (
+            roomDevices
+              .filter((d) => d.smartHomeModelId)
+              .map((d) => {
+                const model = findSmartHomeModel(d.smartHomeModelId!);
+                return (
+                  <div key={d.id} className="flex items-center justify-between text-xs">
+                    <span className="text-text-secondary">
+                      {DEVICE_TYPE_LABELS[d.type]}
+                    </span>
+                    <span className="font-medium text-text">
+                      {model?.label ?? d.smartHomeModelId}
+                    </span>
+                  </div>
+                );
+              })
+          )}
+        </div>
       </Section>
 
       <Section title="Anzahl Elemente">

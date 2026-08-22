@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { Cable as CableIcon, Zap, GitBranch, Network } from "lucide-react";
 import type { Project, RoutingMode } from "@/domain";
-import { KpiCard, Button, Badge } from "@/components/ui";
+import { KpiCard, Button } from "@/components/ui";
 import { formatNumber } from "@/lib/utils";
 import { useEditorStore } from "@/features/editor/store";
 import { RoutingCanvas } from "./RoutingCanvas";
 import { CableListTable } from "./CableListTable";
 import { MaterialListTab } from "./MaterialListTab";
+import { LoxoneListTab } from "./LoxoneListTab";
 
 const ROUTING_MODES: RoutingMode[] = ["Boden", "Decke", "Wand", "Hybrid"];
 
@@ -133,14 +134,7 @@ export function RoutingWorkspace({ project }: { project: Project }) {
           {tab === "materialliste" && <MaterialListTab cables={cables} />}
 
           {tab === "loxone" && (
-            <div className="flex flex-col items-start gap-3 px-5 py-6">
-              <p className="text-sm text-text-secondary">
-                Automatische Loxone-Materialermittlung (Miniserver, Tree
-                Extensions, Touch Pure Tree, …) folgt, sobald echte
-                Loxone-Geräte zugewiesen werden können.
-              </p>
-              <Badge tone="neutral">Demnächst — Phase 8 · LOXONE</Badge>
-            </div>
+            <LoxoneListTab devices={devices} distributionBoard={distributionBoard} />
           )}
         </div>
       </div>
