@@ -7,7 +7,7 @@ import type {
 
 export const runtime = "nodejs";
 
-const MODEL = "gemini-2.5-flash";
+const MODEL = "gemini-3.6-flash";
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
 const ACCEPTED_MIME_TYPES = ["image/png", "image/jpeg", "application/pdf"];
 
