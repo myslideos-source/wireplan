@@ -55,6 +55,7 @@ export function AnalysisScreen({
         <div className="flex flex-col gap-6">
           <AnalysisStatusCard result={analysis} />
           <ReviewModeCard
+            projectId={project.id}
             flaggedAreas={analysis.flaggedAreas}
             estimatedReviewMinutes={analysis.estimatedReviewMinutes}
           />

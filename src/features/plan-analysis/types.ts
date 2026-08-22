@@ -9,12 +9,20 @@ export interface ElementTypeConfidence {
 
 export type FlaggedSeverity = "warning" | "critical";
 
+/** Which geometry element the Review Mode (Phase 4) should focus and let
+ * the user act on — a room, a wall, or a door/window opening. */
+export interface FlaggedAreaTarget {
+  type: "room" | "wall" | "opening";
+  id: string;
+}
+
 export interface FlaggedArea {
   id: string;
   title: string;
   description: string;
   confidence: number;
   severity: FlaggedSeverity;
+  target?: FlaggedAreaTarget;
 }
 
 export interface FloorAnalysisResult {

@@ -36,30 +36,34 @@ const MOCK_ANALYSES: Record<string, FloorAnalysisResult> = {
           "Wir sind uns bei dieser Raumaufteilung nicht sicher. Prüfen Sie, ob hier eine Trennwand fehlt.",
         confidence: 68,
         severity: "critical",
+        target: { type: "room", id: "room-zimmer2" },
       },
       {
         id: "flag-2",
-        title: "Flächenabweichung HAR/HWR",
+        title: "Flächenabweichung Bad",
         description:
-          "OCR erkennt 8,84 m², Geometrie berechnet 8,13 m² – Abweichung 8,0 %. Bitte prüfen.",
+          "OCR erkennt 8,84 m² auf dem Originalplan, unsere Geometrie berechnet einen abweichenden Wert. Bitte prüfen.",
         confidence: 82,
         severity: "warning",
+        target: { type: "room", id: "room-bad" },
       },
       {
         id: "flag-3",
         title: "Maßabweichung Wand",
         description:
-          "Bemaßung im Originalplan: 3,40 m, digitale Wandlänge: 3,26 m.",
+          "Bemaßung im Originalplan: 3,40 m. Bitte mit der digitalen Wandlänge abgleichen.",
         confidence: 79,
         severity: "warning",
+        target: { type: "wall", id: "w8" },
       },
       {
         id: "flag-4",
         title: "Tür unklar erkannt",
         description:
-          "Die Türposition an der Ostwand konnte nicht eindeutig zugeordnet werden.",
+          "Die Türposition zwischen Flur und Bad konnte nicht eindeutig zugeordnet werden.",
         confidence: 71,
         severity: "critical",
+        target: { type: "opening", id: "d4" },
       },
     ],
   },

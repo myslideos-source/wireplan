@@ -13,7 +13,8 @@ export type FeatureFlag =
   | "PDF_EXPORT"
   | "CONSTRUCTION_MODE";
 
-function isOn(raw: string | undefined): boolean {
+function isOn(raw: string | undefined, defaultValue = false): boolean {
+  if (raw === undefined) return defaultValue;
   return raw === "true" || raw === "1";
 }
 
@@ -24,7 +25,10 @@ function isOn(raw: string | undefined): boolean {
 // literally here rather than looked up in a loop.
 export const featureFlags: Record<FeatureFlag, boolean> = {
   AI_PLAN_ANALYSIS: isOn(process.env.NEXT_PUBLIC_FEATURE_AI_PLAN_ANALYSIS),
-  AI_REVIEW: isOn(process.env.NEXT_PUBLIC_FEATURE_AI_REVIEW),
+  // The Phase 4 interactive review tools (split/merge rooms, wall
+  // correction, delete opening) are implemented, so this defaults on —
+  // unlike the flags below, which still gate genuinely unbuilt phases.
+  AI_REVIEW: isOn(process.env.NEXT_PUBLIC_FEATURE_AI_REVIEW, true),
   ELECTRICAL_EDITOR: isOn(process.env.NEXT_PUBLIC_FEATURE_ELECTRICAL_EDITOR),
   CABLE_ROUTING: isOn(process.env.NEXT_PUBLIC_FEATURE_CABLE_ROUTING),
   LOXONE: isOn(process.env.NEXT_PUBLIC_FEATURE_LOXONE),

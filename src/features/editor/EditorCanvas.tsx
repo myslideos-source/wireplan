@@ -2,7 +2,13 @@
 
 import { useMemo, type MouseEvent as ReactMouseEvent } from "react";
 import { useEditorStore } from "./store";
-import { wallOrientation, pointAtOffset, wallsBoundingBox, polygonCentroid } from "./geometry-utils";
+import {
+  wallOrientation,
+  pointAtOffset,
+  wallsBoundingBox,
+  boundingBoxOfPoints,
+  polygonCentroid,
+} from "./geometry-utils";
 import { formatArea } from "@/lib/utils";
 
 export function EditorCanvas() {
@@ -14,8 +20,26 @@ export function EditorCanvas() {
   const selected = useEditorStore((state) => state.selected);
   const select = useEditorStore((state) => state.select);
   const activeTool = useEditorStore((state) => state.activeTool);
+  const focusTarget = useEditorStore((state) => state.focusTarget);
 
-  const box = useMemo(() => wallsBoundingBox(walls), [walls]);
+  const box = useMemo(() => {
+    if (focusTarget?.type === "room") {
+      const room = rooms.find((r) => r.id === focusTarget.id);
+      if (room) return boundingBoxOfPoints(room.polygon, 1200);
+    }
+    if (focusTarget?.type === "wall") {
+      const wall = walls.find((w) => w.id === focusTarget.id);
+      if (wall) return boundingBoxOfPoints([wall.start, wall.end], 1500);
+    }
+    if (focusTarget?.type === "opening") {
+      const opening = openings.find((o) => o.id === focusTarget.id);
+      const wall = opening && walls.find((w) => w.id === opening.wallId);
+      if (opening && wall) {
+        return boundingBoxOfPoints([pointAtOffset(wall, opening.offset)], 1800);
+      }
+    }
+    return wallsBoundingBox(walls);
+  }, [focusTarget, rooms, walls, openings]);
   const vbWidth = box.width / zoom;
   const vbHeight = box.height / zoom;
   const centerX = box.minX + box.width / 2;
@@ -112,17 +136,30 @@ export function EditorCanvas() {
               const isWindow = opening.type === "window";
               const width = orientation === "h" ? opening.width : across;
               const height = orientation === "h" ? across : opening.width;
+              const isFocused = focusTarget?.type === "opening" && focusTarget.id === opening.id;
               return (
-                <rect
-                  key={opening.id}
-                  x={center.x - width / 2}
-                  y={center.y - height / 2}
-                  width={width}
-                  height={height}
-                  fill={isWindow ? "#25b7f2" : "#0b1520"}
-                  stroke={isWindow ? "none" : "#9aa7b3"}
-                  strokeWidth={isWindow ? 0 : 20}
-                />
+                <g key={opening.id}>
+                  <rect
+                    x={center.x - width / 2}
+                    y={center.y - height / 2}
+                    width={width}
+                    height={height}
+                    fill={isWindow ? "#25b7f2" : "#0b1520"}
+                    stroke={isWindow ? "none" : "#9aa7b3"}
+                    strokeWidth={isWindow ? 0 : 20}
+                  />
+                  {isFocused && (
+                    <circle
+                      cx={center.x}
+                      cy={center.y}
+                      r={Math.max(width, height) * 0.9}
+                      fill="none"
+                      stroke="#16d8c4"
+                      strokeWidth={30}
+                      strokeDasharray="60 40"
+                    />
+                  )}
+                </g>
               );
             })}
           </g>

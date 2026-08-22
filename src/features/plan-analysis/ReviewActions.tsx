@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui";
@@ -40,29 +41,27 @@ export function ReviewActions({
         )}
       </p>
       <div className="flex items-center gap-2">
-        <Button
-          variant="secondary"
-          disabled={!reviewEnabled}
-          title={
-            !reviewEnabled
-              ? "Manuelle Korrekturwerkzeuge folgen in Phase 4 — Demnächst"
-              : undefined
-          }
+        <Link
+          href={`/editor?project=${projectId}`}
+          className="inline-flex h-9 items-center gap-2 rounded-[var(--radius-sm)] border border-border px-4 text-sm font-medium text-text transition-colors hover:border-primary/60 hover:text-primary"
         >
-          {reviewEnabled ? "Manuell korrigieren" : "Manuell korrigieren — Demnächst"}
-        </Button>
+          Manuell korrigieren
+        </Link>
         {hasCriticalIssues ? (
-          <Button
-            disabled={!reviewEnabled}
-            title={
-              !reviewEnabled
-                ? "Der geführte Fehler-Review folgt in Phase 4 — Demnächst"
-                : undefined
-            }
-          >
-            <AlertTriangle className="h-4 w-4" />
-            {reviewEnabled ? "Fehler prüfen" : "Fehler prüfen — Demnächst"}
-          </Button>
+          reviewEnabled ? (
+            <Link
+              href={`/editor?project=${projectId}&review=1`}
+              className="inline-flex h-9 items-center gap-2 rounded-[var(--radius-sm)] bg-primary px-4 text-sm font-medium text-[#04211d] transition-colors hover:bg-primary/90"
+            >
+              <AlertTriangle className="h-4 w-4" />
+              Fehler prüfen
+            </Link>
+          ) : (
+            <Button disabled title="Der geführte Fehler-Review folgt in Phase 4 — Demnächst">
+              <AlertTriangle className="h-4 w-4" />
+              Fehler prüfen — Demnächst
+            </Button>
+          )
         ) : (
           <Button onClick={handleAccept} disabled={accepted}>
             <CheckCircle2 className="h-4 w-4" />

@@ -1,12 +1,15 @@
+import Link from "next/link";
 import { Clock, ShieldAlert } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, Badge } from "@/components/ui";
 import { isFeatureEnabled } from "@/lib/feature-flags";
 import type { FlaggedArea } from "./types";
 
 export function ReviewModeCard({
+  projectId,
   flaggedAreas,
   estimatedReviewMinutes,
 }: {
+  projectId: string;
   flaggedAreas: FlaggedArea[];
   estimatedReviewMinutes: number;
 }) {
@@ -53,22 +56,27 @@ export function ReviewModeCard({
           ))}
         </ul>
 
-        <button
-          type="button"
-          disabled={!reviewEnabled}
-          title={
-            !reviewEnabled
-              ? "Der interaktive Review-Modus folgt in Phase 4 — Demnächst"
-              : undefined
-          }
-          className="flex items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-secondary px-4 py-2 text-sm font-medium text-[#041420] transition-colors hover:bg-secondary/90 disabled:pointer-events-none disabled:opacity-50"
-        >
-          {reviewEnabled ? "Jetzt prüfen" : "Jetzt prüfen — Demnächst"}
-        </button>
-        {!reviewEnabled && (
-          <Badge tone="neutral" className="self-start">
-            Phase 4 · AI_REVIEW
-          </Badge>
+        {reviewEnabled ? (
+          <Link
+            href={`/editor?project=${projectId}&review=1`}
+            className="flex items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-secondary px-4 py-2 text-sm font-medium text-[#041420] transition-colors hover:bg-secondary/90"
+          >
+            Jetzt prüfen
+          </Link>
+        ) : (
+          <>
+            <button
+              type="button"
+              disabled
+              title="Der interaktive Review-Modus folgt in Phase 4 — Demnächst"
+              className="flex items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-secondary px-4 py-2 text-sm font-medium text-[#041420] disabled:pointer-events-none disabled:opacity-50"
+            >
+              Jetzt prüfen — Demnächst
+            </button>
+            <Badge tone="neutral" className="self-start">
+              Phase 4 · AI_REVIEW
+            </Badge>
+          </>
         )}
       </CardContent>
     </Card>

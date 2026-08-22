@@ -1,6 +1,7 @@
 import { LayoutGrid } from "lucide-react";
 import { getProjects, getProject } from "@/lib/mock-data";
 import { getGeometryForProject } from "@/features/editor/mock-geometry";
+import { getAnalysisForProject } from "@/features/plan-analysis/mock-analysis";
 import { EntityProjectPicker } from "@/components/shell/EntityProjectPicker";
 import { EditorWorkspace } from "@/features/editor/EditorWorkspace";
 import { NoGeometryYet } from "@/features/editor/NoGeometryYet";
@@ -8,9 +9,9 @@ import { NoGeometryYet } from "@/features/editor/NoGeometryYet";
 export default async function EditorPage({
   searchParams,
 }: {
-  searchParams: Promise<{ project?: string }>;
+  searchParams: Promise<{ project?: string; review?: string }>;
 }) {
-  const { project: projectId } = await searchParams;
+  const { project: projectId, review } = await searchParams;
   const projects = await getProjects();
   const project = projectId ? await getProject(projectId) : undefined;
 
@@ -42,5 +43,13 @@ export default async function EditorPage({
     return <NoGeometryYet project={project} />;
   }
 
-  return <EditorWorkspace project={project} geometry={geometry} />;
+  const analysis = review === "1" ? await getAnalysisForProject(project.id) : undefined;
+
+  return (
+    <EditorWorkspace
+      project={project}
+      geometry={geometry}
+      reviewAreas={analysis?.flaggedAreas}
+    />
+  );
 }
