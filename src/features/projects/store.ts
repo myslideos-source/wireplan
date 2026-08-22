@@ -8,6 +8,7 @@ interface ProjectsState {
   hydrated: boolean;
   hydrate: (projects: Project[]) => void;
   addProject: (input: { name: string; address: string }) => Project;
+  advanceToValidation: (projectId: string) => void;
 }
 
 function createEmptyProject(input: { name: string; address: string }): Project {
@@ -46,5 +47,25 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
     const project = createEmptyProject(input);
     set((state) => ({ projects: [project, ...state.projects] }));
     return project;
+  },
+  advanceToValidation: (projectId) => {
+    set((state) => ({
+      projects: state.projects.map((project) => {
+        if (project.id !== projectId) return project;
+        return {
+          ...project,
+          geometryStatus:
+            project.geometryStatus === "DRAFT"
+              ? "IN_REVIEW"
+              : project.geometryStatus,
+          updatedAt: new Date().toISOString(),
+          stages: project.stages.map((stage) => {
+            if (stage.id === "analyze") return { ...stage, status: "done" };
+            if (stage.id === "validate") return { ...stage, status: "active" };
+            return stage;
+          }),
+        };
+      }),
+    }));
   },
 }));

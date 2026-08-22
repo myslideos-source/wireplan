@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, ArrowUpRight, Building2 } from "lucide-react";
+import { MapPin, ArrowUpRight, Building2, ScanSearch } from "lucide-react";
 import { Card, CardContent, GeometryStatusBadge } from "@/components/ui";
 import type { Project } from "@/domain";
 import { formatLength } from "@/lib/utils";
@@ -25,13 +25,20 @@ export function ProjectHeroCard({ project }: { project: Project }) {
             <GeometryStatusBadge status={project.geometryStatus} />
           </div>
 
-          <div>
+          <div className="flex items-center gap-2">
             <Link
               href={`/editor?project=${project.id}`}
               className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-primary px-4 py-2 text-sm font-medium text-[#04211d] transition-colors hover:bg-primary/90"
             >
               Im Editor öffnen
               <ArrowUpRight className="h-4 w-4" />
+            </Link>
+            <Link
+              href={`/analysis?project=${project.id}`}
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-border px-4 py-2 text-sm font-medium text-text transition-colors hover:border-primary/60 hover:text-primary"
+            >
+              <ScanSearch className="h-4 w-4" />
+              KI-Analyse ansehen
             </Link>
           </div>
         </CardContent>
