@@ -34,6 +34,7 @@ import {
   pointAtOffset,
   wallNormal,
   roomWalls,
+  wallsBoundingBox,
   type SplitDirection,
 } from "./geometry-utils";
 
@@ -50,9 +51,24 @@ export type EditorTool =
   | "smarthome"
   | "door"
   | "window"
+  | "background"
   | "cable";
 
-export type LayerId = "grundriss" | "elektro" | "kabelwege" | "beschriftung";
+export type LayerId = "grundriss" | "elektro" | "kabelwege" | "beschriftung" | "hintergrund";
+
+/** The real, original uploaded plan image, positioned/scaled over the
+ * floor's geometry as a tracing reference — for when the AI's estimated
+ * room polygons aren't precise enough and the user's own plan already is. */
+export interface BackgroundImage {
+  dataUrl: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  aspectRatio: number;
+}
+
+const MIN_BACKGROUND_SIZE_MM = 300;
 
 export type Selection =
   | { type: "room"; id: string }
@@ -94,6 +110,7 @@ interface FloorMutableSlice {
   distributionBoard: DistributionBoard | null;
   cables: Cable[];
   smartHomeDevices: SmartHomeDevice[];
+  backgroundImage: BackgroundImage | null;
 }
 
 function freshSliceFromGeometry(geometry: FloorGeometry): FloorMutableSlice {
@@ -107,6 +124,7 @@ function freshSliceFromGeometry(geometry: FloorGeometry): FloorMutableSlice {
     distributionBoard: null,
     cables: [],
     smartHomeDevices: [],
+    backgroundImage: null,
   };
 }
 
@@ -125,8 +143,13 @@ interface EditorState {
   routingMode: RoutingMode;
   smartHomeDevices: SmartHomeDevice[];
   smartHomePlacementModelId: string;
+  backgroundImage: BackgroundImage | null;
   hydrate: (geometries: FloorGeometry[]) => void;
   switchFloor: (floorId: string) => void;
+  setBackgroundImage: (dataUrl: string, naturalWidth: number, naturalHeight: number) => void;
+  moveBackgroundImageToPoint: (point: Point) => void;
+  resizeBackgroundImageToPoint: (point: Point) => void;
+  clearBackgroundImage: () => void;
 
   selected: Selection;
   select: (selection: Selection) => void;
@@ -199,6 +222,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   routingMode: "Decke",
   smartHomeDevices: [],
   smartHomePlacementModelId: LOXONE_CATALOG[0].id,
+  backgroundImage: null,
   hydrate: (geometries) => {
     // Re-hydrate whenever a different project's floors are passed in (e.g.
     // navigating from one project's editor to another's without a full
@@ -229,6 +253,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       distributionBoard: state.distributionBoard,
       cables: state.cables,
       smartHomeDevices: state.smartHomeDevices,
+      backgroundImage: state.backgroundImage,
     };
     const newCache = currentFloorId
       ? { ...state.floorCache, [currentFloorId]: currentSlice }
@@ -253,7 +278,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   activeTool: "select",
   setTool: (tool) => set({ activeTool: tool }),
 
-  layers: { grundriss: true, elektro: true, kabelwege: true, beschriftung: true },
+  layers: { grundriss: true, elektro: true, kabelwege: true, beschriftung: true, hintergrund: true },
   toggleLayer: (layer) =>
     set((state) => ({ layers: { ...state.layers, [layer]: !state.layers[layer] } })),
 
@@ -527,6 +552,47 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       cables: [],
       selected: state.selected?.type === "board" ? null : state.selected,
     })),
+
+  setBackgroundImage: (dataUrl, naturalWidth, naturalHeight) => {
+    const state = get();
+    const aspectRatio = naturalWidth / naturalHeight;
+    // Fit the image inside the floor's current extent so it's usable right
+    // away instead of appearing off-screen or at the wrong scale.
+    const box = wallsBoundingBox(state.walls, 0);
+    let width = box.width;
+    let height = width / aspectRatio;
+    if (height > box.height) {
+      height = box.height;
+      width = height * aspectRatio;
+    }
+    const x = box.minX + (box.width - width) / 2;
+    const y = box.minY + (box.height - height) / 2;
+    set({ backgroundImage: { dataUrl, x, y, width, height, aspectRatio } });
+  },
+
+  moveBackgroundImageToPoint: (point) =>
+    set((state) =>
+      state.backgroundImage
+        ? {
+            backgroundImage: {
+              ...state.backgroundImage,
+              x: point.x - state.backgroundImage.width / 2,
+              y: point.y - state.backgroundImage.height / 2,
+            },
+          }
+        : {},
+    ),
+
+  resizeBackgroundImageToPoint: (point) =>
+    set((state) => {
+      if (!state.backgroundImage) return {};
+      const image = state.backgroundImage;
+      const width = Math.max(MIN_BACKGROUND_SIZE_MM, point.x - image.x);
+      const height = width / image.aspectRatio;
+      return { backgroundImage: { ...image, width, height } };
+    }),
+
+  clearBackgroundImage: () => set({ backgroundImage: null }),
 
   setRoutingMode: (mode) => set({ routingMode: mode }),
 

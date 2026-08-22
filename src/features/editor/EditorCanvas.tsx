@@ -36,6 +36,11 @@ export function EditorCanvas() {
   const moveSmartHomeDeviceToPoint = useEditorStore((state) => state.moveSmartHomeDeviceToPoint);
   const addOpeningAtPoint = useEditorStore((state) => state.addOpeningAtPoint);
   const moveOpeningToPoint = useEditorStore((state) => state.moveOpeningToPoint);
+  const backgroundImage = useEditorStore((state) => state.backgroundImage);
+  const moveBackgroundImageToPoint = useEditorStore((state) => state.moveBackgroundImageToPoint);
+  const resizeBackgroundImageToPoint = useEditorStore(
+    (state) => state.resizeBackgroundImageToPoint,
+  );
 
   const svgRef = useRef<SVGSVGElement>(null);
   const [dragging, setDragging] = useState<
@@ -43,6 +48,8 @@ export function EditorCanvas() {
     | { kind: "device"; id: string }
     | { kind: "smarthome"; id: string }
     | { kind: "opening"; id: string }
+    | { kind: "background" }
+    | { kind: "background-resize" }
     | null
   >(null);
 
@@ -77,6 +84,7 @@ export function EditorCanvas() {
   const placingBoard = activeTool === "board";
   const placingSmartHome = activeTool === "smarthome";
   const placingOpeningType = activeTool === "door" ? "door" : activeTool === "window" ? "window" : null;
+  const placingBackground = activeTool === "background";
 
   function toSvgPoint(event: { clientX: number; clientY: number }) {
     const svg = svgRef.current;
@@ -99,7 +107,9 @@ export function EditorCanvas() {
       if (current.kind === "board") placeDistributionBoard(point);
       else if (current.kind === "device") moveDeviceToPoint(current.id, point);
       else if (current.kind === "smarthome") moveSmartHomeDeviceToPoint(current.id, point);
-      else moveOpeningToPoint(current.id, point);
+      else if (current.kind === "opening") moveOpeningToPoint(current.id, point);
+      else if (current.kind === "background") moveBackgroundImageToPoint(point);
+      else resizeBackgroundImageToPoint(point);
     }
     function handleUp() {
       setDragging(null);
@@ -385,6 +395,43 @@ export function EditorCanvas() {
               </text>
             );
           })}
+
+        {layers.hintergrund && backgroundImage && (
+          <g>
+            <image
+              href={backgroundImage.dataUrl}
+              x={backgroundImage.x}
+              y={backgroundImage.y}
+              width={backgroundImage.width}
+              height={backgroundImage.height}
+              opacity={0.55}
+              preserveAspectRatio="none"
+              style={{ cursor: placingBackground ? "grab" : undefined }}
+              pointerEvents={placingBackground ? "auto" : "none"}
+              onMouseDown={(event) => {
+                if (!placingBackground) return;
+                event.stopPropagation();
+                setDragging({ kind: "background" });
+              }}
+            />
+            {placingBackground && (
+              <rect
+                x={backgroundImage.x + backgroundImage.width - 120}
+                y={backgroundImage.y + backgroundImage.height - 120}
+                width={240}
+                height={240}
+                fill="#16d8c4"
+                stroke="#071019"
+                strokeWidth={20}
+                style={{ cursor: "nwse-resize" }}
+                onMouseDown={(event) => {
+                  event.stopPropagation();
+                  setDragging({ kind: "background-resize" });
+                }}
+              />
+            )}
+          </g>
+        )}
       </svg>
     </div>
   );

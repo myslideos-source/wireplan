@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import {
   MousePointer2,
   Minus,
@@ -14,6 +15,7 @@ import {
   Cable,
   DoorOpen,
   AppWindow,
+  Image as ImageIcon,
   Eye,
   EyeOff,
   type LucideIcon,
@@ -52,6 +54,7 @@ const TOOLS: ToolDef[] = [
     note: "Zuerst Technikraum festlegen",
   },
   { id: "smarthome", label: "Smart Home", icon: Home, flag: "LOXONE" },
+  { id: "background", label: "Hintergrundbild", icon: ImageIcon },
   { id: "cable", label: "Kabel / Leitung", icon: Cable, flag: "CABLE_ROUTING" },
 ];
 
@@ -60,6 +63,7 @@ const LAYERS: { id: LayerId; label: string }[] = [
   { id: "elektro", label: "Elektro" },
   { id: "kabelwege", label: "Kabelwege" },
   { id: "beschriftung", label: "Beschriftung" },
+  { id: "hintergrund", label: "Hintergrundbild" },
 ];
 
 export function EditorToolbar() {
@@ -72,7 +76,26 @@ export function EditorToolbar() {
   const setSmartHomePlacementModelId = useEditorStore(
     (state) => state.setSmartHomePlacementModelId,
   );
+  const backgroundImage = useEditorStore((state) => state.backgroundImage);
+  const setBackgroundImage = useEditorStore((state) => state.setBackgroundImage);
+  const clearBackgroundImage = useEditorStore((state) => state.clearBackgroundImage);
   const loxoneEnabled = isFeatureEnabled("LOXONE");
+  const backgroundInputRef = useRef<HTMLInputElement>(null);
+
+  function handleBackgroundFile(fileList: FileList | null) {
+    const file = fileList?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const img = new window.Image();
+      img.onload = () => {
+        setBackgroundImage(dataUrl, img.naturalWidth, img.naturalHeight);
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  }
 
   return (
     <aside className="flex w-56 shrink-0 flex-col gap-6 overflow-y-auto border-r border-border bg-bg-secondary p-3 scrollbar-thin">
@@ -122,6 +145,39 @@ export function EditorToolbar() {
                       </option>
                     ))}
                   </select>
+                )}
+                {tool.id === "background" && activeTool === "background" && (
+                  <div className="mx-1 flex flex-col gap-1.5">
+                    <input
+                      ref={backgroundInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(event) => handleBackgroundFile(event.target.files)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => backgroundInputRef.current?.click()}
+                      className="rounded-[var(--radius-sm)] border border-border px-2 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-primary/60 hover:text-text"
+                    >
+                      {backgroundImage ? "Anderes Bild wählen" : "Originalplan hochladen"}
+                    </button>
+                    {backgroundImage && (
+                      <>
+                        <p className="px-1 text-[11px] text-text-muted">
+                          Bild ziehen zum Verschieben, Ecke unten rechts zum
+                          Skalieren.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={clearBackgroundImage}
+                          className="rounded-[var(--radius-sm)] border border-border px-2 py-1.5 text-xs font-medium text-error transition-colors hover:border-error/60"
+                        >
+                          Hintergrundbild entfernen
+                        </button>
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
             );
