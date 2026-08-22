@@ -34,10 +34,16 @@ export function EditorCanvas() {
   const addSmartHomeDeviceAtPoint = useEditorStore((state) => state.addSmartHomeDeviceAtPoint);
   const moveDeviceToPoint = useEditorStore((state) => state.moveDeviceToPoint);
   const moveSmartHomeDeviceToPoint = useEditorStore((state) => state.moveSmartHomeDeviceToPoint);
+  const addOpeningAtPoint = useEditorStore((state) => state.addOpeningAtPoint);
+  const moveOpeningToPoint = useEditorStore((state) => state.moveOpeningToPoint);
 
   const svgRef = useRef<SVGSVGElement>(null);
   const [dragging, setDragging] = useState<
-    { kind: "board" } | { kind: "device"; id: string } | { kind: "smarthome"; id: string } | null
+    | { kind: "board" }
+    | { kind: "device"; id: string }
+    | { kind: "smarthome"; id: string }
+    | { kind: "opening"; id: string }
+    | null
   >(null);
 
   const box = useMemo(() => {
@@ -70,6 +76,7 @@ export function EditorCanvas() {
     : null;
   const placingBoard = activeTool === "board";
   const placingSmartHome = activeTool === "smarthome";
+  const placingOpeningType = activeTool === "door" ? "door" : activeTool === "window" ? "window" : null;
 
   function toSvgPoint(event: { clientX: number; clientY: number }) {
     const svg = svgRef.current;
@@ -91,7 +98,8 @@ export function EditorCanvas() {
       if (!point) return;
       if (current.kind === "board") placeDistributionBoard(point);
       else if (current.kind === "device") moveDeviceToPoint(current.id, point);
-      else moveSmartHomeDeviceToPoint(current.id, point);
+      else if (current.kind === "smarthome") moveSmartHomeDeviceToPoint(current.id, point);
+      else moveOpeningToPoint(current.id, point);
     }
     function handleUp() {
       setDragging(null);
@@ -121,6 +129,11 @@ export function EditorCanvas() {
       if (point) addSmartHomeDeviceAtPoint(point);
       return;
     }
+    if (placingOpeningType) {
+      const point = toSvgPoint(event);
+      if (point) addOpeningAtPoint(placingOpeningType, point);
+      return;
+    }
     if (canSelect) select(null);
   }
 
@@ -129,7 +142,9 @@ export function EditorCanvas() {
       className="relative h-full w-full overflow-hidden bg-bg-secondary"
       style={{
         cursor:
-          placingDeviceType || placingBoard || placingSmartHome ? "crosshair" : undefined,
+          placingDeviceType || placingBoard || placingSmartHome || placingOpeningType
+            ? "crosshair"
+            : undefined,
       }}
     >
       <svg ref={svgRef} viewBox={viewBox} className="h-full w-full" onClick={handleBackgroundClick}>
@@ -215,16 +230,30 @@ export function EditorCanvas() {
               const width = orientation === "h" ? opening.width : across;
               const height = orientation === "h" ? across : opening.width;
               const isFocused = focusTarget?.type === "opening" && focusTarget.id === opening.id;
+              const isSelected = selected?.type === "opening" && selected.id === opening.id;
               return (
-                <g key={opening.id}>
+                <g
+                  key={opening.id}
+                  className={canSelect ? "cursor-grab" : undefined}
+                  onClick={(event) => {
+                    if (!canSelect) return;
+                    event.stopPropagation();
+                    select({ type: "opening", id: opening.id });
+                  }}
+                  onMouseDown={(event) => {
+                    if (!canSelect) return;
+                    event.stopPropagation();
+                    setDragging({ kind: "opening", id: opening.id });
+                  }}
+                >
                   <rect
                     x={center.x - width / 2}
                     y={center.y - height / 2}
                     width={width}
                     height={height}
                     fill={isWindow ? "#25b7f2" : "#0b1520"}
-                    stroke={isWindow ? "none" : "#9aa7b3"}
-                    strokeWidth={isWindow ? 0 : 20}
+                    stroke={isSelected ? "#16d8c4" : isWindow ? "none" : "#9aa7b3"}
+                    strokeWidth={isSelected ? 30 : isWindow ? 0 : 20}
                   />
                   {isFocused && (
                     <circle

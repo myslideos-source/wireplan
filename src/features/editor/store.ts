@@ -48,6 +48,8 @@ export type EditorTool =
   | "network"
   | "board"
   | "smarthome"
+  | "door"
+  | "window"
   | "cable";
 
 export type LayerId = "grundriss" | "elektro" | "kabelwege" | "beschriftung";
@@ -58,7 +60,13 @@ export type Selection =
   | { type: "device"; id: string }
   | { type: "board" }
   | { type: "smarthome"; id: string }
+  | { type: "opening"; id: string }
   | null;
+
+const DEFAULT_OPENING_WIDTH: Record<"door" | "window", number> = {
+  door: 900,
+  window: 1200,
+};
 
 export const DISTRIBUTION_BOARD_ID = "distribution-board";
 
@@ -135,6 +143,9 @@ interface EditorState {
   updateRoom: (id: string, patch: Partial<Pick<Room, "name" | "type" | "height">>) => void;
   updateWallThickness: (id: string, thicknessMm: number) => void;
   deleteOpening: (id: string) => void;
+  addOpeningAtPoint: (type: Opening["type"], point: Point) => boolean;
+  moveOpeningToPoint: (openingId: string, point: Point) => void;
+  updateOpeningWidth: (id: string, width: number) => void;
   addDeviceAtPoint: (type: ElectricalDeviceType, point: Point) => boolean;
   moveDeviceToPoint: (deviceId: string, point: Point) => void;
   deleteDevice: (id: string) => void;
@@ -275,6 +286,42 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   deleteOpening: (id) =>
     set((state) => ({
       openings: state.openings.filter((opening) => opening.id !== id),
+      selected: state.selected?.type === "opening" && state.selected.id === id
+        ? null
+        : state.selected,
+    })),
+
+  addOpeningAtPoint: (type, point) => {
+    const state = get();
+    const wall = findNearestWall(state.walls, point);
+    if (!wall) return false;
+    const { offset } = closestPointOnWall(wall, point);
+    const opening: Opening = {
+      id: generateId("opening"),
+      wallId: wall.id,
+      type,
+      offset,
+      width: DEFAULT_OPENING_WIDTH[type],
+    };
+    set((s) => ({ openings: [...s.openings, opening] }));
+    return true;
+  },
+
+  moveOpeningToPoint: (openingId, point) => {
+    const state = get();
+    const opening = state.openings.find((o) => o.id === openingId);
+    if (!opening) return;
+    const wall = state.walls.find((w) => w.id === opening.wallId);
+    if (!wall) return;
+    const { offset } = closestPointOnWall(wall, point);
+    set((s) => ({
+      openings: s.openings.map((o) => (o.id === openingId ? { ...o, offset } : o)),
+    }));
+  },
+
+  updateOpeningWidth: (id, width) =>
+    set((state) => ({
+      openings: state.openings.map((o) => (o.id === id ? { ...o, width } : o)),
     })),
 
   addDeviceAtPoint: (type, point) => {

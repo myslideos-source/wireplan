@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { MousePointer2, Plug, Lightbulb, ToggleLeft, Radar, Wifi, Trash2, Server, Home, type LucideIcon } from "lucide-react";
+import { MousePointer2, Plug, Lightbulb, ToggleLeft, Radar, Wifi, Trash2, Server, Home, DoorOpen, AppWindow, type LucideIcon } from "lucide-react";
 import { Badge, Button } from "@/components/ui";
 import {
   wallLengthMeters,
@@ -139,6 +139,9 @@ export function EditorInspector() {
   const smartHomeDevices = useEditorStore((state) => state.smartHomeDevices);
   const deleteSmartHomeDevice = useEditorStore((state) => state.deleteSmartHomeDevice);
   const setSmartHomeDeviceModel = useEditorStore((state) => state.setSmartHomeDeviceModel);
+  const openings = useEditorStore((state) => state.openings);
+  const deleteOpening = useEditorStore((state) => state.deleteOpening);
+  const updateOpeningWidth = useEditorStore((state) => state.updateOpeningWidth);
 
   const electricalEnabled = isFeatureEnabled("ELECTRICAL_EDITOR");
 
@@ -327,6 +330,70 @@ export function EditorInspector() {
           >
             <Trash2 className="h-3.5 w-3.5" />
             Gerät löschen
+          </Button>
+        </div>
+      </aside>
+    );
+  }
+
+  if (selected.type === "opening") {
+    const opening = openings.find((o) => o.id === selected.id);
+    if (!opening) return null;
+    const wall = walls.find((w) => w.id === opening.wallId);
+    return (
+      <aside className="w-80 shrink-0 overflow-y-auto border-l border-border bg-bg-secondary scrollbar-thin">
+        <div className="flex items-center gap-2 border-b border-border px-5 py-4">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary/10 text-secondary">
+            {opening.type === "door" ? (
+              <DoorOpen className="h-4 w-4" />
+            ) : (
+              <AppWindow className="h-4 w-4" />
+            )}
+          </span>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
+              Öffnung
+            </p>
+            <h2 className="text-sm font-semibold text-text">
+              {opening.type === "door" ? "Tür" : "Fenster"}
+            </h2>
+          </div>
+        </div>
+        <Section title="Öffnung">
+          <FieldRow label="Typ">
+            <span className="text-sm text-text">
+              {opening.type === "door" ? "Tür" : "Fenster"}
+            </span>
+          </FieldRow>
+          <FieldRow label="Breite">
+            <div className="flex items-center gap-1.5">
+              <input
+                type="number"
+                step={50}
+                min={300}
+                max={3000}
+                value={opening.width}
+                onChange={(event) => updateOpeningWidth(opening.id, Number(event.target.value))}
+                className={inputClass}
+              />
+              <span className="text-xs text-text-muted">mm</span>
+            </div>
+          </FieldRow>
+          <FieldRow label="Wand">
+            <span className="text-sm text-text">{wall?.id ?? "—"}</span>
+          </FieldRow>
+        </Section>
+        <div className="px-5 py-4">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              deleteOpening(opening.id);
+              select(null);
+            }}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            {opening.type === "door" ? "Tür" : "Fenster"} löschen
           </Button>
         </div>
       </aside>
