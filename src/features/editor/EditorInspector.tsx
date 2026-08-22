@@ -1,11 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { MousePointer2 } from "lucide-react";
-import { Badge } from "@/components/ui";
-import { wallLengthMeters } from "@/domain";
+import { MousePointer2, Plug, Lightbulb, ToggleLeft, Radar, Wifi, Trash2, type LucideIcon } from "lucide-react";
+import { Badge, Button } from "@/components/ui";
+import { wallLengthMeters, DEVICE_TYPE_LABELS, DEVICE_WATTAGE, type ElectricalDeviceType } from "@/domain";
 import { isFeatureEnabled } from "@/lib/feature-flags";
 import { formatArea, formatNumber } from "@/lib/utils";
+import { MOCK_CIRCUITS, getCircuit } from "@/features/electrical/mock-circuits";
 import { useEditorStore } from "./store";
 
 const ROOM_TYPES = [
@@ -20,6 +21,14 @@ const ROOM_TYPES = [
   "Technikraum",
   "Sonstiges",
 ];
+
+const DEVICE_ICONS: Record<ElectricalDeviceType, LucideIcon> = {
+  outlet: Plug,
+  light: Lightbulb,
+  switch: ToggleLeft,
+  sensor: Radar,
+  network: Wifi,
+};
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -60,8 +69,13 @@ export function EditorInspector() {
   const selected = useEditorStore((state) => state.selected);
   const rooms = useEditorStore((state) => state.rooms);
   const walls = useEditorStore((state) => state.walls);
+  const devices = useEditorStore((state) => state.devices);
+  const roomCircuits = useEditorStore((state) => state.roomCircuits);
   const updateRoom = useEditorStore((state) => state.updateRoom);
   const updateWallThickness = useEditorStore((state) => state.updateWallThickness);
+  const setRoomCircuit = useEditorStore((state) => state.setRoomCircuit);
+  const deleteDevice = useEditorStore((state) => state.deleteDevice);
+  const select = useEditorStore((state) => state.select);
 
   const electricalEnabled = isFeatureEnabled("ELECTRICAL_EDITOR");
   const loxoneEnabled = isFeatureEnabled("LOXONE");
@@ -73,9 +87,64 @@ export function EditorInspector() {
           <MousePointer2 className="h-4 w-4" />
         </span>
         <p className="text-sm text-text-secondary">
-          Kein Element ausgewählt. Wählen Sie einen Raum oder eine Wand im
-          Grundriss.
+          Kein Element ausgewählt. Wählen Sie einen Raum, eine Wand oder ein
+          Gerät im Grundriss.
         </p>
+      </aside>
+    );
+  }
+
+  if (selected.type === "device") {
+    const device = devices.find((d) => d.id === selected.id);
+    if (!device) return null;
+    const Icon = DEVICE_ICONS[device.type];
+    const room = device.roomId ? rooms.find((r) => r.id === device.roomId) : undefined;
+    return (
+      <aside className="w-80 shrink-0 overflow-y-auto border-l border-border bg-bg-secondary scrollbar-thin">
+        <div className="flex items-center gap-2 border-b border-border px-5 py-4">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-panel-elevated text-text-secondary">
+            <Icon className="h-4 w-4" />
+          </span>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
+              Gerät
+            </p>
+            <h2 className="text-sm font-semibold text-text">
+              {DEVICE_TYPE_LABELS[device.type]}
+            </h2>
+          </div>
+        </div>
+        <Section title="Gerät">
+          <FieldRow label="Typ">
+            <span className="text-sm text-text">{DEVICE_TYPE_LABELS[device.type]}</span>
+          </FieldRow>
+          <FieldRow label="Montage">
+            <span className="text-sm text-text">
+              {device.mount.kind === "wall" ? "Wand" : "Decke"}
+            </span>
+          </FieldRow>
+          <FieldRow label="Höhe">
+            <span className="tabular-nums-font text-sm text-text">
+              {formatNumber(device.mount.height / 1000, 2)} m
+            </span>
+          </FieldRow>
+          <FieldRow label="Raum">
+            <span className="text-sm text-text">{room?.name ?? "—"}</span>
+          </FieldRow>
+        </Section>
+        <div className="px-5 py-4">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              deleteDevice(device.id);
+              select(null);
+            }}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Gerät löschen
+          </Button>
+        </div>
       </aside>
     );
   }
@@ -125,6 +194,20 @@ export function EditorInspector() {
 
   const room = rooms.find((r) => r.id === selected.id);
   if (!room) return null;
+
+  const roomDevices = devices.filter((d) => d.roomId === room.id);
+  const circuitId = roomCircuits[room.id] ?? null;
+  const circuit = getCircuit(circuitId);
+  const totalWatts = roomDevices.reduce((sum, d) => sum + DEVICE_WATTAGE[d.type], 0);
+
+  const deviceCounts: Record<ElectricalDeviceType, number> = {
+    outlet: 0,
+    light: 0,
+    switch: 0,
+    sensor: 0,
+    network: 0,
+  };
+  for (const device of roomDevices) deviceCounts[device.type] += 1;
 
   return (
     <aside className="w-80 shrink-0 overflow-y-auto border-l border-border bg-bg-secondary scrollbar-thin">
@@ -181,13 +264,40 @@ export function EditorInspector() {
 
       <Section title="Elektrisch">
         <FieldRow label="Stromkreis">
-          <DemoField value="—" />
+          {electricalEnabled ? (
+            <select
+              value={circuitId ?? ""}
+              onChange={(event) =>
+                setRoomCircuit(room.id, event.target.value || null)
+              }
+              className={inputClass}
+            >
+              <option value="">—</option>
+              {MOCK_CIRCUITS.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <DemoField value="—" />
+          )}
         </FieldRow>
         <FieldRow label="FI / RCD">
-          <DemoField value="—" />
+          {electricalEnabled ? (
+            <span className="text-sm text-text">{circuit?.rcd ?? "—"}</span>
+          ) : (
+            <DemoField value="—" />
+          )}
         </FieldRow>
         <FieldRow label="Leistung gesamt">
-          <DemoField value="—" />
+          {electricalEnabled ? (
+            <span className="tabular-nums-font text-sm font-medium text-text">
+              {formatNumber(totalWatts / 1000, 2)} kW
+            </span>
+          ) : (
+            <DemoField value="—" />
+          )}
         </FieldRow>
         {!electricalEnabled && (
           <Badge tone="neutral" className="self-start">
@@ -221,19 +331,19 @@ export function EditorInspector() {
 
       <Section title="Anzahl Elemente">
         <FieldRow label="Steckdosen">
-          <span className="tabular-nums-font text-sm text-text">0</span>
+          <span className="tabular-nums-font text-sm text-text">{deviceCounts.outlet}</span>
         </FieldRow>
         <FieldRow label="Lichtpunkte">
-          <span className="tabular-nums-font text-sm text-text">0</span>
+          <span className="tabular-nums-font text-sm text-text">{deviceCounts.light}</span>
         </FieldRow>
         <FieldRow label="Schalter / Taster">
-          <span className="tabular-nums-font text-sm text-text">0</span>
+          <span className="tabular-nums-font text-sm text-text">{deviceCounts.switch}</span>
         </FieldRow>
         <FieldRow label="Netzwerkdosen">
-          <span className="tabular-nums-font text-sm text-text">0</span>
+          <span className="tabular-nums-font text-sm text-text">{deviceCounts.network}</span>
         </FieldRow>
         <FieldRow label="Sensoren">
-          <span className="tabular-nums-font text-sm text-text">0</span>
+          <span className="tabular-nums-font text-sm text-text">{deviceCounts.sensor}</span>
         </FieldRow>
       </Section>
     </aside>

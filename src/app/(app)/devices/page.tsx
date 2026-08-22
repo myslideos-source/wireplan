@@ -4,8 +4,7 @@ export default function DevicesPage() {
   return (
     <ComingSoon
       title="Geräte"
-      description="Die Übersicht aller platzierten Elektro- und Smart-Home-Geräte je Projekt folgt mit dem Elektroeditor."
-      flag="ELECTRICAL_EDITOR"
+      description="Elektrogeräte werden im Editor platziert. Eine projektübergreifende Übersicht folgt, sobald Projektdaten dauerhaft gespeichert werden (Supabase-Anbindung)."
     />
   );
 }

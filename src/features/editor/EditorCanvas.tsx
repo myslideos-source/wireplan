@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, type MouseEvent as ReactMouseEvent } from "react";
-import { useEditorStore } from "./store";
+import { useMemo, useRef, type MouseEvent as ReactMouseEvent } from "react";
+import type { ElectricalDevice, Wall } from "@/domain";
+import { useEditorStore, type EditorTool } from "./store";
 import {
   wallOrientation,
   pointAtOffset,
@@ -10,17 +11,32 @@ import {
   polygonCentroid,
 } from "./geometry-utils";
 import { formatArea } from "@/lib/utils";
+import { DeviceSymbol } from "./DeviceSymbol";
+
+const PLACEABLE_DEVICE_TOOLS: EditorTool[] = ["outlet", "light", "switch", "sensor", "network"];
+
+function devicePosition(device: ElectricalDevice, walls: Wall[]) {
+  const mount = device.mount;
+  if (mount.kind === "point") return mount.position;
+  const wall = walls.find((w) => w.id === mount.wallId);
+  if (!wall) return null;
+  return pointAtOffset(wall, mount.offset);
+}
 
 export function EditorCanvas() {
   const walls = useEditorStore((state) => state.walls);
   const rooms = useEditorStore((state) => state.rooms);
   const openings = useEditorStore((state) => state.openings);
+  const devices = useEditorStore((state) => state.devices);
   const layers = useEditorStore((state) => state.layers);
   const zoom = useEditorStore((state) => state.zoom);
   const selected = useEditorStore((state) => state.selected);
   const select = useEditorStore((state) => state.select);
   const activeTool = useEditorStore((state) => state.activeTool);
   const focusTarget = useEditorStore((state) => state.focusTarget);
+  const addDeviceAtPoint = useEditorStore((state) => state.addDeviceAtPoint);
+
+  const svgRef = useRef<SVGSVGElement>(null);
 
   const box = useMemo(() => {
     if (focusTarget?.type === "room") {
@@ -47,14 +63,37 @@ export function EditorCanvas() {
   const viewBox = `${centerX - vbWidth / 2} ${centerY - vbHeight / 2} ${vbWidth} ${vbHeight}`;
 
   const canSelect = activeTool === "select";
+  const placingDeviceType = PLACEABLE_DEVICE_TOOLS.includes(activeTool)
+    ? (activeTool as ElectricalDevice["type"])
+    : null;
+
+  function toSvgPoint(event: ReactMouseEvent) {
+    const svg = svgRef.current;
+    if (!svg) return null;
+    const point = svg.createSVGPoint();
+    point.x = event.clientX;
+    point.y = event.clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return null;
+    const transformed = point.matrixTransform(ctm.inverse());
+    return { x: transformed.x, y: transformed.y };
+  }
+
+  function handleBackgroundClick(event: ReactMouseEvent) {
+    if (placingDeviceType) {
+      const point = toSvgPoint(event);
+      if (point) addDeviceAtPoint(placingDeviceType, point);
+      return;
+    }
+    if (canSelect) select(null);
+  }
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-bg-secondary">
-      <svg
-        viewBox={viewBox}
-        className="h-full w-full"
-        onClick={() => canSelect && select(null)}
-      >
+    <div
+      className="relative h-full w-full overflow-hidden bg-bg-secondary"
+      style={{ cursor: placingDeviceType ? "crosshair" : undefined }}
+    >
+      <svg ref={svgRef} viewBox={viewBox} className="h-full w-full" onClick={handleBackgroundClick}>
         <defs>
           <pattern id="editor-grid" width={300} height={300} patternUnits="userSpaceOnUse">
             <path d="M 300 0 L 0 0 0 300" fill="none" stroke="#1a2833" strokeWidth={8} />
@@ -164,6 +203,23 @@ export function EditorCanvas() {
             })}
           </g>
         )}
+
+        {layers.elektro &&
+          devices.map((device) => {
+            const position = devicePosition(device, walls);
+            if (!position) return null;
+            const isSelected = selected?.type === "device" && selected.id === device.id;
+            return (
+              <DeviceSymbol
+                key={device.id}
+                device={device}
+                position={position}
+                selected={isSelected}
+                clickable={canSelect}
+                onSelect={() => select({ type: "device", id: device.id })}
+              />
+            );
+          })}
 
         {layers.beschriftung &&
           rooms.map((room) => {

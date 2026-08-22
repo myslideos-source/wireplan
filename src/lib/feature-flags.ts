@@ -29,7 +29,9 @@ export const featureFlags: Record<FeatureFlag, boolean> = {
   // correction, delete opening) are implemented, so this defaults on —
   // unlike the flags below, which still gate genuinely unbuilt phases.
   AI_REVIEW: isOn(process.env.NEXT_PUBLIC_FEATURE_AI_REVIEW, true),
-  ELECTRICAL_EDITOR: isOn(process.env.NEXT_PUBLIC_FEATURE_ELECTRICAL_EDITOR),
+  // Phase 5 (placing outlets/lights/switches/sensors/network devices,
+  // per-room circuit assignment) is implemented, so this also defaults on.
+  ELECTRICAL_EDITOR: isOn(process.env.NEXT_PUBLIC_FEATURE_ELECTRICAL_EDITOR, true),
   CABLE_ROUTING: isOn(process.env.NEXT_PUBLIC_FEATURE_CABLE_ROUTING),
   LOXONE: isOn(process.env.NEXT_PUBLIC_FEATURE_LOXONE),
   MATERIAL_CALCULATION: isOn(process.env.NEXT_PUBLIC_FEATURE_MATERIAL_CALCULATION),

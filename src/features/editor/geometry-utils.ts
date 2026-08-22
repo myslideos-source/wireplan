@@ -15,6 +15,17 @@ export function pointAtOffset(wall: Wall, offset: number): Point {
   return { x: wall.start.x + ux * offset, y: wall.start.y + uy * offset };
 }
 
+/** Unit vector perpendicular to a wall — used to probe which side (room)
+ * a wall-mounted device faces, independent of exactly where on the wall's
+ * thickness the placing click landed. */
+export function wallNormal(wall: Wall): Point {
+  const length = Math.hypot(wall.end.x - wall.start.x, wall.end.y - wall.start.y);
+  if (length === 0) return { x: 0, y: 0 };
+  const ux = (wall.end.x - wall.start.x) / length;
+  const uy = (wall.end.y - wall.start.y) / length;
+  return { x: -uy, y: ux };
+}
+
 export function boundingBoxOfPoints(points: Point[], paddingMm = 900) {
   const xs = points.map((p) => p.x);
   const ys = points.map((p) => p.y);
@@ -204,4 +215,54 @@ export function wallMatchesSegment(
     (close(wall.start, segment.start) && close(wall.end, segment.end)) ||
     (close(wall.start, segment.end) && close(wall.end, segment.start))
   );
+}
+
+/** Projects `point` onto the closest point of a wall's centerline,
+ * returning the offset along the wall (for wall-mounted device
+ * placement, §66) and the perpendicular distance. */
+export function closestPointOnWall(wall: Wall, point: Point) {
+  const dx = wall.end.x - wall.start.x;
+  const dy = wall.end.y - wall.start.y;
+  const lengthSq = dx * dx + dy * dy;
+  const t =
+    lengthSq === 0
+      ? 0
+      : Math.min(
+          1,
+          Math.max(0, ((point.x - wall.start.x) * dx + (point.y - wall.start.y) * dy) / lengthSq),
+        );
+  const length = Math.sqrt(lengthSq);
+  const offset = t * length;
+  const projected = { x: wall.start.x + dx * t, y: wall.start.y + dy * t };
+  const distance = Math.hypot(point.x - projected.x, point.y - projected.y);
+  return { offset, distance };
+}
+
+/** Finds the wall whose centerline is closest to `point` — used to snap a
+ * newly placed wall-mounted device (outlet, switch, network) to a wall. */
+export function findNearestWall(walls: Wall[], point: Point): Wall | null {
+  let nearest: Wall | null = null;
+  let nearestDistance = Infinity;
+  for (const wall of walls) {
+    const { distance } = closestPointOnWall(wall, point);
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearest = wall;
+    }
+  }
+  return nearest;
+}
+
+/** Standard ray-casting point-in-polygon test. */
+export function isPointInPolygon(point: Point, polygon: Point[]): boolean {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const a = polygon[i];
+    const b = polygon[j];
+    const intersects =
+      a.y > point.y !== b.y > point.y &&
+      point.x < ((b.x - a.x) * (point.y - a.y)) / (b.y - a.y) + a.x;
+    if (intersects) inside = !inside;
+  }
+  return inside;
 }

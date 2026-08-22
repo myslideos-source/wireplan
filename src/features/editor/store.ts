@@ -1,8 +1,8 @@
 "use client";
 
 import { create } from "zustand";
-import type { Wall, Room, Opening } from "@/domain";
-import { polygonAreaSqMeters } from "@/domain";
+import type { Wall, Room, Opening, Point, ElectricalDevice, ElectricalDeviceType } from "@/domain";
+import { polygonAreaSqMeters, DEVICE_MOUNT_KIND, DEVICE_DEFAULT_HEIGHT } from "@/domain";
 import type { FloorGeometry } from "./mock-geometry";
 import type { FlaggedArea, FlaggedAreaTarget } from "@/features/plan-analysis/types";
 import {
@@ -10,6 +10,11 @@ import {
   splitRectangle,
   tryMergeAdjacentRects,
   wallMatchesSegment,
+  findNearestWall,
+  closestPointOnWall,
+  isPointInPolygon,
+  pointAtOffset,
+  wallNormal,
   type SplitDirection,
 } from "./geometry-utils";
 
@@ -30,6 +35,7 @@ export type LayerId = "grundriss" | "elektro" | "kabelwege" | "beschriftung";
 export type Selection =
   | { type: "room"; id: string }
   | { type: "wall"; id: string }
+  | { type: "device"; id: string }
   | null;
 
 let nextGeneratedId = 1;
@@ -48,6 +54,8 @@ interface EditorState {
   walls: Wall[];
   rooms: Room[];
   openings: Opening[];
+  devices: ElectricalDevice[];
+  roomCircuits: Record<string, string | null>;
   hydrate: (geometry: FloorGeometry) => void;
 
   selected: Selection;
@@ -65,6 +73,9 @@ interface EditorState {
   updateRoom: (id: string, patch: Partial<Pick<Room, "name" | "type" | "height">>) => void;
   updateWallThickness: (id: string, thicknessMm: number) => void;
   deleteOpening: (id: string) => void;
+  addDeviceAtPoint: (type: ElectricalDeviceType, point: Point) => boolean;
+  deleteDevice: (id: string) => void;
+  setRoomCircuit: (roomId: string, circuitId: string | null) => void;
   splitRoom: (
     roomId: string,
     direction: SplitDirection,
@@ -92,6 +103,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   walls: [],
   rooms: [],
   openings: [],
+  devices: [],
+  roomCircuits: {},
   hydrate: (geometry) => {
     // Re-hydrate whenever a different floor's geometry is passed in (e.g.
     // navigating from one project's editor to another's without a full
@@ -102,6 +115,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       walls: geometry.walls,
       rooms: geometry.rooms,
       openings: geometry.openings,
+      devices: [],
+      roomCircuits: {},
       selected: null,
     });
   },
@@ -145,6 +160,66 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   deleteOpening: (id) =>
     set((state) => ({
       openings: state.openings.filter((opening) => opening.id !== id),
+    })),
+
+  addDeviceAtPoint: (type, point) => {
+    const state = get();
+    const mountKind = DEVICE_MOUNT_KIND[type];
+    const height = DEVICE_DEFAULT_HEIGHT[type];
+
+    if (mountKind === "wall") {
+      const wall = findNearestWall(state.walls, point);
+      if (!wall) return false;
+      const { offset } = closestPointOnWall(wall, point);
+
+      // A wall-mounted device sits right on the wall's thickness, so the
+      // raw click can land just outside every room polygon (which are
+      // drawn to wall centerlines). Probe both perpendicular sides of the
+      // wall instead of trusting the exact click point.
+      const wallPoint = pointAtOffset(wall, offset);
+      const normal = wallNormal(wall);
+      const probeDistance = 150;
+      const sideA = { x: wallPoint.x + normal.x * probeDistance, y: wallPoint.y + normal.y * probeDistance };
+      const sideB = { x: wallPoint.x - normal.x * probeDistance, y: wallPoint.y - normal.y * probeDistance };
+      const room =
+        state.rooms.find((r) => isPointInPolygon(sideA, r.polygon)) ??
+        state.rooms.find((r) => isPointInPolygon(sideB, r.polygon));
+
+      const device: ElectricalDevice = {
+        id: generateId("device"),
+        floorId: state.floorId ?? "",
+        type,
+        mount: { kind: "wall", wallId: wall.id, offset, height },
+        roomId: room?.id ?? null,
+      };
+      set((s) => ({ devices: [...s.devices, device] }));
+      return true;
+    }
+
+    const room = state.rooms.find((r) => isPointInPolygon(point, r.polygon));
+    if (!room) return false;
+    const device: ElectricalDevice = {
+      id: generateId("device"),
+      floorId: state.floorId ?? "",
+      type,
+      mount: { kind: "point", position: point, height },
+      roomId: room.id,
+    };
+    set((s) => ({ devices: [...s.devices, device] }));
+    return true;
+  },
+
+  deleteDevice: (id) =>
+    set((state) => ({
+      devices: state.devices.filter((device) => device.id !== id),
+      selected: state.selected?.type === "device" && state.selected.id === id
+        ? null
+        : state.selected,
+    })),
+
+  setRoomCircuit: (roomId, circuitId) =>
+    set((state) => ({
+      roomCircuits: { ...state.roomCircuits, [roomId]: circuitId },
     })),
 
   splitRoom: (roomId, direction, ratio, nameA, nameB) => {
@@ -213,6 +288,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       openings: removedWall
         ? current.openings.filter((opening) => opening.wallId !== removedWall.id)
         : current.openings,
+      devices: removedWall
+        ? current.devices.filter(
+            (device) => !(device.mount.kind === "wall" && device.mount.wallId === removedWall.id),
+          )
+        : current.devices,
       selected: null,
     }));
     return true;
