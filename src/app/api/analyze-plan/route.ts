@@ -7,6 +7,11 @@ import type {
 import type { AiGeometryDraft } from "@/features/plan-analysis/ai-geometry";
 
 export const runtime = "nodejs";
+// The geometry draft makes the response noticeably larger to generate than
+// a plain count — this can take longer than Vercel's default function
+// timeout (10s on Hobby). 60s is the maximum allowed on Hobby; upgrade this
+// if the project moves to Pro and still needs more headroom.
+export const maxDuration = 60;
 
 const MODEL = "gemini-3.6-flash";
 const MAX_FILE_BYTES = 8 * 1024 * 1024;

@@ -52,12 +52,15 @@ function UploadPlanDialogContent({
 
     setAnalyzing(true);
     setError(null);
+    const timeoutController = new AbortController();
+    const timeout = setTimeout(() => timeoutController.abort(), 65_000);
     try {
       const formData = new FormData();
       formData.append("file", target.file);
       const response = await fetch("/api/analyze-plan", {
         method: "POST",
         body: formData,
+        signal: timeoutController.signal,
       });
       const body = await response.json();
       if (!response.ok) {
@@ -78,8 +81,15 @@ function UploadPlanDialogContent({
       onClose();
       router.push("/analysis/real");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Analyse fehlgeschlagen.");
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setError(
+          "Die Analyse hat zu lange gedauert und wurde abgebrochen. Versuchen Sie es erneut, idealerweise mit einer kleineren Datei.",
+        );
+      } else {
+        setError(err instanceof Error ? err.message : "Analyse fehlgeschlagen.");
+      }
     } finally {
+      clearTimeout(timeout);
       setAnalyzing(false);
     }
   }
@@ -155,9 +165,10 @@ function UploadPlanDialogContent({
         <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-secondary" />
         <span>
           Nach dem Hochladen wertet eine echte KI (Google Gemini) Ihren
-          Grundriss aus — Räume, Wände, Türen und Fenster werden gezählt.
-          Eine bearbeitbare digitale Geometrie entsteht dabei noch nicht;
-          nutzen Sie dafür den Editor.
+          Grundriss aus und schätzt zusätzlich einen groben Geometrie-Entwurf
+          (Räume, Wände, Türen, Fenster), den Sie danach im Editor prüfen und
+          korrigieren können. Bei größeren Plänen kann das bis zu einer
+          Minute dauern.
         </span>
       </div>
 
