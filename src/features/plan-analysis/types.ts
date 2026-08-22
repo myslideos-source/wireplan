@@ -40,6 +40,34 @@ export interface FloorAnalysisResult {
   estimatedReviewMinutes: number;
 }
 
+/**
+ * Result of a real vision-model pass over a user-uploaded plan (Gemini,
+ * `/api/analyze-plan`). Deliberately a different, smaller shape than
+ * FloorAnalysisResult: a single vision call gives honest counts and a
+ * self-reported confidence, but it cannot produce a reviewable digital
+ * geometry twin, so flagged areas here carry no room/wall/opening target.
+ */
+export interface RealAnalysisObservation {
+  title: string;
+  description: string;
+  severity: FlaggedSeverity;
+}
+
+export interface RealAnalysisResult {
+  fileName: string;
+  model: string;
+  analyzedAt: string;
+  roomsDetected: number;
+  wallsCount: number;
+  doorsCount: number;
+  windowsCount: number;
+  stairsCount: number;
+  overallConfidence: number;
+  elementConfidence: ElementTypeConfidence[];
+  observations: RealAnalysisObservation[];
+  summary: string;
+}
+
 export function confidenceTone(
   confidence: number,
 ): "success" | "warning" | "error" {
