@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isFeatureEnabled, type FeatureFlag } from "@/lib/feature-flags";
+import { LOXONE_CATALOG, SMART_HOME_CATEGORY_LABELS } from "@/domain";
 import { useEditorStore, type EditorTool, type LayerId } from "./store";
 
 interface ToolDef {
@@ -63,6 +64,11 @@ export function EditorToolbar() {
   const layers = useEditorStore((state) => state.layers);
   const toggleLayer = useEditorStore((state) => state.toggleLayer);
   const technikraumRoomId = useEditorStore((state) => state.technikraumRoomId);
+  const smartHomePlacementModelId = useEditorStore((state) => state.smartHomePlacementModelId);
+  const setSmartHomePlacementModelId = useEditorStore(
+    (state) => state.setSmartHomePlacementModelId,
+  );
+  const loxoneEnabled = isFeatureEnabled("LOXONE");
 
   return (
     <aside className="flex w-56 shrink-0 flex-col gap-6 overflow-y-auto border-r border-border bg-bg-secondary p-3 scrollbar-thin">
@@ -78,28 +84,42 @@ export function EditorToolbar() {
             const Icon = tool.icon;
             const disabled = !enabled;
             return (
-              <button
-                key={tool.id}
-                type="button"
-                disabled={disabled}
-                title={
-                  !flagEnabled
-                    ? `${tool.note ?? "Folgt in einer späteren Phase"} — Demnächst`
-                    : missingTechnikraum
-                      ? tool.note
-                      : undefined
-                }
-                onClick={() => setTool(tool.id)}
-                className={cn(
-                  "flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40",
-                  activeTool === tool.id && enabled
-                    ? "bg-primary/10 text-primary"
-                    : "text-text-secondary hover:bg-panel-elevated hover:text-text disabled:hover:bg-transparent",
+              <div key={tool.id} className="flex flex-col gap-1">
+                <button
+                  type="button"
+                  disabled={disabled}
+                  title={
+                    !flagEnabled
+                      ? `${tool.note ?? "Folgt in einer späteren Phase"} — Demnächst`
+                      : missingTechnikraum
+                        ? tool.note
+                        : undefined
+                  }
+                  onClick={() => setTool(tool.id)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40",
+                    activeTool === tool.id && enabled
+                      ? "bg-primary/10 text-primary"
+                      : "text-text-secondary hover:bg-panel-elevated hover:text-text disabled:hover:bg-transparent",
+                  )}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  {tool.label}
+                </button>
+                {tool.id === "smarthome" && loxoneEnabled && activeTool === "smarthome" && (
+                  <select
+                    value={smartHomePlacementModelId}
+                    onChange={(event) => setSmartHomePlacementModelId(event.target.value)}
+                    className="mx-1 rounded-[var(--radius-sm)] border border-border bg-bg px-2 py-1.5 text-xs text-text outline-none focus:border-primary/60"
+                  >
+                    {LOXONE_CATALOG.map((model) => (
+                      <option key={model.id} value={model.id}>
+                        {SMART_HOME_CATEGORY_LABELS[model.category]} · {model.label}
+                      </option>
+                    ))}
+                  </select>
                 )}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                {tool.label}
-              </button>
+              </div>
             );
           })}
         </div>

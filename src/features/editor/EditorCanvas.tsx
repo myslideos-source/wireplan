@@ -30,6 +30,8 @@ export function EditorCanvas() {
   const addDeviceAtPoint = useEditorStore((state) => state.addDeviceAtPoint);
   const distributionBoard = useEditorStore((state) => state.distributionBoard);
   const placeDistributionBoard = useEditorStore((state) => state.placeDistributionBoard);
+  const smartHomeDevices = useEditorStore((state) => state.smartHomeDevices);
+  const addSmartHomeDeviceAtPoint = useEditorStore((state) => state.addSmartHomeDeviceAtPoint);
 
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -62,6 +64,7 @@ export function EditorCanvas() {
     ? (activeTool as ElectricalDevice["type"])
     : null;
   const placingBoard = activeTool === "board";
+  const placingSmartHome = activeTool === "smarthome";
 
   function toSvgPoint(event: ReactMouseEvent) {
     const svg = svgRef.current;
@@ -86,13 +89,21 @@ export function EditorCanvas() {
       if (point) placeDistributionBoard(point);
       return;
     }
+    if (placingSmartHome) {
+      const point = toSvgPoint(event);
+      if (point) addSmartHomeDeviceAtPoint(point);
+      return;
+    }
     if (canSelect) select(null);
   }
 
   return (
     <div
       className="relative h-full w-full overflow-hidden bg-bg-secondary"
-      style={{ cursor: placingDeviceType || placingBoard ? "crosshair" : undefined }}
+      style={{
+        cursor:
+          placingDeviceType || placingBoard || placingSmartHome ? "crosshair" : undefined,
+      }}
     >
       <svg ref={svgRef} viewBox={viewBox} className="h-full w-full" onClick={handleBackgroundClick}>
         <defs>
@@ -258,6 +269,32 @@ export function EditorCanvas() {
                 clickable={canSelect}
                 onSelect={() => select({ type: "device", id: device.id })}
               />
+            );
+          })}
+
+        {layers.elektro &&
+          smartHomeDevices.map((device) => {
+            const isSelected = selected?.type === "smarthome" && selected.id === device.id;
+            return (
+              <g
+                key={device.id}
+                className={canSelect ? "cursor-pointer" : undefined}
+                onClick={(event) => {
+                  if (!canSelect) return;
+                  event.stopPropagation();
+                  select({ type: "smarthome", id: device.id });
+                }}
+              >
+                <circle
+                  cx={device.position.x}
+                  cy={device.position.y}
+                  r={160}
+                  fill="rgba(37,183,242,0.18)"
+                  stroke={isSelected ? "#16d8c4" : "#25b7f2"}
+                  strokeWidth={isSelected ? 36 : 24}
+                />
+                <circle cx={device.position.x} cy={device.position.y} r={50} fill="#25b7f2" />
+              </g>
             );
           })}
 

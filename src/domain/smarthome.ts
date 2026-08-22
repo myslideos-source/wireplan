@@ -1,3 +1,4 @@
+import type { Point } from "./geometry";
 import type { ElectricalDeviceType } from "./electrical";
 
 /**
@@ -11,10 +12,18 @@ export interface SmartHomeSystem {
   name: string;
 }
 
+/** A standalone smart-home device placed directly on the plan — not tied
+ * to one of the five electrical device categories (e.g. a Weather Station
+ * mounted outside, or a Room Comfort Sensor floating in a room with no
+ * outlet/light of its own). Point-mounted like a ceiling device (§66);
+ * the user picks any catalog model freely, not narrowed by category. */
 export interface SmartHomeDevice {
   id: string;
-  manufacturerId: string;
+  floorId: string;
   systemId: string;
+  modelId: string;
+  position: Point;
+  roomId: string | null;
 }
 
 export const LOXONE_SYSTEM: SmartHomeSystem = {
@@ -166,4 +175,14 @@ export const DEVICE_TYPE_SMART_HOME_CATEGORIES: Partial<
 
 export const DISTRIBUTION_BOARD_SMART_HOME_CATEGORIES: SmartHomeDeviceCategory[] = [
   "controller",
+];
+
+/** Every category — used by the standalone Smart-Home placement tool,
+ * where the user picks freely from the whole catalog. */
+export const ALL_SMART_HOME_CATEGORIES: SmartHomeDeviceCategory[] = [
+  "controller",
+  "actuator",
+  "input",
+  "sensor",
+  "climate",
 ];

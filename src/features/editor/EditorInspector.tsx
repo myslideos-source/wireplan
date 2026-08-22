@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { MousePointer2, Plug, Lightbulb, ToggleLeft, Radar, Wifi, Trash2, Server, type LucideIcon } from "lucide-react";
+import { MousePointer2, Plug, Lightbulb, ToggleLeft, Radar, Wifi, Trash2, Server, Home, type LucideIcon } from "lucide-react";
 import { Badge, Button } from "@/components/ui";
 import {
   wallLengthMeters,
@@ -12,6 +12,7 @@ import {
   LOXONE_SYSTEM,
   DEVICE_TYPE_SMART_HOME_CATEGORIES,
   DISTRIBUTION_BOARD_SMART_HOME_CATEGORIES,
+  ALL_SMART_HOME_CATEGORIES,
   type ElectricalDeviceType,
 } from "@/domain";
 import { isFeatureEnabled } from "@/lib/feature-flags";
@@ -135,6 +136,9 @@ export function EditorInspector() {
   const deleteDistributionBoard = useEditorStore((state) => state.deleteDistributionBoard);
   const assignDeviceSmartHomeModel = useEditorStore((state) => state.assignDeviceSmartHomeModel);
   const assignBoardSmartHomeModel = useEditorStore((state) => state.assignBoardSmartHomeModel);
+  const smartHomeDevices = useEditorStore((state) => state.smartHomeDevices);
+  const deleteSmartHomeDevice = useEditorStore((state) => state.deleteSmartHomeDevice);
+  const setSmartHomeDeviceModel = useEditorStore((state) => state.setSmartHomeDeviceModel);
 
   const electricalEnabled = isFeatureEnabled("ELECTRICAL_EDITOR");
 
@@ -271,6 +275,58 @@ export function EditorInspector() {
           >
             <Trash2 className="h-3.5 w-3.5" />
             Schaltschrank entfernen
+          </Button>
+        </div>
+      </aside>
+    );
+  }
+
+  if (selected.type === "smarthome") {
+    const device = smartHomeDevices.find((d) => d.id === selected.id);
+    if (!device) return null;
+    const room = device.roomId ? rooms.find((r) => r.id === device.roomId) : undefined;
+    const model = findSmartHomeModel(device.modelId);
+    return (
+      <aside className="w-80 shrink-0 overflow-y-auto border-l border-border bg-bg-secondary scrollbar-thin">
+        <div className="flex items-center gap-2 border-b border-border px-5 py-4">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary/10 text-secondary">
+            <Home className="h-4 w-4" />
+          </span>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
+              Smart-Home-Gerät
+            </p>
+            <h2 className="text-sm font-semibold text-text">{model?.label ?? device.modelId}</h2>
+          </div>
+        </div>
+        <Section title="Smart Home (Loxone)">
+          <FieldRow label="Loxone-Gerät">
+            <SmartHomeModelSelect
+              categories={ALL_SMART_HOME_CATEGORIES}
+              value={device.modelId}
+              onChange={(modelId) => modelId && setSmartHomeDeviceModel(device.id, modelId)}
+            />
+          </FieldRow>
+          {model && (
+            <FieldRow label="Beschreibung" as="div">
+              <span className="text-right text-xs text-text-secondary">{model.description}</span>
+            </FieldRow>
+          )}
+          <FieldRow label="Raum">
+            <span className="text-sm text-text">{room?.name ?? "— (außerhalb eines Raums)"}</span>
+          </FieldRow>
+        </Section>
+        <div className="px-5 py-4">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              deleteSmartHomeDevice(device.id);
+              select(null);
+            }}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Gerät löschen
           </Button>
         </div>
       </aside>

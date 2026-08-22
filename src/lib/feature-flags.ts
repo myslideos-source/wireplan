@@ -36,7 +36,9 @@ export const featureFlags: Record<FeatureFlag, boolean> = {
   // per-room circuit assignment) is implemented, so this also defaults on.
   ELECTRICAL_EDITOR: isOn(process.env.NEXT_PUBLIC_FEATURE_ELECTRICAL_EDITOR, true),
   CABLE_ROUTING: isOn(process.env.NEXT_PUBLIC_FEATURE_CABLE_ROUTING),
-  LOXONE: isOn(process.env.NEXT_PUBLIC_FEATURE_LOXONE),
+  // Phase 8 (Loxone hardware catalog: assigning devices/board to real
+  // Tree/Air models, plus standalone placement) is implemented.
+  LOXONE: isOn(process.env.NEXT_PUBLIC_FEATURE_LOXONE, true),
   MATERIAL_CALCULATION: isOn(process.env.NEXT_PUBLIC_FEATURE_MATERIAL_CALCULATION),
   PDF_EXPORT: isOn(process.env.NEXT_PUBLIC_FEATURE_PDF_EXPORT),
   CONSTRUCTION_MODE: isOn(process.env.NEXT_PUBLIC_FEATURE_CONSTRUCTION_MODE),

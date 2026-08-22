@@ -18,6 +18,7 @@ type Tab = "kabelliste" | "materialliste" | "loxone";
 export function RoutingWorkspace({ project }: { project: Project }) {
   const devices = useEditorStore((state) => state.devices);
   const distributionBoard = useEditorStore((state) => state.distributionBoard);
+  const smartHomeDevices = useEditorStore((state) => state.smartHomeDevices);
   const cables = useEditorStore((state) => state.cables);
   const roomCircuits = useEditorStore((state) => state.roomCircuits);
   const routingMode = useEditorStore((state) => state.routingMode);
@@ -134,7 +135,11 @@ export function RoutingWorkspace({ project }: { project: Project }) {
           {tab === "materialliste" && <MaterialListTab cables={cables} />}
 
           {tab === "loxone" && (
-            <LoxoneListTab devices={devices} distributionBoard={distributionBoard} />
+            <LoxoneListTab
+              devices={devices}
+              distributionBoard={distributionBoard}
+              smartHomeDevices={smartHomeDevices}
+            />
           )}
         </div>
       </div>

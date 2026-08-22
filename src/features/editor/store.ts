@@ -11,8 +11,15 @@ import type {
   DistributionBoard,
   Cable,
   RoutingMode,
+  SmartHomeDevice,
 } from "@/domain";
-import { polygonAreaSqMeters, DEVICE_MOUNT_KIND, DEVICE_DEFAULT_HEIGHT } from "@/domain";
+import {
+  polygonAreaSqMeters,
+  DEVICE_MOUNT_KIND,
+  DEVICE_DEFAULT_HEIGHT,
+  LOXONE_SYSTEM,
+  LOXONE_CATALOG,
+} from "@/domain";
 import type { FloorGeometry } from "./mock-geometry";
 import type { FlaggedArea, FlaggedAreaTarget } from "@/features/plan-analysis/types";
 import { computeCables } from "@/features/routing/compute-cables";
@@ -50,6 +57,7 @@ export type Selection =
   | { type: "wall"; id: string }
   | { type: "device"; id: string }
   | { type: "board" }
+  | { type: "smarthome"; id: string }
   | null;
 
 export const DISTRIBUTION_BOARD_ID = "distribution-board";
@@ -76,6 +84,8 @@ interface EditorState {
   distributionBoard: DistributionBoard | null;
   cables: Cable[];
   routingMode: RoutingMode;
+  smartHomeDevices: SmartHomeDevice[];
+  smartHomePlacementModelId: string;
   hydrate: (geometry: FloorGeometry) => void;
 
   selected: Selection;
@@ -97,6 +107,10 @@ interface EditorState {
   deleteDevice: (id: string) => void;
   assignDeviceSmartHomeModel: (deviceId: string, modelId: string | null) => void;
   assignBoardSmartHomeModel: (modelId: string | null) => void;
+  setSmartHomePlacementModelId: (modelId: string) => void;
+  addSmartHomeDeviceAtPoint: (point: Point) => boolean;
+  deleteSmartHomeDevice: (id: string) => void;
+  setSmartHomeDeviceModel: (deviceId: string, modelId: string) => void;
   setRoomCircuit: (roomId: string, circuitId: string | null) => void;
   setTechnikraum: (roomId: string) => void;
   placeDistributionBoard: (point: Point) => boolean;
@@ -136,6 +150,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   distributionBoard: null,
   cables: [],
   routingMode: "Decke",
+  smartHomeDevices: [],
+  smartHomePlacementModelId: LOXONE_CATALOG[0].id,
   hydrate: (geometry) => {
     // Re-hydrate whenever a different floor's geometry is passed in (e.g.
     // navigating from one project's editor to another's without a full
@@ -151,6 +167,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       technikraumRoomId: null,
       distributionBoard: null,
       cables: [],
+      smartHomeDevices: [],
       selected: null,
     });
   },
@@ -276,6 +293,38 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           }
         : {},
     ),
+
+  setSmartHomePlacementModelId: (modelId) => set({ smartHomePlacementModelId: modelId }),
+
+  addSmartHomeDeviceAtPoint: (point) => {
+    const state = get();
+    const room = state.rooms.find((r) => isPointInPolygon(point, r.polygon));
+    const device: SmartHomeDevice = {
+      id: generateId("smarthome"),
+      floorId: state.floorId ?? "",
+      systemId: LOXONE_SYSTEM.id,
+      modelId: state.smartHomePlacementModelId,
+      position: point,
+      roomId: room?.id ?? null,
+    };
+    set((s) => ({ smartHomeDevices: [...s.smartHomeDevices, device] }));
+    return true;
+  },
+
+  deleteSmartHomeDevice: (id) =>
+    set((state) => ({
+      smartHomeDevices: state.smartHomeDevices.filter((device) => device.id !== id),
+      selected: state.selected?.type === "smarthome" && state.selected.id === id
+        ? null
+        : state.selected,
+    })),
+
+  setSmartHomeDeviceModel: (deviceId, modelId) =>
+    set((state) => ({
+      smartHomeDevices: state.smartHomeDevices.map((device) =>
+        device.id === deviceId ? { ...device, modelId } : device,
+      ),
+    })),
 
   setTechnikraum: (roomId) => set({ technikraumRoomId: roomId }),
 
