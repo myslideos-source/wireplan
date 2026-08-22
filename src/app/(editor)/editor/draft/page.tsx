@@ -31,7 +31,7 @@ export default function AiDraftEditorPage() {
   return (
     <EditorWorkspace
       project={draft.project}
-      geometry={draft.geometry}
+      geometries={[draft.geometry]}
       reviewAreas={draft.flaggedAreas}
     />
   );

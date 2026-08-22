@@ -1,6 +1,6 @@
 import { Cable } from "lucide-react";
 import { getProjects, getProject } from "@/lib/mock-data";
-import { getGeometryForProject } from "@/features/editor/mock-geometry";
+import { getGeometriesForProject } from "@/features/editor/mock-geometry";
 import { EntityProjectPicker } from "@/components/shell/EntityProjectPicker";
 import { RoutingGate } from "@/features/routing/RoutingGate";
 
@@ -17,7 +17,7 @@ export default async function RoutingPage({
     const availability = await Promise.all(
       projects.map(async (p) => ({
         id: p.id,
-        available: Boolean(await getGeometryForProject(p.id)),
+        available: Boolean(await getGeometriesForProject(p.id)),
       })),
     );
     return (
@@ -36,8 +36,8 @@ export default async function RoutingPage({
     );
   }
 
-  const geometry = await getGeometryForProject(project.id);
-  if (!geometry) {
+  const geometries = await getGeometriesForProject(project.id);
+  if (!geometries) {
     return (
       <EntityProjectPicker
         title="Kabelrouting"
@@ -52,5 +52,10 @@ export default async function RoutingPage({
     );
   }
 
-  return <RoutingGate project={project} expectedFloorId={geometry.floor.id} />;
+  return (
+    <RoutingGate
+      project={project}
+      expectedFloorIds={geometries.map((g) => g.floor.id)}
+    />
+  );
 }

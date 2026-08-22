@@ -73,8 +73,39 @@ function selectionFromTarget(target: FlaggedAreaTarget | undefined): Selection {
   return null;
 }
 
+/** Everything that's per-floor and independently editable — each floor
+ * has its own geometry, devices, Technikraum/Schaltschrank, and cables,
+ * so switching floors swaps this whole slice rather than resetting it. */
+interface FloorMutableSlice {
+  walls: Wall[];
+  rooms: Room[];
+  openings: Opening[];
+  devices: ElectricalDevice[];
+  roomCircuits: Record<string, string | null>;
+  technikraumRoomId: string | null;
+  distributionBoard: DistributionBoard | null;
+  cables: Cable[];
+  smartHomeDevices: SmartHomeDevice[];
+}
+
+function freshSliceFromGeometry(geometry: FloorGeometry): FloorMutableSlice {
+  return {
+    walls: geometry.walls,
+    rooms: geometry.rooms,
+    openings: geometry.openings,
+    devices: [],
+    roomCircuits: {},
+    technikraumRoomId: null,
+    distributionBoard: null,
+    cables: [],
+    smartHomeDevices: [],
+  };
+}
+
 interface EditorState {
   floorId: string | null;
+  floors: FloorGeometry[];
+  floorCache: Record<string, FloorMutableSlice>;
   walls: Wall[];
   rooms: Room[];
   openings: Opening[];
@@ -86,7 +117,8 @@ interface EditorState {
   routingMode: RoutingMode;
   smartHomeDevices: SmartHomeDevice[];
   smartHomePlacementModelId: string;
-  hydrate: (geometry: FloorGeometry) => void;
+  hydrate: (geometries: FloorGeometry[]) => void;
+  switchFloor: (floorId: string) => void;
 
   selected: Selection;
   select: (selection: Selection) => void;
@@ -141,6 +173,8 @@ interface EditorState {
 
 export const useEditorStore = create<EditorState>((set, get) => ({
   floorId: null,
+  floors: [],
+  floorCache: {},
   walls: [],
   rooms: [],
   openings: [],
@@ -152,23 +186,51 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   routingMode: "Decke",
   smartHomeDevices: [],
   smartHomePlacementModelId: LOXONE_CATALOG[0].id,
-  hydrate: (geometry) => {
-    // Re-hydrate whenever a different floor's geometry is passed in (e.g.
+  hydrate: (geometries) => {
+    // Re-hydrate whenever a different project's floors are passed in (e.g.
     // navigating from one project's editor to another's without a full
     // page reload) but skip redundant resets of in-progress edits.
-    if (get().floorId === geometry.floor.id) return;
+    const first = geometries[0];
+    if (!first) return;
+    if (get().floors[0]?.floor.projectId === first.floor.projectId) return;
     set({
-      floorId: geometry.floor.id,
-      walls: geometry.walls,
-      rooms: geometry.rooms,
-      openings: geometry.openings,
-      devices: [],
-      roomCircuits: {},
-      technikraumRoomId: null,
-      distributionBoard: null,
-      cables: [],
-      smartHomeDevices: [],
+      floors: geometries,
+      floorCache: {},
+      floorId: first.floor.id,
+      ...freshSliceFromGeometry(first),
       selected: null,
+    });
+  },
+
+  switchFloor: (floorId) => {
+    const state = get();
+    if (state.floorId === floorId) return;
+    const currentFloorId = state.floorId;
+    const currentSlice: FloorMutableSlice = {
+      walls: state.walls,
+      rooms: state.rooms,
+      openings: state.openings,
+      devices: state.devices,
+      roomCircuits: state.roomCircuits,
+      technikraumRoomId: state.technikraumRoomId,
+      distributionBoard: state.distributionBoard,
+      cables: state.cables,
+      smartHomeDevices: state.smartHomeDevices,
+    };
+    const newCache = currentFloorId
+      ? { ...state.floorCache, [currentFloorId]: currentSlice }
+      : state.floorCache;
+
+    const target = state.floors.find((f) => f.floor.id === floorId);
+    if (!target) return;
+    const slice = newCache[floorId] ?? freshSliceFromGeometry(target);
+
+    set({
+      floorCache: newCache,
+      floorId,
+      ...slice,
+      selected: null,
+      activeTool: "select",
     });
   },
 

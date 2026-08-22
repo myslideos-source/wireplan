@@ -24,6 +24,9 @@ export function RoutingWorkspace({ project }: { project: Project }) {
   const routingMode = useEditorStore((state) => state.routingMode);
   const setRoutingMode = useEditorStore((state) => state.setRoutingMode);
   const calculateRouting = useEditorStore((state) => state.calculateRouting);
+  const floors = useEditorStore((state) => state.floors);
+  const floorId = useEditorStore((state) => state.floorId);
+  const switchFloor = useEditorStore((state) => state.switchFloor);
 
   const [tab, setTab] = useState<Tab>("kabelliste");
   const [selectedCableId, setSelectedCableId] = useState<string | null>(null);
@@ -44,6 +47,21 @@ export function RoutingWorkspace({ project }: { project: Project }) {
           <h1 className="text-2xl font-semibold text-text">Kabelrouting</h1>
         </div>
         <div className="flex items-center gap-2">
+          {floors.length > 1 && (
+            <select
+              value={floorId ?? ""}
+              onChange={(event) => switchFloor(event.target.value)}
+              className="rounded-[var(--radius-sm)] border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-primary/60"
+            >
+              {[...floors]
+                .sort((a, b) => a.floor.level - b.floor.level)
+                .map((f) => (
+                  <option key={f.floor.id} value={f.floor.id}>
+                    {f.floor.name}
+                  </option>
+                ))}
+            </select>
+          )}
           <select
             value={routingMode}
             onChange={(event) => setRoutingMode(event.target.value as RoutingMode)}

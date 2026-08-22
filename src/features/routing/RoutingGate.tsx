@@ -7,14 +7,14 @@ import { RoutingNotReady } from "./RoutingNotReady";
 
 export function RoutingGate({
   project,
-  expectedFloorId,
+  expectedFloorIds,
 }: {
   project: Project;
-  expectedFloorId: string;
+  expectedFloorIds: string[];
 }) {
   const floorId = useEditorStore((state) => state.floorId);
 
-  if (floorId !== expectedFloorId) {
+  if (!floorId || !expectedFloorIds.includes(floorId)) {
     return <RoutingNotReady project={project} />;
   }
 
