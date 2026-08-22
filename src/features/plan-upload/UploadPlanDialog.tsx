@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { UploadCloud, FileText, X, Sparkles, Loader2 } from "lucide-react";
 import { Button, Modal, Badge } from "@/components/ui";
 import { useRealAnalysisStore } from "@/features/plan-analysis/real-analysis-store";
+import { useAiDraftStore } from "@/features/plan-analysis/ai-draft-store";
+import { buildGeometryFromAiDraft, type AiGeometryDraft } from "@/features/plan-analysis/ai-geometry";
 import type { RealAnalysisResult } from "@/features/plan-analysis/types";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +27,7 @@ function UploadPlanDialogContent({
 }) {
   const router = useRouter();
   const setResult = useRealAnalysisStore((state) => state.setResult);
+  const setDraft = useAiDraftStore((state) => state.setDraft);
   const [files, setFiles] = React.useState<StagedFile[]>([]);
   const [dragActive, setDragActive] = React.useState(false);
   const [analyzing, setAnalyzing] = React.useState(false);
@@ -61,6 +64,17 @@ function UploadPlanDialogContent({
         throw new Error(body.error ?? "Analyse fehlgeschlagen.");
       }
       setResult(body as RealAnalysisResult);
+
+      const geometryDraft = body.geometryDraft as AiGeometryDraft | undefined;
+      if (geometryDraft?.rooms?.length) {
+        const { project, geometry, flaggedAreas } = buildGeometryFromAiDraft(
+          geometryDraft,
+          (body as RealAnalysisResult).observations,
+          target.file.name,
+        );
+        setDraft({ project, geometry, flaggedAreas });
+      }
+
       onClose();
       router.push("/analysis/real");
     } catch (err) {
