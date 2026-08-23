@@ -50,6 +50,7 @@ import {
   roomWalls,
   wallsBoundingBox,
   computeSpotArrayPositions,
+  polygonCentroid,
   type SplitDirection,
   type SpotArrangement,
 } from "./geometry-utils";
@@ -304,6 +305,46 @@ function getMultiSelectPosition(
   return device?.mount.kind === "point" ? device.mount.position : null;
 }
 
+const SNAP_GRID_MM = 50;
+const SNAP_MAGNET_THRESHOLD_MM = 180;
+
+/** §51 — snapping while placing/dragging a point-mounted item. Magnetism
+ * (to another device or a room's center) wins over the grid when the
+ * point is close enough to one; otherwise the point snaps to the nearest
+ * grid intersection. Wall-mounted devices/openings already snap to their
+ * wall via closestPointOnWall — a separate, already-correct behavior
+ * this doesn't touch. */
+function applySnap(
+  state: Pick<EditorState, "snapEnabled" | "devices" | "smartHomeDevices" | "fixedConsumers" | "rooms">,
+  point: Point,
+): Point {
+  if (!state.snapEnabled) return point;
+
+  const candidates: Point[] = [];
+  for (const device of state.devices) {
+    if (device.mount.kind === "point") candidates.push(device.mount.position);
+  }
+  for (const device of state.smartHomeDevices) candidates.push(device.position);
+  for (const consumer of state.fixedConsumers) candidates.push(consumer.position);
+  for (const room of state.rooms) candidates.push(polygonCentroid(room.polygon));
+
+  let nearest: Point | null = null;
+  let nearestDistance = SNAP_MAGNET_THRESHOLD_MM;
+  for (const candidate of candidates) {
+    const distance = Math.hypot(candidate.x - point.x, candidate.y - point.y);
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearest = candidate;
+    }
+  }
+  if (nearest) return nearest;
+
+  return {
+    x: Math.round(point.x / SNAP_GRID_MM) * SNAP_GRID_MM,
+    y: Math.round(point.y / SNAP_GRID_MM) * SNAP_GRID_MM,
+  };
+}
+
 function moveMultiSelectItem(get: () => EditorState, item: MultiSelectItem, point: Point) {
   if (item.type === "device") get().moveDeviceToPoint(item.id, point);
   else if (item.type === "smarthome") get().moveSmartHomeDeviceToPoint(item.id, point);
@@ -413,6 +454,10 @@ interface EditorState {
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
 
+  // §51 — snap to grid / wall / room-center / other devices.
+  snapEnabled: boolean;
+  toggleSnap: () => void;
+
   zoom: number;
   setZoom: (updater: number | ((zoom: number) => number)) => void;
 
@@ -518,8 +563,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setFixedConsumerPlacementType: (type) => set({ fixedConsumerPlacementType: type }),
   setFixedConsumerCustomLabel: (label) => set({ fixedConsumerCustomLabel: label }),
 
-  addFixedConsumerAtPoint: (point) => {
+  addFixedConsumerAtPoint: (rawPoint) => {
     const state = get();
+    const point = applySnap(state, rawPoint);
     const room = state.rooms.find((r) => isPointInPolygon(point, r.polygon));
     const type = state.fixedConsumerPlacementType;
     const consumer: FixedConsumer = {
@@ -536,8 +582,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     return true;
   },
 
-  moveFixedConsumerToPoint: (id, point) => {
+  moveFixedConsumerToPoint: (id, rawPoint) => {
     const state = get();
+    const point = applySnap(state, rawPoint);
     const room = state.rooms.find((r) => isPointInPolygon(point, r.polygon));
     set((s) => ({
       fixedConsumers: s.fixedConsumers.map((c) =>
@@ -849,6 +896,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   viewMode: "alle",
   setViewMode: (mode) => set({ viewMode: mode }),
 
+  snapEnabled: true,
+  toggleSnap: () => set((state) => ({ snapEnabled: !state.snapEnabled })),
+
   zoom: 1,
   setZoom: (updater) =>
     set((state) => ({
@@ -916,11 +966,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       openings: state.openings.map((o) => (o.id === id ? { ...o, width } : o)),
     })),
 
-  addDeviceAtPoint: (type, point) => {
+  addDeviceAtPoint: (type, rawPoint) => {
     const state = get();
     const mountKind = DEVICE_MOUNT_KIND[type];
     const height = DEVICE_DEFAULT_HEIGHT[type];
     const number = nextNumberForPrefix(state, numberingPrefixFor({ type }));
+    const point = mountKind === "point" ? applySnap(state, rawPoint) : rawPoint;
 
     if (mountKind === "wall") {
       const wall = findNearestWall(state.walls, point);
@@ -966,10 +1017,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     return true;
   },
 
-  moveDeviceToPoint: (deviceId, point) => {
+  moveDeviceToPoint: (deviceId, rawPoint) => {
     const state = get();
     const device = state.devices.find((d) => d.id === deviceId);
     if (!device) return;
+    const point = device.mount.kind === "point" ? applySnap(state, rawPoint) : rawPoint;
 
     if (device.mount.kind === "wall") {
       const wall = findNearestWall(state.walls, point);
@@ -1059,8 +1111,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   setSmartHomePlacementModelId: (modelId) => set({ smartHomePlacementModelId: modelId }),
 
-  addSmartHomeDeviceAtPoint: (point) => {
+  addSmartHomeDeviceAtPoint: (rawPoint) => {
     const state = get();
+    const point = applySnap(state, rawPoint);
     const room = state.rooms.find((r) => isPointInPolygon(point, r.polygon));
     const model = findSmartHomeModel(state.smartHomePlacementModelId);
     const number = nextNumberForPrefix(
@@ -1098,8 +1151,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     return true;
   },
 
-  moveSmartHomeDeviceToPoint: (deviceId, point) => {
+  moveSmartHomeDeviceToPoint: (deviceId, rawPoint) => {
     const state = get();
+    const point = applySnap(state, rawPoint);
     const room = state.rooms.find((r) => isPointInPolygon(point, r.polygon));
     set((s) => ({
       smartHomeDevices: s.smartHomeDevices.map((device) =>

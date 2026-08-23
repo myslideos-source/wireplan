@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { CheckCircle2, CloudCheck, ZoomIn, ZoomOut, RotateCcw, Undo2, Redo2 } from "lucide-react";
+import { CheckCircle2, CloudCheck, ZoomIn, ZoomOut, RotateCcw, Undo2, Redo2, Magnet } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useEditorStore } from "./store";
 
 export function EditorStatusBar() {
@@ -12,6 +13,8 @@ export function EditorStatusBar() {
   const future = useEditorStore((state) => state.future);
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
+  const snapEnabled = useEditorStore((state) => state.snapEnabled);
+  const toggleSnap = useEditorStore((state) => state.toggleSnap);
 
   const visibleLayers = Object.entries(layers)
     .filter(([, visible]) => visible)
@@ -92,6 +95,20 @@ export function EditorStatusBar() {
             <RotateCcw className="h-3.5 w-3.5" />
           </button>
         </div>
+        <button
+          type="button"
+          onClick={toggleSnap}
+          title="An Raster, Wand, Raummitte und anderen Geräten einrasten (§51)"
+          className={cn(
+            "flex items-center gap-1.5 rounded-[var(--radius-sm)] border px-2 py-1 transition-colors",
+            snapEnabled
+              ? "border-primary/60 text-primary"
+              : "border-border text-text-muted hover:text-text",
+          )}
+        >
+          <Magnet className="h-3.5 w-3.5" />
+          Snap
+        </button>
       </div>
 
       <div className="flex items-center gap-1.5">
