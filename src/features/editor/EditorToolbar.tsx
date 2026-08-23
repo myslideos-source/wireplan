@@ -3,7 +3,6 @@
 import { useRef } from "react";
 import {
   MousePointer2,
-  Minus,
   Square,
   Plug,
   Lightbulb,
@@ -13,8 +12,6 @@ import {
   Server,
   Home,
   Cable,
-  DoorOpen,
-  AppWindow,
   Image as ImageIcon,
   Eye,
   EyeOff,
@@ -89,10 +86,7 @@ interface ToolDef {
 
 const TOOLS: ToolDef[] = [
   { id: "select", label: "Auswählen", icon: MousePointer2 },
-  { id: "wall", label: "Wand", icon: Minus, note: "Zeichenwerkzeug folgt" },
-  { id: "room", label: "Raum", icon: Square, note: "Zeichenwerkzeug folgt" },
-  { id: "door", label: "Tür einfügen", icon: DoorOpen },
-  { id: "window", label: "Fenster einfügen", icon: AppWindow },
+  { id: "room", label: "Raum", icon: Square },
   { id: "outlet", label: "Steckdose", icon: Plug, flag: "ELECTRICAL_EDITOR" },
   { id: "light", label: "Lichtpunkt", icon: Lightbulb, flag: "ELECTRICAL_EDITOR" },
   { id: "switch", label: "Schalter", icon: ToggleLeft, flag: "ELECTRICAL_EDITOR" },
@@ -168,6 +162,8 @@ export function EditorToolbar() {
   const rooms = useEditorStore((state) => state.rooms);
   const selected = useEditorStore((state) => state.selected);
   const select = useEditorStore((state) => state.select);
+  const drawingRoomPoints = useEditorStore((state) => state.drawingRoomPoints);
+  const cancelRoomDraw = useEditorStore((state) => state.cancelRoomDraw);
   const loxoneEnabled = isFeatureEnabled("LOXONE");
   const backgroundInputRef = useRef<HTMLInputElement>(null);
 
@@ -253,13 +249,24 @@ export function EditorToolbar() {
           </div>
           <button
             type="button"
-            disabled
-            title="Manuelles Raum-Zeichnen folgt in einer späteren Phase — Demnächst"
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-[var(--radius-sm)] border border-border px-3 py-2 text-sm font-medium text-text-muted disabled:cursor-not-allowed"
+            onClick={() => setTool("room")}
+            className={cn(
+              "mt-3 flex w-full items-center justify-center gap-2 rounded-[var(--radius-sm)] border border-border px-3 py-2 text-sm font-medium transition-colors",
+              activeTool === "room"
+                ? "border-primary/60 bg-primary/10 text-primary"
+                : "text-text-secondary hover:border-primary/60 hover:text-text",
+            )}
           >
             <Square className="h-4 w-4" />
             Raum hinzufügen
           </button>
+          {activeTool === "room" && (
+            <p className="mt-2 px-1 text-[11px] text-text-muted">
+              {drawingRoomPoints && drawingRoomPoints.length >= 3
+                ? "Am ersten Punkt (hell markiert) klicken zum Schließen, oder Enter drücken."
+                : "Ecken im Grundriss anklicken. Esc zum Abbrechen."}
+            </p>
+          )}
         </div>
       )}
 
@@ -378,6 +385,24 @@ export function EditorToolbar() {
                       ),
                     )}
                   </select>
+                )}
+                {tool.id === "room" && activeTool === "room" && (
+                  <div className="mx-1 flex flex-col gap-1.5">
+                    <p className="px-1 text-[11px] text-text-muted">
+                      {drawingRoomPoints && drawingRoomPoints.length >= 3
+                        ? "Am ersten Punkt klicken zum Schließen, oder Enter drücken."
+                        : "Ecken anklicken, am ersten Punkt schließen. Esc zum Abbrechen, Enter zum Fertigstellen."}
+                    </p>
+                    {drawingRoomPoints && (
+                      <button
+                        type="button"
+                        onClick={cancelRoomDraw}
+                        className="rounded-[var(--radius-sm)] border border-border px-2 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-primary/60 hover:text-text"
+                      >
+                        Abbrechen
+                      </button>
+                    )}
+                  </div>
                 )}
                 {tool.id === "treeConnect" && activeTool === "treeConnect" && (
                   <div className="mx-1 flex flex-col gap-1.5">

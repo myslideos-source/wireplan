@@ -2,9 +2,8 @@
 
 import { create } from "zustand";
 import type {
-  Wall,
+  Floor,
   Room,
-  Opening,
   Point,
   ElectricalDevice,
   ElectricalDeviceType,
@@ -23,7 +22,6 @@ import type {
 } from "@/domain";
 import {
   polygonAreaSqMeters,
-  DEVICE_MOUNT_KIND,
   DEVICE_DEFAULT_HEIGHT,
   LOXONE_SYSTEM,
   LOXONE_CATALOG,
@@ -44,14 +42,8 @@ import {
   isAxisAlignedRectangle,
   splitRectangle,
   tryMergeAdjacentRects,
-  wallMatchesSegment,
-  findNearestWall,
-  closestPointOnWall,
   isPointInPolygon,
-  pointAtOffset,
-  wallNormal,
-  roomWalls,
-  wallsBoundingBox,
+  floorExtentBox,
   computeSpotArrayPositions,
   polygonCentroid,
   devicePosition,
@@ -61,7 +53,6 @@ import {
 
 export type EditorTool =
   | "select"
-  | "wall"
   | "room"
   | "outlet"
   | "light"
@@ -71,8 +62,6 @@ export type EditorTool =
   | "board"
   | "smarthome"
   | "consumer"
-  | "door"
-  | "window"
   | "background"
   | "cable"
   | "junction"
@@ -84,9 +73,10 @@ export type LayerId = "grundriss" | "elektro" | "kabelwege" | "beschriftung" | "
  * than a LayerId toggle (which only shows/hides a whole layer). */
 export type ViewMode = "alle" | "tree" | "audio" | "network" | "power";
 
-/** The real, original uploaded plan image, positioned/scaled over the
- * floor's geometry as a tracing reference — for when the AI's estimated
- * room polygons aren't precise enough and the user's own plan already is. */
+/** The real, original uploaded plan image — locked and never redrawn
+ * (Phase 11). Room zones are drawn directly on top of it by the user;
+ * this image is the floor's actual source of truth, not a tracing aid
+ * for some other estimated geometry. */
 export interface BackgroundImage {
   dataUrl: string;
   x: number;
@@ -98,13 +88,36 @@ export interface BackgroundImage {
 
 const MIN_BACKGROUND_SIZE_MM = 300;
 
+/** Fits a freshly-uploaded image inside a floor's current extent (drawn
+ * room zones, or a sensible default box for a brand-new floor) so it's
+ * usable right away instead of appearing off-screen or at the wrong
+ * scale. Shared by `setBackgroundImage` (an existing floor) and
+ * `addFloor` (a brand-new one, always fitting against the default box
+ * since it has no rooms yet). */
+function fitBackgroundImage(
+  rooms: Room[],
+  dataUrl: string,
+  naturalWidth: number,
+  naturalHeight: number,
+): BackgroundImage {
+  const aspectRatio = naturalWidth / naturalHeight;
+  const box = floorExtentBox(rooms, null, 0);
+  let width = box.width;
+  let height = width / aspectRatio;
+  if (height > box.height) {
+    height = box.height;
+    width = height * aspectRatio;
+  }
+  const x = box.minX + (box.width - width) / 2;
+  const y = box.minY + (box.height - height) / 2;
+  return { dataUrl, x, y, width, height, aspectRatio };
+}
+
 export type Selection =
   | { type: "room"; id: string }
-  | { type: "wall"; id: string }
   | { type: "device"; id: string }
   | { type: "board" }
   | { type: "smarthome"; id: string }
-  | { type: "opening"; id: string }
   | { type: "consumer"; id: string }
   | { type: "junction"; id: string }
   | null;
@@ -118,11 +131,6 @@ export interface MultiSelectItem {
   id: string;
 }
 
-const DEFAULT_OPENING_WIDTH: Record<"door" | "window", number> = {
-  door: 900,
-  window: 1200,
-};
-
 export const DISTRIBUTION_BOARD_ID = "distribution-board";
 
 let nextGeneratedId = 1;
@@ -132,7 +140,6 @@ function generateId(prefix: string): string {
 
 function selectionFromTarget(target: FlaggedAreaTarget | undefined): Selection {
   if (target?.type === "room") return { type: "room", id: target.id };
-  if (target?.type === "wall") return { type: "wall", id: target.id };
   return null;
 }
 
@@ -140,9 +147,7 @@ function selectionFromTarget(target: FlaggedAreaTarget | undefined): Selection {
  * has its own geometry, devices, Technikraum/Schaltschrank, and cables,
  * so switching floors swaps this whole slice rather than resetting it. */
 interface FloorMutableSlice {
-  walls: Wall[];
   rooms: Room[];
-  openings: Opening[];
   devices: ElectricalDevice[];
   roomCircuits: Record<string, string | null>;
   technikraumRoomId: string | null;
@@ -159,9 +164,7 @@ interface FloorMutableSlice {
 
 function freshSliceFromGeometry(geometry: FloorGeometry): FloorMutableSlice {
   return {
-    walls: geometry.walls,
     rooms: geometry.rooms,
-    openings: geometry.openings,
     devices: [],
     roomCircuits: {},
     technikraumRoomId: null,
@@ -182,9 +185,7 @@ function freshSliceFromGeometry(geometry: FloorGeometry): FloorMutableSlice {
  * zoom, or the active tool, which shouldn't be undoable). Also reused by
  * switchFloor to snapshot/restore a floor's slice. */
 const SLICE_KEYS: (keyof FloorMutableSlice)[] = [
-  "walls",
   "rooms",
-  "openings",
   "devices",
   "roomCircuits",
   "technikraumRoomId",
@@ -304,14 +305,12 @@ function resolveTreeBranchAssignment(
  * branch, the one place `handleTreeConnectClick` and the bus-length
  * calculation both need to turn a reference back into real data. */
 function resolveTreeNodeRef(
-  state: Pick<EditorState, "devices" | "smartHomeDevices" | "treeJunctions" | "walls" | "distributionBoard">,
+  state: Pick<EditorState, "devices" | "smartHomeDevices" | "treeJunctions" | "distributionBoard">,
   ref: string,
 ): { position: Point; treeBranchId: string | undefined } | null {
   if (ref === "board") {
     if (!state.distributionBoard) return null;
-    const wall = state.walls.find((w) => w.id === state.distributionBoard!.wallId);
-    if (!wall) return null;
-    return { position: pointAtOffset(wall, state.distributionBoard.offset), treeBranchId: undefined };
+    return { position: state.distributionBoard.position, treeBranchId: undefined };
   }
   const separatorIndex = ref.indexOf(":");
   if (separatorIndex === -1) return null;
@@ -320,9 +319,7 @@ function resolveTreeNodeRef(
   if (kind === "device") {
     const device = state.devices.find((d) => d.id === id);
     if (!device) return null;
-    const position = devicePosition(device, state.walls);
-    if (!position) return null;
-    return { position, treeBranchId: device.treeBranchId };
+    return { position: devicePosition(device), treeBranchId: device.treeBranchId };
   }
   if (kind === "smarthome") {
     const device = state.smartHomeDevices.find((d) => d.id === id);
@@ -337,11 +334,8 @@ function resolveTreeNodeRef(
   return null;
 }
 
-/** Reads a multi-select item's current position — only point-mounted
- * devices, standalone Smart-Home devices, and fixed consumers have one;
- * wall-mounted devices return null and are silently skipped by
- * align/distribute (they're constrained to their wall, not freely
- * movable in the plane those operations work in). */
+/** Reads a multi-select item's current position — devices, standalone
+ * Smart-Home devices, and fixed consumers are all point-placed. */
 function getMultiSelectPosition(
   state: Pick<EditorState, "devices" | "smartHomeDevices" | "fixedConsumers">,
   item: MultiSelectItem,
@@ -352,9 +346,15 @@ function getMultiSelectPosition(
   if (item.type === "consumer") {
     return state.fixedConsumers.find((c) => c.id === item.id)?.position ?? null;
   }
-  const device = state.devices.find((d) => d.id === item.id);
-  return device?.mount.kind === "point" ? device.mount.position : null;
+  return state.devices.find((d) => d.id === item.id)?.mount.position ?? null;
 }
+
+/** Default ceiling height for a manually-drawn room zone (Phase 11) —
+ * matches the height this app has always used for AI-estimated rooms. */
+const DEFAULT_ROOM_HEIGHT_MM = 2500;
+/** Clicking within this distance of the room draw's first vertex closes
+ * the polygon instead of adding a near-duplicate point. */
+const ROOM_DRAW_CLOSE_THRESHOLD_MM = 250;
 
 const SNAP_GRID_MM = 50;
 const SNAP_MAGNET_THRESHOLD_MM = 180;
@@ -362,9 +362,7 @@ const SNAP_MAGNET_THRESHOLD_MM = 180;
 /** §51 — snapping while placing/dragging a point-mounted item. Magnetism
  * (to another device or a room's center) wins over the grid when the
  * point is close enough to one; otherwise the point snaps to the nearest
- * grid intersection. Wall-mounted devices/openings already snap to their
- * wall via closestPointOnWall — a separate, already-correct behavior
- * this doesn't touch. */
+ * grid intersection. */
 function applySnap(
   state: Pick<EditorState, "snapEnabled" | "devices" | "smartHomeDevices" | "fixedConsumers" | "rooms">,
   point: Point,
@@ -372,9 +370,7 @@ function applySnap(
   if (!state.snapEnabled) return point;
 
   const candidates: Point[] = [];
-  for (const device of state.devices) {
-    if (device.mount.kind === "point") candidates.push(device.mount.position);
-  }
+  for (const device of state.devices) candidates.push(device.mount.position);
   for (const device of state.smartHomeDevices) candidates.push(device.position);
   for (const consumer of state.fixedConsumers) candidates.push(consumer.position);
   for (const room of state.rooms) candidates.push(polygonCentroid(room.polygon));
@@ -432,9 +428,7 @@ interface EditorState {
   floorId: string | null;
   floors: FloorGeometry[];
   floorCache: Record<string, FloorMutableSlice>;
-  walls: Wall[];
   rooms: Room[];
-  openings: Opening[];
   devices: ElectricalDevice[];
   roomCircuits: Record<string, string | null>;
   technikraumRoomId: string | null;
@@ -498,6 +492,15 @@ interface EditorState {
 
   hydrate: (geometries: FloorGeometry[]) => void;
   switchFloor: (floorId: string) => void;
+  /** Adds a brand-new, empty floor to the current project and switches to
+   * it — e.g. a second locked-raster floor added from the editor, rather
+   * than only the floors a project was hydrated with. Returns the new
+   * floor's id. */
+  addFloor: (input: {
+    name: string;
+    level: number;
+    backgroundImage?: { dataUrl: string; naturalWidth: number; naturalHeight: number };
+  }) => string;
   setBackgroundImage: (dataUrl: string, naturalWidth: number, naturalHeight: number) => void;
   moveBackgroundImageToPoint: (point: Point) => void;
   resizeBackgroundImageToPoint: (point: Point) => void;
@@ -557,11 +560,17 @@ interface EditorState {
   setBackgroundImageOpacity: (opacity: number) => void;
 
   updateRoom: (id: string, patch: Partial<Pick<Room, "name" | "type" | "height" | "notes">>) => void;
-  updateWallThickness: (id: string, thicknessMm: number) => void;
-  deleteOpening: (id: string) => void;
-  addOpeningAtPoint: (type: Opening["type"], point: Point) => boolean;
-  moveOpeningToPoint: (openingId: string, point: Point) => void;
-  updateOpeningWidth: (id: string, width: number) => void;
+
+  // Manual room-zone drawing (Phase 11) — the plan is a locked background
+  // image with no wall geometry, so rooms are polygons the user traces
+  // directly, click by click, instead of AI-derived or split/merge-only.
+  // Pure in-progress UI state, like treeConnectPendingNodeRef: not part of
+  // the undo-tracked FloorMutableSlice.
+  drawingRoomPoints: Point[] | null;
+  addRoomDrawPoint: (point: Point) => void;
+  closeRoomDraw: (name?: string) => boolean;
+  cancelRoomDraw: () => void;
+
   addDeviceAtPoint: (type: ElectricalDeviceType, point: Point) => boolean;
   // §8 — "Mehrere Spots platzieren": when count > 1, a light-tool click
   // fills the clicked room with an auto-distributed spot array instead of
@@ -613,9 +622,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   floorId: null,
   floors: [],
   floorCache: {},
-  walls: [],
   rooms: [],
-  openings: [],
   devices: [],
   roomCircuits: {},
   technikraumRoomId: null,
@@ -629,6 +636,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   treeJunctions: [],
   treeEdges: [],
   treeConnectPendingNodeRef: null,
+  drawingRoomPoints: null,
   audioZones: [],
   speakerCableType: SPEAKER_CABLE_TYPES[0],
   setSpeakerCableType: (type) => set({ speakerCableType: type }),
@@ -738,7 +746,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         id: generateId("device"),
         floorId: state.floorId ?? "",
         type: "light",
-        mount: { kind: "point", position, height },
+        mount: { position, height },
         roomId: room.id,
         number,
       };
@@ -944,6 +952,35 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     isRestoringHistory = false;
   },
 
+  addFloor: ({ name, level, backgroundImage }) => {
+    const state = get();
+    const projectId = state.floors[0]?.floor.projectId ?? "";
+    const floor: Floor = { id: generateId("floor"), projectId, name, level };
+    const geometry: FloorGeometry = { floor, rooms: [] };
+    const currentFloorId = state.floorId;
+    const currentSlice = sliceOf(state);
+    const newCache = currentFloorId
+      ? { ...state.floorCache, [currentFloorId]: currentSlice }
+      : state.floorCache;
+
+    isRestoringHistory = true;
+    set({
+      floors: [...state.floors, geometry],
+      floorCache: newCache,
+      floorId: floor.id,
+      ...freshSliceFromGeometry(geometry),
+      backgroundImage: backgroundImage
+        ? fitBackgroundImage([], backgroundImage.dataUrl, backgroundImage.naturalWidth, backgroundImage.naturalHeight)
+        : null,
+      selected: null,
+      activeTool: "select",
+      history: [],
+      future: [],
+    });
+    isRestoringHistory = false;
+    return floor.id;
+  },
+
   selected: null,
   select: (selection) => set({ selected: selection }),
 
@@ -999,7 +1036,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     for (const item of state.multiSelection) {
       if (item.type === "device") {
         const device = state.devices.find((d) => d.id === item.id);
-        if (!device || device.mount.kind !== "point") continue;
+        if (!device) continue;
         const position = { x: device.mount.position.x + OFFSET, y: device.mount.position.y + OFFSET };
         const id = generateId("device");
         const number = nextNumberForPrefix(
@@ -1131,92 +1168,55 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ),
     })),
 
-  updateWallThickness: (id, thicknessMm) =>
-    set((state) => ({
-      walls: state.walls.map((wall) =>
-        wall.id === id ? { ...wall, thickness: thicknessMm } : wall,
-      ),
-    })),
-
-  deleteOpening: (id) =>
-    set((state) => ({
-      openings: state.openings.filter((opening) => opening.id !== id),
-      selected: state.selected?.type === "opening" && state.selected.id === id
-        ? null
-        : state.selected,
-    })),
-
-  addOpeningAtPoint: (type, point) => {
+  addRoomDrawPoint: (rawPoint) => {
     const state = get();
-    const wall = findNearestWall(state.walls, point);
-    if (!wall) return false;
-    const { offset } = closestPointOnWall(wall, point);
-    const opening: Opening = {
-      id: generateId("opening"),
-      wallId: wall.id,
-      type,
-      offset,
-      width: DEFAULT_OPENING_WIDTH[type],
+    const point = applySnap(state, rawPoint);
+    const points = state.drawingRoomPoints;
+    if (!points) {
+      set({ drawingRoomPoints: [point] });
+      return;
+    }
+    if (points.length >= 3) {
+      const first = points[0];
+      const distance = Math.hypot(point.x - first.x, point.y - first.y);
+      if (distance <= ROOM_DRAW_CLOSE_THRESHOLD_MM) {
+        get().closeRoomDraw();
+        return;
+      }
+    }
+    set({ drawingRoomPoints: [...points, point] });
+  },
+
+  closeRoomDraw: (name) => {
+    const state = get();
+    const points = state.drawingRoomPoints;
+    if (!points || points.length < 3) return false;
+    const room: Room = {
+      id: generateId("room"),
+      floorId: state.floorId ?? "",
+      name: name ?? `Raum ${state.rooms.length + 1}`,
+      type: "Sonstiges",
+      polygon: points,
+      area: polygonAreaSqMeters(points),
+      height: DEFAULT_ROOM_HEIGHT_MM,
     };
-    set((s) => ({ openings: [...s.openings, opening] }));
+    set((s) => ({
+      rooms: [...s.rooms, room],
+      drawingRoomPoints: null,
+      activeTool: "select",
+      selected: { type: "room", id: room.id },
+    }));
     return true;
   },
 
-  moveOpeningToPoint: (openingId, point) => {
-    const state = get();
-    const opening = state.openings.find((o) => o.id === openingId);
-    if (!opening) return;
-    const wall = state.walls.find((w) => w.id === opening.wallId);
-    if (!wall) return;
-    const { offset } = closestPointOnWall(wall, point);
-    set((s) => ({
-      openings: s.openings.map((o) => (o.id === openingId ? { ...o, offset } : o)),
-    }));
-  },
-
-  updateOpeningWidth: (id, width) =>
-    set((state) => ({
-      openings: state.openings.map((o) => (o.id === id ? { ...o, width } : o)),
-    })),
+  cancelRoomDraw: () => set({ drawingRoomPoints: null }),
 
   addDeviceAtPoint: (type, rawPoint) => {
     const state = get();
-    const mountKind = DEVICE_MOUNT_KIND[type];
     const height = DEVICE_DEFAULT_HEIGHT[type];
     const networkDeviceSubtype = type === "network" ? state.networkDevicePlacementSubtype : undefined;
     const number = nextNumberForPrefix(state, numberingPrefixFor({ type, networkDeviceSubtype }));
-    const point = mountKind === "point" ? applySnap(state, rawPoint) : rawPoint;
-
-    if (mountKind === "wall") {
-      const wall = findNearestWall(state.walls, point);
-      if (!wall) return false;
-      const { offset } = closestPointOnWall(wall, point);
-
-      // A wall-mounted device sits right on the wall's thickness, so the
-      // raw click can land just outside every room polygon (which are
-      // drawn to wall centerlines). Probe both perpendicular sides of the
-      // wall instead of trusting the exact click point.
-      const wallPoint = pointAtOffset(wall, offset);
-      const normal = wallNormal(wall);
-      const probeDistance = 150;
-      const sideA = { x: wallPoint.x + normal.x * probeDistance, y: wallPoint.y + normal.y * probeDistance };
-      const sideB = { x: wallPoint.x - normal.x * probeDistance, y: wallPoint.y - normal.y * probeDistance };
-      const room =
-        state.rooms.find((r) => isPointInPolygon(sideA, r.polygon)) ??
-        state.rooms.find((r) => isPointInPolygon(sideB, r.polygon));
-
-      const device: ElectricalDevice = {
-        id: generateId("device"),
-        floorId: state.floorId ?? "",
-        type,
-        mount: { kind: "wall", wallId: wall.id, offset, height },
-        roomId: room?.id ?? null,
-        networkDeviceSubtype,
-        number,
-      };
-      set((s) => ({ devices: [...s.devices, device] }));
-      return true;
-    }
+    const point = applySnap(state, rawPoint);
 
     const room = state.rooms.find((r) => isPointInPolygon(point, r.polygon));
     if (!room) return false;
@@ -1224,7 +1224,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       id: generateId("device"),
       floorId: state.floorId ?? "",
       type,
-      mount: { kind: "point", position: point, height },
+      mount: { position: point, height },
       roomId: room.id,
       networkDeviceSubtype,
       number,
@@ -1237,33 +1237,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const state = get();
     const device = state.devices.find((d) => d.id === deviceId);
     if (!device) return;
-    const point = device.mount.kind === "point" ? applySnap(state, rawPoint) : rawPoint;
-
-    if (device.mount.kind === "wall") {
-      const wall = findNearestWall(state.walls, point);
-      if (!wall) return;
-      const { offset } = closestPointOnWall(wall, point);
-      const wallPoint = pointAtOffset(wall, offset);
-      const normal = wallNormal(wall);
-      const probeDistance = 150;
-      const sideA = { x: wallPoint.x + normal.x * probeDistance, y: wallPoint.y + normal.y * probeDistance };
-      const sideB = { x: wallPoint.x - normal.x * probeDistance, y: wallPoint.y - normal.y * probeDistance };
-      const room =
-        state.rooms.find((r) => isPointInPolygon(sideA, r.polygon)) ??
-        state.rooms.find((r) => isPointInPolygon(sideB, r.polygon));
-      set((s) => ({
-        devices: s.devices.map((d) =>
-          d.id === deviceId
-            ? {
-                ...d,
-                mount: { kind: "wall", wallId: wall.id, offset, height: device.mount.height },
-                roomId: room?.id ?? null,
-              }
-            : d,
-        ),
-      }));
-      return;
-    }
+    const point = applySnap(state, rawPoint);
 
     const room = state.rooms.find((r) => isPointInPolygon(point, r.polygon));
     set((s) => ({
@@ -1271,7 +1245,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         d.id === deviceId
           ? {
               ...d,
-              mount: { kind: "point", position: point, height: device.mount.height },
+              mount: { position: point, height: device.mount.height },
               roomId: room?.id ?? null,
             }
           : d,
@@ -1302,28 +1276,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     // Offset the clone from the original so it's visibly a separate device
     // rather than stacked exactly on top of it.
     const offsetMm = 300;
-
-    const mount = device.mount;
-    if (mount.kind === "wall") {
-      const wall = state.walls.find((w) => w.id === mount.wallId);
-      const wallLenMm = wall ? Math.hypot(wall.end.x - wall.start.x, wall.end.y - wall.start.y) : mount.offset;
-      const newOffset = Math.min(mount.offset + offsetMm, Math.max(0, wallLenMm - 50));
-      const clone: ElectricalDevice = {
-        ...device,
-        id: generateId("device"),
-        mount: { ...mount, offset: newOffset },
-        number,
-      };
-      set((s) => ({ devices: [...s.devices, clone], selected: { type: "device", id: clone.id } }));
-      return;
-    }
-
-    const newPosition = { x: mount.position.x + offsetMm, y: mount.position.y + offsetMm };
+    const newPosition = { x: device.mount.position.x + offsetMm, y: device.mount.position.y + offsetMm };
     const room = state.rooms.find((r) => isPointInPolygon(newPosition, r.polygon));
     const clone: ElectricalDevice = {
       ...device,
       id: generateId("device"),
-      mount: { ...mount, position: newPosition },
+      mount: { ...device.mount, position: newPosition },
       roomId: room?.id ?? device.roomId,
       number,
     };
@@ -1466,19 +1424,15 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const technikraum = state.rooms.find((r) => r.id === state.technikraumRoomId);
     if (!technikraum) return false;
 
-    // Restrict placement to walls that actually border the Technikraum
-    // (§45) rather than any wall on the floor.
-    const candidateWalls = roomWalls(state.walls, technikraum);
-    const wall = findNearestWall(candidateWalls, point);
-    if (!wall) return false;
-    const { offset } = closestPointOnWall(wall, point);
+    // Restrict placement to inside the Technikraum's own polygon (§45) —
+    // there's no bordering wall to snap to anymore (Phase 11).
+    if (!isPointInPolygon(point, technikraum.polygon)) return false;
 
     const board: DistributionBoard = {
       id: DISTRIBUTION_BOARD_ID,
       floorId: state.floorId ?? "",
       roomId: technikraum.id,
-      wallId: wall.id,
-      offset,
+      position: point,
       width: 600,
       height: 800,
     };
@@ -1495,19 +1449,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   setBackgroundImage: (dataUrl, naturalWidth, naturalHeight) => {
     const state = get();
-    const aspectRatio = naturalWidth / naturalHeight;
-    // Fit the image inside the floor's current extent so it's usable right
-    // away instead of appearing off-screen or at the wrong scale.
-    const box = wallsBoundingBox(state.walls, 0);
-    let width = box.width;
-    let height = width / aspectRatio;
-    if (height > box.height) {
-      height = box.height;
-      width = height * aspectRatio;
-    }
-    const x = box.minX + (box.width - width) / 2;
-    const y = box.minY + (box.height - height) / 2;
-    set({ backgroundImage: { dataUrl, x, y, width, height, aspectRatio } });
+    set({ backgroundImage: fitBackgroundImage(state.rooms, dataUrl, naturalWidth, naturalHeight) });
   },
 
   moveBackgroundImageToPoint: (point) =>
@@ -1542,17 +1484,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const starCables = computeCables(
       state.devices,
       state.distributionBoard,
-      state.walls,
       state.rooms,
       state.routingMode,
-      state.openings,
     );
     const treeCables = computeTreeBranchCables(
       state.treeBranches,
       state.devices,
       state.smartHomeDevices,
       state.distributionBoard,
-      state.walls,
       state.routingMode,
       state.treeJunctions,
       state.treeEdges,
@@ -1561,16 +1500,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       state.smartHomeDevices,
       state.audioZones,
       state.distributionBoard,
-      state.walls,
       state.speakerCableType,
       state.routingMode,
     );
     const consumerCables = computeConsumerCables(
       state.fixedConsumers,
       state.distributionBoard,
-      state.walls,
       state.routingMode,
-      state.openings,
     );
     set({ cables: [...starCables, ...treeCables, ...audioCables, ...consumerCables] });
     return true;
@@ -1580,15 +1516,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const room = get().rooms.find((r) => r.id === roomId);
     if (!room || !isAxisAlignedRectangle(room.polygon)) return false;
 
-    const { polyA, polyB, wall } = splitRectangle(room.polygon, direction, ratio);
-    const newWall: Wall = {
-      id: generateId("wall"),
-      floorId: room.floorId,
-      start: wall.start,
-      end: wall.end,
-      thickness: 100,
-      height: room.height,
-    };
+    const { polyA, polyB } = splitRectangle(room.polygon, direction, ratio);
     const roomA: Room = {
       ...room,
       id: generateId("room"),
@@ -1606,7 +1534,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     set((state) => ({
       rooms: [...state.rooms.filter((r) => r.id !== roomId), roomA, roomB],
-      walls: [...state.walls, newWall],
       selected: null,
     }));
     return true;
@@ -1621,9 +1548,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const merged = tryMergeAdjacentRects(roomA.polygon, roomB.polygon);
     if (!merged) return false;
 
-    const removedWall = state.walls.find((wall) =>
-      wallMatchesSegment(wall, merged.sharedEdge),
-    );
     const mergedRoom: Room = {
       ...roomA,
       name: newName,
@@ -1636,25 +1560,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         ...current.rooms.filter((r) => r.id !== roomA.id && r.id !== roomB.id),
         mergedRoom,
       ],
-      walls: removedWall
-        ? current.walls.filter((wall) => wall.id !== removedWall.id)
-        : current.walls,
-      openings: removedWall
-        ? current.openings.filter((opening) => opening.wallId !== removedWall.id)
-        : current.openings,
-      devices: removedWall
-        ? current.devices.filter(
-            (device) => !(device.mount.kind === "wall" && device.mount.wallId === removedWall.id),
-          )
-        : current.devices,
-      distributionBoard:
-        removedWall && current.distributionBoard?.wallId === removedWall.id
-          ? null
-          : current.distributionBoard,
-      cables:
-        removedWall && current.distributionBoard?.wallId === removedWall.id
-          ? []
-          : current.cables,
       selected: null,
     }));
     return true;

@@ -98,7 +98,7 @@ export function EditorStatusBar() {
         <button
           type="button"
           onClick={toggleSnap}
-          title="An Raster, Wand, Raummitte und anderen Geräten einrasten (§51)"
+          title="An Raster, Raummitte und anderen Geräten einrasten (§51)"
           className={cn(
             "flex items-center gap-1.5 rounded-[var(--radius-sm)] border px-2 py-1 transition-colors",
             snapEnabled

@@ -8,7 +8,7 @@ function makeDevice(overrides: Partial<ElectricalDevice> & { roomId: string | nu
     id: "d1",
     floorId: "f1",
     type: "outlet",
-    mount: { kind: "wall", wallId: "w1", offset: 0, height: 300 },
+    mount: { position: { x: 0, y: 0 }, height: 300 },
     number: 1,
     ...overrides,
   };

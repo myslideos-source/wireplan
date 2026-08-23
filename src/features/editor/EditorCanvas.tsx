@@ -14,9 +14,7 @@ import { DRAG_TOOL_MIME } from "./drag-tool";
 import { orderTreeBusPoints, type TreeBusPoint } from "@/features/routing/compute-tree-cables";
 import { useEditorStore, type EditorTool } from "./store";
 import {
-  wallOrientation,
-  pointAtOffset,
-  wallsBoundingBox,
+  floorExtentBox,
   boundingBoxOfPoints,
   polygonCentroid,
   devicePosition,
@@ -28,9 +26,7 @@ import { DeviceSymbol } from "./DeviceSymbol";
 const PLACEABLE_DEVICE_TOOLS: EditorTool[] = ["outlet", "light", "switch", "sensor", "network"];
 
 export function EditorCanvas() {
-  const walls = useEditorStore((state) => state.walls);
   const rooms = useEditorStore((state) => state.rooms);
-  const openings = useEditorStore((state) => state.openings);
   const devices = useEditorStore((state) => state.devices);
   const layers = useEditorStore((state) => state.layers);
   const zoom = useEditorStore((state) => state.zoom);
@@ -47,8 +43,10 @@ export function EditorCanvas() {
   const addSmartHomeDeviceAtPoint = useEditorStore((state) => state.addSmartHomeDeviceAtPoint);
   const moveDeviceToPoint = useEditorStore((state) => state.moveDeviceToPoint);
   const moveSmartHomeDeviceToPoint = useEditorStore((state) => state.moveSmartHomeDeviceToPoint);
-  const addOpeningAtPoint = useEditorStore((state) => state.addOpeningAtPoint);
-  const moveOpeningToPoint = useEditorStore((state) => state.moveOpeningToPoint);
+  const drawingRoomPoints = useEditorStore((state) => state.drawingRoomPoints);
+  const addRoomDrawPoint = useEditorStore((state) => state.addRoomDrawPoint);
+  const closeRoomDraw = useEditorStore((state) => state.closeRoomDraw);
+  const cancelRoomDraw = useEditorStore((state) => state.cancelRoomDraw);
   const backgroundImage = useEditorStore((state) => state.backgroundImage);
   const backgroundImageOpacity = useEditorStore((state) => state.backgroundImageOpacity);
   const moveBackgroundImageToPoint = useEditorStore((state) => state.moveBackgroundImageToPoint);
@@ -87,7 +85,6 @@ export function EditorCanvas() {
     | { kind: "board" }
     | { kind: "device"; id: string }
     | { kind: "smarthome"; id: string }
-    | { kind: "opening"; id: string }
     | { kind: "consumer"; id: string }
     | { kind: "junction"; id: string }
     | { kind: "background" }
@@ -100,28 +97,15 @@ export function EditorCanvas() {
       const room = rooms.find((r) => r.id === focusTarget.id);
       if (room) return boundingBoxOfPoints(room.polygon, 1200);
     }
-    if (focusTarget?.type === "wall") {
-      const wall = walls.find((w) => w.id === focusTarget.id);
-      if (wall) return boundingBoxOfPoints([wall.start, wall.end], 1500);
-    }
-    if (focusTarget?.type === "opening") {
-      const opening = openings.find((o) => o.id === focusTarget.id);
-      const wall = opening && walls.find((w) => w.id === opening.wallId);
-      if (opening && wall) {
-        return boundingBoxOfPoints([pointAtOffset(wall, opening.offset)], 1800);
-      }
-    }
-    return wallsBoundingBox(walls);
-  }, [focusTarget, rooms, walls, openings]);
+    return floorExtentBox(rooms, backgroundImage);
+  }, [focusTarget, rooms, backgroundImage]);
   const vbWidth = box.width / zoom;
   const vbHeight = box.height / zoom;
   const centerX = box.minX + box.width / 2;
   const centerY = box.minY + box.height / 2;
   const viewBox = `${centerX - vbWidth / 2} ${centerY - vbHeight / 2} ${vbWidth} ${vbHeight}`;
 
-  const boardWall = distributionBoard ? walls.find((w) => w.id === distributionBoard.wallId) : undefined;
-  const boardPosition =
-    boardWall && distributionBoard ? pointAtOffset(boardWall, distributionBoard.offset) : null;
+  const boardPosition = distributionBoard ? distributionBoard.position : null;
 
   /** One polyline per Tree branch with at least one device — reuses the
    * same nearest-neighbor bus ordering as the actual length calculation
@@ -142,8 +126,7 @@ export function EditorCanvas() {
       for (const device of devices) {
         if (device.treeBranchId !== branch.id) continue;
         if (!device.smartHomeModelId || !findSmartHomeModel(device.smartHomeModelId)?.countsAsTreeDevice) continue;
-        const position = devicePosition(device, walls);
-        if (position) points.push({ id: device.id, position });
+        points.push({ id: device.id, position: devicePosition(device) });
       }
       for (const device of smartHomeDevices) {
         if (device.treeBranchId !== branch.id) continue;
@@ -154,7 +137,7 @@ export function EditorCanvas() {
       paths.push({ branchId: branch.id, colorHex: branch.colorHex, ordered: orderTreeBusPoints(boardPosition, points) });
     }
     return paths;
-  }, [treeBranches, devices, smartHomeDevices, walls, boardPosition, branchIdsWithManualEdges]);
+  }, [treeBranches, devices, smartHomeDevices, boardPosition, branchIdsWithManualEdges]);
 
   /** §61 — resolves a tagged Tree node ref to a world position for
    * drawing manual edges; mirrors `resolveTreeNodeRef` in store.ts but
@@ -167,7 +150,7 @@ export function EditorCanvas() {
     const id = ref.slice(separatorIndex + 1);
     if (kind === "device") {
       const device = devices.find((d) => d.id === id);
-      return device ? devicePosition(device, walls) : null;
+      return device ? devicePosition(device) : null;
     }
     if (kind === "smarthome") {
       const device = smartHomeDevices.find((d) => d.id === id);
@@ -191,7 +174,7 @@ export function EditorCanvas() {
       })
       .filter((e): e is { id: string; colorHex: string; from: Point; to: Point } => e !== null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [treeEdges, treeBranches, devices, smartHomeDevices, treeJunctions, walls, boardPosition]);
+  }, [treeEdges, treeBranches, devices, smartHomeDevices, treeJunctions, boardPosition]);
 
   function isTreeDevice(device: ElectricalDevice): boolean {
     return !!device.smartHomeModelId && !!findSmartHomeModel(device.smartHomeModelId)?.countsAsTreeDevice;
@@ -224,7 +207,7 @@ export function EditorCanvas() {
   const placingSmartHome = activeTool === "smarthome";
   const placingConsumer = activeTool === "consumer";
   const placingJunction = activeTool === "junction";
-  const placingOpeningType = activeTool === "door" ? "door" : activeTool === "window" ? "window" : null;
+  const placingRoom = activeTool === "room";
   const placingBackground = activeTool === "background";
   const connectingTree = activeTool === "treeConnect";
 
@@ -249,7 +232,6 @@ export function EditorCanvas() {
       if (current.kind === "board") placeDistributionBoard(point);
       else if (current.kind === "device") moveDeviceToPoint(current.id, point);
       else if (current.kind === "smarthome") moveSmartHomeDeviceToPoint(current.id, point);
-      else if (current.kind === "opening") moveOpeningToPoint(current.id, point);
       else if (current.kind === "consumer") moveFixedConsumerToPoint(current.id, point);
       else if (current.kind === "junction") moveTreeJunctionToPoint(current.id, point);
       else if (current.kind === "background") moveBackgroundImageToPoint(point);
@@ -299,9 +281,9 @@ export function EditorCanvas() {
       if (point) placeDistributionBoard(point);
       return;
     }
-    if (placingOpeningType) {
+    if (placingRoom) {
       const point = toSvgPoint(event);
-      if (point) addOpeningAtPoint(placingOpeningType, point);
+      if (point) addRoomDrawPoint(point);
       return;
     }
     if (connectingTree) {
@@ -313,6 +295,18 @@ export function EditorCanvas() {
       clearMultiSelection();
     }
   }
+
+  // Room drawing (§ Phase 11) — Escape discards the in-progress polygon,
+  // Enter closes it early (before clicking back near the first vertex).
+  useEffect(() => {
+    if (!placingRoom) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") cancelRoomDraw();
+      else if (event.key === "Enter") closeRoomDraw();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [placingRoom, cancelRoomDraw, closeRoomDraw]);
 
   function handleCanvasDragOver(event: ReactDragEvent) {
     if (event.dataTransfer.types.includes(DRAG_TOOL_MIME)) event.preventDefault();
@@ -375,7 +369,7 @@ export function EditorCanvas() {
           placingSmartHome ||
           placingConsumer ||
           placingJunction ||
-          placingOpeningType ||
+          placingRoom ||
           connectingTree
             ? "crosshair"
             : undefined,
@@ -429,104 +423,36 @@ export function EditorCanvas() {
               );
             })}
 
-            {walls.map((wall) => {
-              const isSelected = selected?.type === "wall" && selected.id === wall.id;
-              const handleSelect = (event: ReactMouseEvent) => {
-                if (!canSelect) return;
-                event.stopPropagation();
-                select({ type: "wall", id: wall.id });
-              };
-              return (
-                <g key={wall.id}>
-                  {/* Visible wall, drawn at true thickness. */}
-                  <line
-                    x1={wall.start.x}
-                    y1={wall.start.y}
-                    x2={wall.end.x}
-                    y2={wall.end.y}
-                    stroke={isSelected ? "#C96F5B" : "#303030"}
-                    strokeWidth={wall.thickness}
-                    strokeLinecap="square"
-                    pointerEvents="none"
-                  />
-                  {/* Invisible, generously wide hit-target so thin walls
-                      stay easy to click regardless of zoom. */}
-                  <line
-                    x1={wall.start.x}
-                    y1={wall.start.y}
-                    x2={wall.end.x}
-                    y2={wall.end.y}
-                    stroke="transparent"
-                    strokeWidth={Math.max(wall.thickness, 500)}
-                    strokeLinecap="square"
-                    pointerEvents={canSelect ? "stroke" : "none"}
-                    className={canSelect ? "cursor-pointer" : undefined}
-                    onClick={handleSelect}
-                  />
-                </g>
-              );
-            })}
+          </g>
+        )}
 
-            {openings.map((opening) => {
-              const wall = walls.find((w) => w.id === opening.wallId);
-              if (!wall) return null;
-              const center = pointAtOffset(wall, opening.offset);
-              const orientation = wallOrientation(wall);
-              const across = wall.thickness + 60;
-              const isWindow = opening.type === "window";
-              const width = orientation === "h" ? opening.width : across;
-              const height = orientation === "h" ? across : opening.width;
-              const isFocused = focusTarget?.type === "opening" && focusTarget.id === opening.id;
-              const isSelected = selected?.type === "opening" && selected.id === opening.id;
-              return (
-                <g
-                  key={opening.id}
-                  className={canSelect ? "cursor-grab" : undefined}
-                  onClick={(event) => {
-                    if (!canSelect) return;
-                    event.stopPropagation();
-                    select({ type: "opening", id: opening.id });
-                  }}
-                  onMouseDown={(event) => {
-                    if (!canSelect) return;
-                    event.stopPropagation();
-                    setDragging({ kind: "opening", id: opening.id });
-                  }}
-                >
-                  <rect
-                    x={center.x - width / 2}
-                    y={center.y - height / 2}
-                    width={width}
-                    height={height}
-                    fill={isWindow ? "#4A8FA8" : "#5C5648"}
-                    stroke={isSelected ? "#C96F5B" : isWindow ? "none" : "#6B6459"}
-                    strokeWidth={isSelected ? 30 : isWindow ? 0 : 20}
-                  />
-                  {isFocused && (
-                    <circle
-                      cx={center.x}
-                      cy={center.y}
-                      r={Math.max(width, height) * 0.9}
-                      fill="none"
-                      stroke="#C96F5B"
-                      strokeWidth={30}
-                      strokeDasharray="60 40"
-                    />
-                  )}
-                </g>
-              );
-            })}
+        {placingRoom && drawingRoomPoints && drawingRoomPoints.length > 0 && (
+          <g pointerEvents="none">
+            <polyline
+              points={drawingRoomPoints.map((p) => `${p.x},${p.y}`).join(" ")}
+              fill="none"
+              stroke="#C96F5B"
+              strokeWidth={30}
+              strokeDasharray="60 40"
+            />
+            {drawingRoomPoints.map((p, index) => (
+              <circle
+                key={index}
+                cx={p.x}
+                cy={p.y}
+                r={index === 0 && drawingRoomPoints.length >= 3 ? 90 : 50}
+                fill={index === 0 && drawingRoomPoints.length >= 3 ? "#FAF8F4" : "#C96F5B"}
+                stroke="#C96F5B"
+                strokeWidth={index === 0 && drawingRoomPoints.length >= 3 ? 24 : 0}
+              />
+            ))}
           </g>
         )}
 
         {layers.elektro && distributionBoard && (() => {
-          const wall = walls.find((w) => w.id === distributionBoard.wallId);
-          if (!wall) return null;
-          const center = pointAtOffset(wall, distributionBoard.offset);
-          const orientation = wallOrientation(wall);
-          const depth = 250;
-          const width = orientation === "h" ? distributionBoard.width : depth;
-          const height = orientation === "h" ? depth : distributionBoard.width;
+          const center = distributionBoard.position;
+          const width = distributionBoard.width;
+          const height = distributionBoard.height;
           const isSelected = selected?.type === "board";
           return (
             <g
@@ -569,8 +495,7 @@ export function EditorCanvas() {
 
         {layers.elektro &&
           devices.map((device) => {
-            const position = devicePosition(device, walls);
-            if (!position) return null;
+            const position = devicePosition(device);
             const isSelected = selected?.type === "device" && selected.id === device.id;
             return (
               <DeviceSymbol

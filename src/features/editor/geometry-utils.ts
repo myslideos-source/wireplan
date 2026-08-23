@@ -1,43 +1,7 @@
-import type { Point, Wall, Room, ElectricalDevice, DeviceMount } from "@/domain";
+import type { Point, Room, ElectricalDevice } from "@/domain";
 
-/** Resolves any wall- or point-mounted fixture (device or distribution
- * board) to a plan position. Returns null if its wall no longer exists
- * (e.g. removed by a room merge). */
-export function mountPosition(mount: DeviceMount, walls: Wall[]): Point | null {
-  if (mount.kind === "point") return mount.position;
-  const wall = walls.find((w) => w.id === mount.wallId);
-  if (!wall) return null;
-  return pointAtOffset(wall, mount.offset);
-}
-
-export function devicePosition(device: ElectricalDevice, walls: Wall[]): Point | null {
-  return mountPosition(device.mount, walls);
-}
-
-/** All current mock walls are axis-aligned; these helpers assume that. */
-export function wallOrientation(wall: Wall): "h" | "v" {
-  const dx = Math.abs(wall.end.x - wall.start.x);
-  const dy = Math.abs(wall.end.y - wall.start.y);
-  return dx >= dy ? "h" : "v";
-}
-
-export function pointAtOffset(wall: Wall, offset: number): Point {
-  const length = Math.hypot(wall.end.x - wall.start.x, wall.end.y - wall.start.y);
-  if (length === 0) return wall.start;
-  const ux = (wall.end.x - wall.start.x) / length;
-  const uy = (wall.end.y - wall.start.y) / length;
-  return { x: wall.start.x + ux * offset, y: wall.start.y + uy * offset };
-}
-
-/** Unit vector perpendicular to a wall — used to probe which side (room)
- * a wall-mounted device faces, independent of exactly where on the wall's
- * thickness the placing click landed. */
-export function wallNormal(wall: Wall): Point {
-  const length = Math.hypot(wall.end.x - wall.start.x, wall.end.y - wall.start.y);
-  if (length === 0) return { x: 0, y: 0 };
-  const ux = (wall.end.x - wall.start.x) / length;
-  const uy = (wall.end.y - wall.start.y) / length;
-  return { x: -uy, y: ux };
+export function devicePosition(device: ElectricalDevice): Point {
+  return device.mount.position;
 }
 
 export function boundingBoxOfPoints(points: Point[], paddingMm = 900) {
@@ -50,11 +14,30 @@ export function boundingBoxOfPoints(points: Point[], paddingMm = 900) {
   return { minX, maxX, minY, maxY, width: maxX - minX, height: maxY - minY };
 }
 
-export function wallsBoundingBox(walls: Wall[], paddingMm = 900) {
-  return boundingBoxOfPoints(
-    walls.flatMap((wall) => [wall.start, wall.end]),
-    paddingMm,
-  );
+/**
+ * The canvas/export viewport extent (Phase 11 — there's no wall geometry
+ * left to bound against). Falls back through what's actually available:
+ * drawn room zones first, then the locked background image's own extent,
+ * then a fixed default box for a brand-new, still-empty floor.
+ */
+export function floorExtentBox(
+  rooms: Room[],
+  background: { x: number; y: number; width: number; height: number } | null,
+  paddingMm = 900,
+) {
+  if (rooms.length > 0) {
+    return boundingBoxOfPoints(rooms.flatMap((r) => r.polygon), paddingMm);
+  }
+  if (background) {
+    return boundingBoxOfPoints(
+      [
+        { x: background.x, y: background.y },
+        { x: background.x + background.width, y: background.y + background.height },
+      ],
+      paddingMm,
+    );
+  }
+  return { minX: 0, minY: 0, maxX: 10000, maxY: 10000, width: 10000, height: 10000 };
 }
 
 export function polygonCentroid(polygon: Point[]): Point {
@@ -107,10 +90,11 @@ export function isAxisAlignedRectangle(polygon: Point[]): boolean {
 export type SplitDirection = "vertical" | "horizontal";
 
 /**
- * Splits a rectangular room polygon into two, plus the new dividing wall
- * between them. `ratio` (0–1) is where the divider falls along the split
- * axis. `vertical` = a vertical divider (left/right rooms); `horizontal` =
- * a horizontal divider (top/bottom rooms).
+ * Splits a rectangular room polygon into two. `ratio` (0–1) is where the
+ * divider falls along the split axis. `vertical` = a vertical divider
+ * (left/right rooms); `horizontal` = a horizontal divider (top/bottom
+ * rooms). There's no wall to insert alongside the split (Phase 11) — only
+ * the two new room polygons are produced.
  */
 export function splitRectangle(
   polygon: Point[],
@@ -135,7 +119,6 @@ export function splitRectangle(
         { x: maxX, y: maxY },
         { x: splitX, y: maxY },
       ],
-      wall: { start: { x: splitX, y: minY }, end: { x: splitX, y: maxY } },
     };
   }
 
@@ -153,7 +136,6 @@ export function splitRectangle(
       { x: maxX, y: maxY },
       { x: minX, y: maxY },
     ],
-    wall: { start: { x: minX, y: splitY }, end: { x: maxX, y: splitY } },
   };
 }
 
@@ -166,7 +148,7 @@ export function splitRectangle(
 export function tryMergeAdjacentRects(
   polyA: Point[],
   polyB: Point[],
-): { polygon: Point[]; sharedEdge: { start: Point; end: Point } } | null {
+): { polygon: Point[] } | null {
   if (!isAxisAlignedRectangle(polyA) || !isAxisAlignedRectangle(polyB)) {
     return null;
   }
@@ -180,7 +162,6 @@ export function tryMergeAdjacentRects(
         { x: a.minX, y: a.minY }, { x: b.maxX, y: a.minY },
         { x: b.maxX, y: a.maxY }, { x: a.minX, y: a.maxY },
       ],
-      sharedEdge: { start: { x: a.maxX, y: a.minY }, end: { x: a.maxX, y: a.maxY } },
     };
   }
   if (sameHeight && Math.abs(b.maxX - a.minX) < EPS) {
@@ -189,7 +170,6 @@ export function tryMergeAdjacentRects(
         { x: b.minX, y: a.minY }, { x: a.maxX, y: a.minY },
         { x: a.maxX, y: a.maxY }, { x: b.minX, y: a.maxY },
       ],
-      sharedEdge: { start: { x: a.minX, y: a.minY }, end: { x: a.minX, y: a.maxY } },
     };
   }
 
@@ -200,7 +180,6 @@ export function tryMergeAdjacentRects(
         { x: a.minX, y: a.minY }, { x: a.maxX, y: a.minY },
         { x: a.maxX, y: b.maxY }, { x: a.minX, y: b.maxY },
       ],
-      sharedEdge: { start: { x: a.minX, y: a.maxY }, end: { x: a.maxX, y: a.maxY } },
     };
   }
   if (sameWidth && Math.abs(b.maxY - a.minY) < EPS) {
@@ -209,72 +188,10 @@ export function tryMergeAdjacentRects(
         { x: a.minX, y: b.minY }, { x: a.maxX, y: b.minY },
         { x: a.maxX, y: a.maxY }, { x: a.minX, y: a.maxY },
       ],
-      sharedEdge: { start: { x: a.minX, y: a.minY }, end: { x: a.maxX, y: a.minY } },
     };
   }
 
   return null;
-}
-
-/** Whether a wall's segment lies along the given line (same coordinates,
- * either point order) within tolerance — used to find the wall a merge
- * should remove. */
-export function wallMatchesSegment(
-  wall: Pick<Wall, "start" | "end">,
-  segment: { start: Point; end: Point },
-): boolean {
-  const close = (p: Point, q: Point) =>
-    Math.abs(p.x - q.x) < EPS && Math.abs(p.y - q.y) < EPS;
-  return (
-    (close(wall.start, segment.start) && close(wall.end, segment.end)) ||
-    (close(wall.start, segment.end) && close(wall.end, segment.start))
-  );
-}
-
-/** Walls that trace a room's own polygon boundary — used to restrict
- * where a fixture like the distribution board (§45) may be placed. */
-export function roomWalls(walls: Wall[], room: Room): Wall[] {
-  const edges = room.polygon.map((point, i) => ({
-    start: point,
-    end: room.polygon[(i + 1) % room.polygon.length],
-  }));
-  return walls.filter((wall) => edges.some((edge) => wallMatchesSegment(wall, edge)));
-}
-
-/** Projects `point` onto the closest point of a wall's centerline,
- * returning the offset along the wall (for wall-mounted device
- * placement, §66) and the perpendicular distance. */
-export function closestPointOnWall(wall: Wall, point: Point) {
-  const dx = wall.end.x - wall.start.x;
-  const dy = wall.end.y - wall.start.y;
-  const lengthSq = dx * dx + dy * dy;
-  const t =
-    lengthSq === 0
-      ? 0
-      : Math.min(
-          1,
-          Math.max(0, ((point.x - wall.start.x) * dx + (point.y - wall.start.y) * dy) / lengthSq),
-        );
-  const length = Math.sqrt(lengthSq);
-  const offset = t * length;
-  const projected = { x: wall.start.x + dx * t, y: wall.start.y + dy * t };
-  const distance = Math.hypot(point.x - projected.x, point.y - projected.y);
-  return { offset, distance };
-}
-
-/** Finds the wall whose centerline is closest to `point` — used to snap a
- * newly placed wall-mounted device (outlet, switch, network) to a wall. */
-export function findNearestWall(walls: Wall[], point: Point): Wall | null {
-  let nearest: Wall | null = null;
-  let nearestDistance = Infinity;
-  for (const wall of walls) {
-    const { distance } = closestPointOnWall(wall, point);
-    if (distance < nearestDistance) {
-      nearestDistance = distance;
-      nearest = wall;
-    }
-  }
-  return nearest;
 }
 
 /** Standard ray-casting point-in-polygon test. */

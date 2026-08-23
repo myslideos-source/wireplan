@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
 import type { Project } from "@/domain";
 import type { FlaggedArea } from "@/features/plan-analysis/types";
 import type { FloorGeometry } from "./mock-geometry";
@@ -12,6 +12,7 @@ import { EditorCanvas } from "./EditorCanvas";
 import { EditorInspector } from "./EditorInspector";
 import { EditorStatusBar } from "./EditorStatusBar";
 import { ReviewPanel } from "./ReviewPanel";
+import { StartFloorDialog, type StartFloorInput } from "./StartFloorDialog";
 import { cn } from "@/lib/utils";
 
 export function EditorWorkspace({
@@ -25,7 +26,9 @@ export function EditorWorkspace({
 }) {
   const hydrate = useEditorStore((state) => state.hydrate);
   const switchFloor = useEditorStore((state) => state.switchFloor);
+  const addFloor = useEditorStore((state) => state.addFloor);
   const floorId = useEditorStore((state) => state.floorId);
+  const storeFloors = useEditorStore((state) => state.floors);
   const startReview = useEditorStore((state) => state.startReview);
   const planViewMode = useEditorStore((state) => state.planViewMode);
   const setPlanViewMode = useEditorStore((state) => state.setPlanViewMode);
@@ -42,8 +45,15 @@ export function EditorWorkspace({
     startReview(reviewAreas);
   }, [reviewAreas, startReview]);
 
-  const sortedFloors = [...geometries].sort((a, b) => a.floor.level - b.floor.level);
+  // Read from the store's own `floors` rather than the `geometries` prop —
+  // the prop is a static server snapshot, while the store also reflects a
+  // floor added via "+ Etage" during this session (§ addFloor).
+  const sortedFloors = [...storeFloors].sort((a, b) => a.floor.level - b.floor.level);
   const activeFloor = sortedFloors.find((f) => f.floor.id === floorId) ?? sortedFloors[0];
+
+  function handleCreateFloor(input: StartFloorInput) {
+    addFloor(input);
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -76,6 +86,23 @@ export function EditorWorkspace({
         ) : (
           <span className="text-text-muted">· {activeFloor?.floor.name}</span>
         )}
+        <StartFloorDialog
+          suggestedName={`Etage ${sortedFloors.length + 1}`}
+          suggestedLevel={(sortedFloors[sortedFloors.length - 1]?.floor.level ?? -1) + 1}
+          triggerLabel="Etage anlegen"
+          onCreate={handleCreateFloor}
+          trigger={(onOpen) => (
+            <button
+              type="button"
+              onClick={onOpen}
+              aria-label="Etage hinzufügen"
+              title="Etage hinzufügen"
+              className="flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] text-text-muted transition-colors hover:bg-panel-elevated hover:text-text"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          )}
+        />
 
         <div className="ml-auto flex items-center gap-0.5 rounded-[var(--radius-sm)] border border-border bg-bg p-0.5">
           {(["original", "planer"] as const).map((mode) => (

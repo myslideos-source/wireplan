@@ -1,10 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { MousePointer2, Plug, Lightbulb, ToggleLeft, Radar, Wifi, Trash2, Copy, Server, Home, DoorOpen, AppWindow, Zap, GitFork, type LucideIcon } from "lucide-react";
+import { MousePointer2, Plug, Lightbulb, ToggleLeft, Radar, Wifi, Trash2, Copy, Server, Home, Zap, GitFork, type LucideIcon } from "lucide-react";
 import { Badge, Button, KpiCard } from "@/components/ui";
 import {
-  wallLengthMeters,
   DEVICE_TYPE_LABELS,
   DEVICE_WATTAGE,
   getSmartHomeCatalog,
@@ -225,11 +224,9 @@ function AudioZoneSelect({
 export function EditorInspector() {
   const selected = useEditorStore((state) => state.selected);
   const rooms = useEditorStore((state) => state.rooms);
-  const walls = useEditorStore((state) => state.walls);
   const devices = useEditorStore((state) => state.devices);
   const roomCircuits = useEditorStore((state) => state.roomCircuits);
   const updateRoom = useEditorStore((state) => state.updateRoom);
-  const updateWallThickness = useEditorStore((state) => state.updateWallThickness);
   const setRoomCircuit = useEditorStore((state) => state.setRoomCircuit);
   const deleteDevice = useEditorStore((state) => state.deleteDevice);
   const duplicateDevice = useEditorStore((state) => state.duplicateDevice);
@@ -255,9 +252,6 @@ export function EditorInspector() {
   const setFixedConsumerReserveConduit = useEditorStore((state) => state.setFixedConsumerReserveConduit);
   const updateDeviceNetworkSubtype = useEditorStore((state) => state.updateDeviceNetworkSubtype);
   const updateDeviceMeta = useEditorStore((state) => state.updateDeviceMeta);
-  const openings = useEditorStore((state) => state.openings);
-  const deleteOpening = useEditorStore((state) => state.deleteOpening);
-  const updateOpeningWidth = useEditorStore((state) => state.updateOpeningWidth);
 
   const electricalEnabled = isFeatureEnabled("ELECTRICAL_EDITOR");
 
@@ -268,8 +262,8 @@ export function EditorInspector() {
           <MousePointer2 className="h-4 w-4" />
         </span>
         <p className="text-sm text-text-secondary">
-          Kein Element ausgewählt. Wählen Sie einen Raum, eine Wand oder ein
-          Gerät im Grundriss.
+          Kein Element ausgewählt. Wählen Sie einen Raum oder ein Gerät im
+          Grundriss.
         </p>
       </aside>
     );
@@ -326,11 +320,6 @@ export function EditorInspector() {
               </select>
             </FieldRow>
           )}
-          <FieldRow label="Montage">
-            <span className="text-sm text-text">
-              {device.mount.kind === "wall" ? "Wand" : "Decke"}
-            </span>
-          </FieldRow>
           <FieldRow label="Höhe">
             <span className="tabular-nums-font text-sm text-text">
               {formatNumber(device.mount.height / 1000, 2)} m
@@ -346,9 +335,7 @@ export function EditorInspector() {
           </FieldRow>
           <FieldRow label="Position">
             <span className="tabular-nums-font text-sm text-text">
-              {device.mount.kind === "point"
-                ? `${formatNumber(device.mount.position.x / 1000, 2)} / ${formatNumber(device.mount.position.y / 1000, 2)} m`
-                : `${formatNumber(device.mount.offset / 1000, 2)} m ab Wandanfang`}
+              {formatNumber(device.mount.position.x / 1000, 2)} / {formatNumber(device.mount.position.y / 1000, 2)} m
             </span>
           </FieldRow>
           <FieldRow label="Rotation">
@@ -420,7 +407,6 @@ export function EditorInspector() {
   if (selected.type === "board") {
     if (!distributionBoard) return null;
     const room = rooms.find((r) => r.id === distributionBoard.roomId);
-    const wall = walls.find((w) => w.id === distributionBoard.wallId);
     return (
       <aside className="w-80 shrink-0 overflow-y-auto border-l border-border bg-bg-secondary scrollbar-thin">
         <div className="flex items-center gap-2 border-b border-border px-5 py-4">
@@ -447,9 +433,6 @@ export function EditorInspector() {
             <span className="tabular-nums-font text-sm text-text">
               {formatNumber(distributionBoard.height / 1000, 2)} m
             </span>
-          </FieldRow>
-          <FieldRow label="Wand">
-            <span className="text-sm text-text">{wall?.id ?? "—"}</span>
           </FieldRow>
         </Section>
         <Section title="Smart Home (Loxone)">
@@ -547,70 +530,6 @@ export function EditorInspector() {
           >
             <Trash2 className="h-3.5 w-3.5" />
             Gerät löschen
-          </Button>
-        </div>
-      </aside>
-    );
-  }
-
-  if (selected.type === "opening") {
-    const opening = openings.find((o) => o.id === selected.id);
-    if (!opening) return null;
-    const wall = walls.find((w) => w.id === opening.wallId);
-    return (
-      <aside className="w-80 shrink-0 overflow-y-auto border-l border-border bg-bg-secondary scrollbar-thin">
-        <div className="flex items-center gap-2 border-b border-border px-5 py-4">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary/10 text-secondary">
-            {opening.type === "door" ? (
-              <DoorOpen className="h-4 w-4" />
-            ) : (
-              <AppWindow className="h-4 w-4" />
-            )}
-          </span>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
-              Öffnung
-            </p>
-            <h2 className="text-sm font-semibold text-text">
-              {opening.type === "door" ? "Tür" : "Fenster"}
-            </h2>
-          </div>
-        </div>
-        <Section title="Öffnung">
-          <FieldRow label="Typ">
-            <span className="text-sm text-text">
-              {opening.type === "door" ? "Tür" : "Fenster"}
-            </span>
-          </FieldRow>
-          <FieldRow label="Breite">
-            <div className="flex items-center gap-1.5">
-              <input
-                type="number"
-                step={50}
-                min={300}
-                max={3000}
-                value={opening.width}
-                onChange={(event) => updateOpeningWidth(opening.id, Number(event.target.value))}
-                className={inputClass}
-              />
-              <span className="text-xs text-text-muted">mm</span>
-            </div>
-          </FieldRow>
-          <FieldRow label="Wand">
-            <span className="text-sm text-text">{wall?.id ?? "—"}</span>
-          </FieldRow>
-        </Section>
-        <div className="px-5 py-4">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              deleteOpening(opening.id);
-              select(null);
-            }}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            {opening.type === "door" ? "Tür" : "Fenster"} löschen
           </Button>
         </div>
       </aside>
@@ -727,49 +646,6 @@ export function EditorInspector() {
             Verzweigung löschen
           </Button>
         </div>
-      </aside>
-    );
-  }
-
-  if (selected.type === "wall") {
-    const wall = walls.find((w) => w.id === selected.id);
-    if (!wall) return null;
-    return (
-      <aside className="w-80 shrink-0 overflow-y-auto border-l border-border bg-bg-secondary scrollbar-thin">
-        <div className="border-b border-border px-5 py-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
-            Wand
-          </p>
-          <h2 className="text-sm font-semibold text-text">{wall.id}</h2>
-        </div>
-        <Section title="Wand">
-          <FieldRow label="Länge">
-            <span className="tabular-nums-font text-sm font-medium text-text">
-              {formatNumber(wallLengthMeters(wall), 2)} m
-            </span>
-          </FieldRow>
-          <FieldRow label="Wandstärke">
-            <div className="flex items-center gap-1.5">
-              <input
-                type="number"
-                step={10}
-                min={60}
-                max={400}
-                value={wall.thickness}
-                onChange={(event) =>
-                  updateWallThickness(wall.id, Number(event.target.value))
-                }
-                className={inputClass}
-              />
-              <span className="text-xs text-text-muted">mm</span>
-            </div>
-          </FieldRow>
-          <FieldRow label="Höhe">
-            <span className="tabular-nums-font text-sm text-text">
-              {formatNumber(wall.height / 1000, 2)} m
-            </span>
-          </FieldRow>
-        </Section>
       </aside>
     );
   }
