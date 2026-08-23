@@ -30,7 +30,7 @@ export function Stepper({
                   step.status === "done" &&
                     "border-success bg-success/15 text-success",
                   step.status === "active" &&
-                    "border-primary bg-primary/15 text-primary shadow-[0_0_0_3px_rgba(22,216,196,0.12)]",
+                    "border-primary bg-primary/15 text-primary shadow-[0_0_0_3px_rgba(201,111,91,0.12)]",
                   step.status === "pending" &&
                     "border-border bg-panel-elevated text-text-muted",
                 )}
