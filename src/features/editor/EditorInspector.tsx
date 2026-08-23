@@ -338,6 +338,11 @@ export function EditorInspector() {
           <FieldRow label="Raum">
             <span className="text-sm text-text">{room?.name ?? "—"}</span>
           </FieldRow>
+          <FieldRow label="Stromkreis">
+            <span className="text-sm text-text">
+              {room ? (getCircuit(roomCircuits[room.id] ?? null)?.label ?? "—") : "—"}
+            </span>
+          </FieldRow>
           <FieldRow label="Position">
             <span className="tabular-nums-font text-sm text-text">
               {device.mount.kind === "point"
