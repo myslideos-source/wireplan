@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { MousePointer2, Plug, Lightbulb, ToggleLeft, Radar, Wifi, Trash2, Server, Home, DoorOpen, AppWindow, Zap, GitFork, type LucideIcon } from "lucide-react";
-import { Badge, Button } from "@/components/ui";
+import { Badge, Button, KpiCard } from "@/components/ui";
 import {
   wallLengthMeters,
   DEVICE_TYPE_LABELS,
@@ -745,6 +745,8 @@ export function EditorInspector() {
     network: 0,
   };
   for (const device of roomDevices) deviceCounts[device.type] += 1;
+  const roomSmartHomeDevices = smartHomeDevices.filter((d) => d.roomId === room.id);
+  const loxoneDeviceCount = roomDevices.filter((d) => d.smartHomeModelId).length + roomSmartHomeDevices.length;
 
   return (
     <aside className="w-80 shrink-0 overflow-y-auto border-l border-border bg-bg-secondary scrollbar-thin">
@@ -753,6 +755,12 @@ export function EditorInspector() {
           Raum
         </p>
         <h2 className="text-sm font-semibold text-text">{room.name}</h2>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 px-5 py-4">
+        <KpiCard className="px-2 py-2.5" label="Steckdosen" value={String(deviceCounts.outlet)} />
+        <KpiCard className="px-2 py-2.5" label="Licht" value={String(deviceCounts.light)} />
+        <KpiCard className="px-2 py-2.5" label="Loxone" value={String(loxoneDeviceCount)} />
       </div>
 
       <Section title="Raum">
