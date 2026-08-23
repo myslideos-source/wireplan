@@ -101,6 +101,15 @@ export type Selection =
   | { type: "consumer"; id: string }
   | null;
 
+/** §49 — multi-select, scoped to point-placeable items (devices,
+ * standalone Smart-Home devices, fixed consumers). Rooms/walls/openings
+ * stay single-select: they're anchored to geometry, not freely movable
+ * points, so "align" or "distribute" don't apply to them. */
+export interface MultiSelectItem {
+  type: "device" | "smarthome" | "consumer";
+  id: string;
+}
+
 const DEFAULT_OPENING_WIDTH: Record<"door" | "window", number> = {
   door: 900,
   window: 1200,
@@ -276,6 +285,31 @@ function resolveTreeBranchAssignment(
   return { treeBranchId: branch.id, treeBranches: [...state.treeBranches, branch] };
 }
 
+/** Reads a multi-select item's current position — only point-mounted
+ * devices, standalone Smart-Home devices, and fixed consumers have one;
+ * wall-mounted devices return null and are silently skipped by
+ * align/distribute (they're constrained to their wall, not freely
+ * movable in the plane those operations work in). */
+function getMultiSelectPosition(
+  state: Pick<EditorState, "devices" | "smartHomeDevices" | "fixedConsumers">,
+  item: MultiSelectItem,
+): Point | null {
+  if (item.type === "smarthome") {
+    return state.smartHomeDevices.find((d) => d.id === item.id)?.position ?? null;
+  }
+  if (item.type === "consumer") {
+    return state.fixedConsumers.find((c) => c.id === item.id)?.position ?? null;
+  }
+  const device = state.devices.find((d) => d.id === item.id);
+  return device?.mount.kind === "point" ? device.mount.position : null;
+}
+
+function moveMultiSelectItem(get: () => EditorState, item: MultiSelectItem, point: Point) {
+  if (item.type === "device") get().moveDeviceToPoint(item.id, point);
+  else if (item.type === "smarthome") get().moveSmartHomeDeviceToPoint(item.id, point);
+  else get().moveFixedConsumerToPoint(item.id, point);
+}
+
 /** Resolves what a speaker's `audioZoneId` should become (§12/§76): keep
  * an existing assignment, reuse a zone already named after the device's
  * room, create a room-named zone, or clear it for a non-audio model.
@@ -358,6 +392,15 @@ interface EditorState {
 
   selected: Selection;
   select: (selection: Selection) => void;
+
+  // §48-50 — multi-select, duplicate, align, distribute.
+  multiSelection: MultiSelectItem[];
+  toggleMultiSelect: (item: MultiSelectItem) => void;
+  clearMultiSelection: () => void;
+  deleteMultiSelection: () => void;
+  duplicateMultiSelection: () => void;
+  alignMultiSelection: (axis: "horizontal" | "vertical") => void;
+  distributeMultiSelection: (axis: "horizontal" | "vertical") => void;
 
   activeTool: EditorTool;
   setTool: (tool: EditorTool) => void;
@@ -657,6 +700,144 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   selected: null,
   select: (selection) => set({ selected: selection }),
+
+  multiSelection: [],
+  toggleMultiSelect: (item) =>
+    set((state) => {
+      const exists = state.multiSelection.some((s) => s.type === item.type && s.id === item.id);
+      if (exists) {
+        return {
+          multiSelection: state.multiSelection.filter((s) => !(s.type === item.type && s.id === item.id)),
+        };
+      }
+      // The very first Shift+Click after a plain click should extend the
+      // single selection, not replace it — seed the multi-selection with
+      // whatever was already singly selected (if it's a multi-selectable
+      // kind) before adding the newly shift-clicked item.
+      let base = state.multiSelection;
+      if (base.length === 0 && state.selected) {
+        const selected = state.selected;
+        if (
+          (selected.type === "device" || selected.type === "smarthome" || selected.type === "consumer") &&
+          !(selected.type === item.type && selected.id === item.id)
+        ) {
+          base = [selected];
+        }
+      }
+      return { multiSelection: [...base, item] };
+    }),
+  clearMultiSelection: () => set({ multiSelection: [] }),
+
+  deleteMultiSelection: () => {
+    const state = get();
+    for (const item of state.multiSelection) {
+      if (item.type === "device") get().deleteDevice(item.id);
+      else if (item.type === "smarthome") get().deleteSmartHomeDevice(item.id);
+      else get().deleteFixedConsumer(item.id);
+    }
+    set({ multiSelection: [] });
+  },
+
+  duplicateMultiSelection: () => {
+    const state = get();
+    const OFFSET = 300;
+    const newDevices: ElectricalDevice[] = [];
+    const newSmartHomeDevices: SmartHomeDevice[] = [];
+    const newConsumers: FixedConsumer[] = [];
+    const newSelection: MultiSelectItem[] = [];
+
+    function roomAt(point: Point) {
+      return state.rooms.find((r) => isPointInPolygon(point, r.polygon))?.id ?? null;
+    }
+
+    for (const item of state.multiSelection) {
+      if (item.type === "device") {
+        const device = state.devices.find((d) => d.id === item.id);
+        if (!device || device.mount.kind !== "point") continue;
+        const position = { x: device.mount.position.x + OFFSET, y: device.mount.position.y + OFFSET };
+        const id = generateId("device");
+        const number = nextNumberForPrefix(
+          { devices: [...state.devices, ...newDevices], smartHomeDevices: state.smartHomeDevices },
+          numberingPrefixFor({ type: device.type }),
+        );
+        newDevices.push({
+          ...device,
+          id,
+          mount: { ...device.mount, position },
+          roomId: roomAt(position),
+          number,
+        });
+        newSelection.push({ type: "device", id });
+      } else if (item.type === "smarthome") {
+        const device = state.smartHomeDevices.find((d) => d.id === item.id);
+        if (!device) continue;
+        const model = findSmartHomeModel(device.modelId);
+        const position = { x: device.position.x + OFFSET, y: device.position.y + OFFSET };
+        const id = generateId("smarthome");
+        const number = nextNumberForPrefix(
+          { devices: state.devices, smartHomeDevices: [...state.smartHomeDevices, ...newSmartHomeDevices] },
+          numberingPrefixFor({ category: model?.category, technology: model?.technology }),
+        );
+        newSmartHomeDevices.push({ ...device, id, position, roomId: roomAt(position), number });
+        newSelection.push({ type: "smarthome", id });
+      } else {
+        const consumer = state.fixedConsumers.find((c) => c.id === item.id);
+        if (!consumer) continue;
+        const position = { x: consumer.position.x + OFFSET, y: consumer.position.y + OFFSET };
+        const id = generateId("consumer");
+        const number =
+          Math.max(0, ...state.fixedConsumers.map((c) => c.number), ...newConsumers.map((c) => c.number)) + 1;
+        newConsumers.push({ ...consumer, id, position, roomId: roomAt(position), number });
+        newSelection.push({ type: "consumer", id });
+      }
+    }
+
+    set({
+      devices: [...state.devices, ...newDevices],
+      smartHomeDevices: [...state.smartHomeDevices, ...newSmartHomeDevices],
+      fixedConsumers: [...state.fixedConsumers, ...newConsumers],
+      multiSelection: newSelection,
+    });
+  },
+
+  alignMultiSelection: (axis) => {
+    const state = get();
+    const positions = state.multiSelection
+      .map((item) => ({ item, point: getMultiSelectPosition(state, item) }))
+      .filter((x): x is { item: MultiSelectItem; point: Point } => x.point !== null);
+    if (positions.length < 2) return;
+    const average =
+      axis === "horizontal"
+        ? positions.reduce((sum, p) => sum + p.point.y, 0) / positions.length
+        : positions.reduce((sum, p) => sum + p.point.x, 0) / positions.length;
+    for (const { item, point } of positions) {
+      const target = axis === "horizontal" ? { x: point.x, y: average } : { x: average, y: point.y };
+      moveMultiSelectItem(get, item, target);
+    }
+  },
+
+  distributeMultiSelection: (axis) => {
+    const state = get();
+    const positions = state.multiSelection
+      .map((item) => ({ item, point: getMultiSelectPosition(state, item) }))
+      .filter((x): x is { item: MultiSelectItem; point: Point } => x.point !== null);
+    if (positions.length < 3) return;
+    const sorted = [...positions].sort((a, b) =>
+      axis === "horizontal" ? a.point.x - b.point.x : a.point.y - b.point.y,
+    );
+    const first = sorted[0].point;
+    const last = sorted[sorted.length - 1].point;
+    const lastIndex = sorted.length - 1;
+    sorted.forEach(({ item, point }, index) => {
+      if (index === 0 || index === lastIndex) return;
+      const t = index / lastIndex;
+      const target =
+        axis === "horizontal"
+          ? { x: first.x + (last.x - first.x) * t, y: point.y }
+          : { x: point.x, y: first.y + (last.y - first.y) * t };
+      moveMultiSelectItem(get, item, target);
+    });
+  },
 
   activeTool: "select",
   setTool: (tool) => set({ activeTool: tool }),

@@ -58,6 +58,17 @@ export function EditorCanvas() {
   const fixedConsumers = useEditorStore((state) => state.fixedConsumers);
   const addFixedConsumerAtPoint = useEditorStore((state) => state.addFixedConsumerAtPoint);
   const moveFixedConsumerToPoint = useEditorStore((state) => state.moveFixedConsumerToPoint);
+  const multiSelection = useEditorStore((state) => state.multiSelection);
+  const toggleMultiSelect = useEditorStore((state) => state.toggleMultiSelect);
+  const clearMultiSelection = useEditorStore((state) => state.clearMultiSelection);
+  const deleteMultiSelection = useEditorStore((state) => state.deleteMultiSelection);
+  const duplicateMultiSelection = useEditorStore((state) => state.duplicateMultiSelection);
+  const alignMultiSelection = useEditorStore((state) => state.alignMultiSelection);
+  const distributeMultiSelection = useEditorStore((state) => state.distributeMultiSelection);
+
+  function isMultiSelected(type: "device" | "smarthome" | "consumer", id: string) {
+    return multiSelection.some((s) => s.type === type && s.id === id);
+  }
 
   const svgRef = useRef<SVGSVGElement>(null);
   const [dragging, setDragging] = useState<
@@ -231,7 +242,10 @@ export function EditorCanvas() {
       if (point) addOpeningAtPoint(placingOpeningType, point);
       return;
     }
-    if (canSelect) select(null);
+    if (canSelect) {
+      select(null);
+      clearMultiSelection();
+    }
   }
 
   function handleCanvasDragOver(event: ReactDragEvent) {
@@ -444,9 +458,13 @@ export function EditorCanvas() {
                 position={position}
                 selected={isSelected}
                 clickable={canSelect}
-                onSelect={() => select({ type: "device", id: device.id })}
+                onSelect={(event) => {
+                  if (event.shiftKey) toggleMultiSelect({ type: "device", id: device.id });
+                  else select({ type: "device", id: device.id });
+                }}
                 onDragStart={() => setDragging({ kind: "device", id: device.id })}
                 dimmed={!isDeviceHighlighted(device)}
+                multiSelected={isMultiSelected("device", device.id)}
               />
             );
           })}
@@ -462,7 +480,8 @@ export function EditorCanvas() {
                 onClick={(event) => {
                   if (!canSelect) return;
                   event.stopPropagation();
-                  select({ type: "smarthome", id: device.id });
+                  if (event.shiftKey) toggleMultiSelect({ type: "smarthome", id: device.id });
+                  else select({ type: "smarthome", id: device.id });
                 }}
                 onMouseDown={(event) => {
                   if (!canSelect) return;
@@ -470,6 +489,17 @@ export function EditorCanvas() {
                   setDragging({ kind: "smarthome", id: device.id });
                 }}
               >
+                {isMultiSelected("smarthome", device.id) && (
+                  <circle
+                    cx={device.position.x}
+                    cy={device.position.y}
+                    r={210}
+                    fill="none"
+                    stroke="#16d8c4"
+                    strokeWidth={14}
+                    strokeDasharray="30 20"
+                  />
+                )}
                 <circle
                   cx={device.position.x}
                   cy={device.position.y}
@@ -494,7 +524,8 @@ export function EditorCanvas() {
                 onClick={(event) => {
                   if (!canSelect) return;
                   event.stopPropagation();
-                  select({ type: "consumer", id: consumer.id });
+                  if (event.shiftKey) toggleMultiSelect({ type: "consumer", id: consumer.id });
+                  else select({ type: "consumer", id: consumer.id });
                 }}
                 onMouseDown={(event) => {
                   if (!canSelect) return;
@@ -502,6 +533,18 @@ export function EditorCanvas() {
                   setDragging({ kind: "consumer", id: consumer.id });
                 }}
               >
+                {isMultiSelected("consumer", consumer.id) && (
+                  <rect
+                    x={consumer.position.x - 200}
+                    y={consumer.position.y - 200}
+                    width={400}
+                    height={400}
+                    fill="none"
+                    stroke="#16d8c4"
+                    strokeWidth={14}
+                    strokeDasharray="30 20"
+                  />
+                )}
                 <rect
                   x={consumer.position.x - 150}
                   y={consumer.position.y - 150}
@@ -604,6 +647,48 @@ export function EditorCanvas() {
           </g>
         )}
       </svg>
+
+      {multiSelection.length > 1 && (
+        <div className="absolute left-1/2 top-4 flex -translate-x-1/2 items-center gap-1 rounded-[var(--radius-md)] border border-border bg-panel px-2 py-1.5 shadow-lg">
+          <span className="px-2 text-xs font-medium text-text-secondary">
+            {multiSelection.length} ausgewählt
+          </span>
+          <MultiSelectButton label="Duplizieren" onClick={duplicateMultiSelection} />
+          <MultiSelectButton label="Horizontal ausrichten" onClick={() => alignMultiSelection("horizontal")} />
+          <MultiSelectButton label="Vertikal ausrichten" onClick={() => alignMultiSelection("vertical")} />
+          <MultiSelectButton
+            label="Horizontal verteilen"
+            onClick={() => distributeMultiSelection("horizontal")}
+          />
+          <MultiSelectButton label="Vertikal verteilen" onClick={() => distributeMultiSelection("vertical")} />
+          <MultiSelectButton label="Löschen" tone="error" onClick={deleteMultiSelection} />
+          <MultiSelectButton label="Abbrechen" onClick={clearMultiSelection} />
+        </div>
+      )}
     </div>
+  );
+}
+
+function MultiSelectButton({
+  label,
+  onClick,
+  tone,
+}: {
+  label: string;
+  onClick: () => void;
+  tone?: "error";
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        tone === "error"
+          ? "rounded-[var(--radius-sm)] px-2 py-1 text-xs font-medium text-error transition-colors hover:bg-error/10"
+          : "rounded-[var(--radius-sm)] px-2 py-1 text-xs font-medium text-text-secondary transition-colors hover:bg-panel-elevated hover:text-text"
+      }
+    >
+      {label}
+    </button>
   );
 }

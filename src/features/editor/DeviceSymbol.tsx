@@ -67,16 +67,19 @@ export function DeviceSymbol({
   onSelect,
   onDragStart,
   dimmed,
+  multiSelected,
 }: {
   device: ElectricalDevice;
   position: Point;
   selected: boolean;
   clickable: boolean;
-  onSelect: () => void;
+  onSelect: (event: ReactMouseEvent) => void;
   onDragStart?: (event: ReactMouseEvent) => void;
   /** §67 Tree View — fades out devices that aren't Tree hardware while
    * the user focuses on Tree cabling, without hiding them entirely. */
   dimmed?: boolean;
+  /** §49 — part of the current multi-selection (Shift+Click). */
+  multiSelected?: boolean;
 }) {
   const color = DEVICE_COLORS[device.type];
 
@@ -88,7 +91,7 @@ export function DeviceSymbol({
       onClick={(event) => {
         if (!clickable) return;
         event.stopPropagation();
-        onSelect();
+        onSelect(event);
       }}
       onMouseDown={(event) => {
         if (!clickable || !onDragStart) return;
@@ -96,6 +99,9 @@ export function DeviceSymbol({
         onDragStart(event);
       }}
     >
+      {multiSelected && (
+        <circle r={RADIUS + 50} fill="none" stroke="#16d8c4" strokeWidth={14} strokeDasharray="30 20" />
+      )}
       <circle
         r={RADIUS}
         fill="#0b1520"
