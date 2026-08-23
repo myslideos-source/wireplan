@@ -573,6 +573,7 @@ interface EditorState {
   addSpotArrayAtPoint: (point: Point) => boolean;
   moveDeviceToPoint: (deviceId: string, point: Point) => void;
   deleteDevice: (id: string) => void;
+  duplicateDevice: (id: string) => void;
   assignDeviceSmartHomeModel: (deviceId: string, modelId: string | null) => void;
   assignBoardSmartHomeModel: (modelId: string | null) => void;
   setSmartHomePlacementModelId: (modelId: string) => void;
@@ -1289,6 +1290,45 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           : state.selected,
       };
     }),
+
+  duplicateDevice: (id) => {
+    const state = get();
+    const device = state.devices.find((d) => d.id === id);
+    if (!device) return;
+    const number = nextNumberForPrefix(
+      state,
+      numberingPrefixFor({ type: device.type, networkDeviceSubtype: device.networkDeviceSubtype }),
+    );
+    // Offset the clone from the original so it's visibly a separate device
+    // rather than stacked exactly on top of it.
+    const offsetMm = 300;
+
+    const mount = device.mount;
+    if (mount.kind === "wall") {
+      const wall = state.walls.find((w) => w.id === mount.wallId);
+      const wallLenMm = wall ? Math.hypot(wall.end.x - wall.start.x, wall.end.y - wall.start.y) : mount.offset;
+      const newOffset = Math.min(mount.offset + offsetMm, Math.max(0, wallLenMm - 50));
+      const clone: ElectricalDevice = {
+        ...device,
+        id: generateId("device"),
+        mount: { ...mount, offset: newOffset },
+        number,
+      };
+      set((s) => ({ devices: [...s.devices, clone], selected: { type: "device", id: clone.id } }));
+      return;
+    }
+
+    const newPosition = { x: mount.position.x + offsetMm, y: mount.position.y + offsetMm };
+    const room = state.rooms.find((r) => isPointInPolygon(newPosition, r.polygon));
+    const clone: ElectricalDevice = {
+      ...device,
+      id: generateId("device"),
+      mount: { ...mount, position: newPosition },
+      roomId: room?.id ?? device.roomId,
+      number,
+    };
+    set((s) => ({ devices: [...s.devices, clone], selected: { type: "device", id: clone.id } }));
+  },
 
   setRoomCircuit: (roomId, circuitId) =>
     set((state) => ({

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { MousePointer2, Plug, Lightbulb, ToggleLeft, Radar, Wifi, Trash2, Server, Home, DoorOpen, AppWindow, Zap, GitFork, type LucideIcon } from "lucide-react";
+import { MousePointer2, Plug, Lightbulb, ToggleLeft, Radar, Wifi, Trash2, Copy, Server, Home, DoorOpen, AppWindow, Zap, GitFork, type LucideIcon } from "lucide-react";
 import { Badge, Button, KpiCard } from "@/components/ui";
 import {
   wallLengthMeters,
@@ -232,6 +232,7 @@ export function EditorInspector() {
   const updateWallThickness = useEditorStore((state) => state.updateWallThickness);
   const setRoomCircuit = useEditorStore((state) => state.setRoomCircuit);
   const deleteDevice = useEditorStore((state) => state.deleteDevice);
+  const duplicateDevice = useEditorStore((state) => state.duplicateDevice);
   const select = useEditorStore((state) => state.select);
   const technikraumRoomId = useEditorStore((state) => state.technikraumRoomId);
   const setTechnikraum = useEditorStore((state) => state.setTechnikraum);
@@ -391,7 +392,15 @@ export function EditorInspector() {
             </FieldRow>
           )}
         </Section>
-        <div className="px-5 py-4">
+        <div className="flex gap-2 px-5 py-4">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => duplicateDevice(device.id)}
+          >
+            <Copy className="h-3.5 w-3.5" />
+            Duplizieren
+          </Button>
           <Button
             variant="secondary"
             size="sm"
