@@ -75,10 +75,16 @@ export function RoutingCanvas({
         if (!position || !boardPosition) return null;
         const isSelected = selectedCableId === cable.id;
         const dimmed = selectedCableId !== null && !isSelected;
+        // §16/§31 — "Wand" mode carries its actual routed polyline (bent
+        // through doorways); every other mode still renders as the
+        // simple corner-to-corner line it was always computed as.
+        const d = cable.path
+          ? cable.path.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ")
+          : `M ${boardPosition.x} ${boardPosition.y} L ${position.x} ${boardPosition.y} L ${position.x} ${position.y}`;
         return (
           <path
             key={cable.id}
-            d={`M ${boardPosition.x} ${boardPosition.y} L ${position.x} ${boardPosition.y} L ${position.x} ${position.y}`}
+            d={d}
             fill="none"
             stroke={CABLE_COLORS[cable.type]}
             strokeWidth={isSelected ? 50 : 30}

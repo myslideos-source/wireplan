@@ -1,3 +1,5 @@
+import type { Point } from "./geometry";
+
 /**
  * Cable types used for routing (§49, §54, §28). "Tree Cable" is the
  * shared bus for a Tree branch (§33/§60) — one cable per branch, not one
@@ -29,10 +31,11 @@ export const SPEAKER_CABLE_TYPES: CableType[] = [
   "Lautsprecherkabel 2x2,5",
 ];
 
-/** §48 — how the cable run is assumed to travel. Recorded per calculation
- * run; the length estimate itself doesn't yet vary by mode (see
- * computeCables), so switching this is informative, not decorative, once
- * real per-mode pathfinding lands. */
+/** §48 — how the cable run is assumed to travel. In "Wand" mode the
+ * length actually comes from wall/door-aware pathfinding (§16/§31, see
+ * pathfind.ts) instead of a straight Manhattan estimate — the other
+ * modes assume floor/ceiling routing can pass under or over any wall, so
+ * they keep the Manhattan estimate. */
 export type RoutingMode = "Boden" | "Decke" | "Wand" | "Hybrid";
 
 export interface Cable {
@@ -48,4 +51,7 @@ export interface Cable {
   mode: RoutingMode;
   startLabel: string;
   targetLabel: string;
+  /** The actual routed polyline in "Wand" mode (§16/§31) — absent for
+   * the other modes, which render as a simple corner-to-corner line. */
+  path?: Point[];
 }

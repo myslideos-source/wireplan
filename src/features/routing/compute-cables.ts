@@ -4,12 +4,15 @@ import type {
   DistributionBoard,
   ElectricalDevice,
   ElectricalDeviceType,
+  Opening,
+  Point,
   Room,
   RoutingMode,
   Wall,
 } from "@/domain";
 import { DEVICE_TYPE_LABELS, findSmartHomeModel, NETWORK_DEVICE_CABLE, NETWORK_DEVICE_LABELS } from "@/domain";
 import { devicePosition, pointAtOffset } from "@/features/editor/geometry-utils";
+import { findWallAwarePath } from "./pathfind";
 
 const CABLE_TYPE_BY_DEVICE: Record<Exclude<ElectricalDeviceType, "network">, CableType> = {
   outlet: "NYM-J 3x1,5",
@@ -31,11 +34,13 @@ function deviceLabelFor(device: ElectricalDevice): string {
 }
 
 /**
- * First-pass cable length estimate (§47-49). Real routing would path
- * around walls/openings per the chosen mode (Boden/Decke/Wand/Hybrid);
- * this uses Manhattan distance (never straight-line/"Luftlinie", per
- * §47) as an honest approximation until per-mode pathfinding exists —
- * the mode is recorded on each cable but doesn't yet change the length.
+ * Cable length estimate (§47-49). "Wand" mode uses real wall/door-aware
+ * pathfinding (§16/§31, see pathfind.ts) since a surface-mounted cable
+ * genuinely cannot cross a wall except through a doorway. The other
+ * modes (Boden/Decke/Hybrid) assume the cable runs under the floor or
+ * above the ceiling, which can pass under/over any wall — Manhattan
+ * distance (never straight-line/"Luftlinie", per §47) is an honest
+ * approximation for those.
  */
 export function computeCables(
   devices: ElectricalDevice[],
@@ -43,6 +48,7 @@ export function computeCables(
   walls: Wall[],
   rooms: Room[],
   mode: RoutingMode,
+  openings: Opening[] = [],
 ): Cable[] {
   const boardWall = walls.find((w) => w.id === board.wallId);
   if (!boardWall) return [];
@@ -59,17 +65,26 @@ export function computeCables(
     const position = devicePosition(device, walls);
     if (!position) continue;
     index += 1;
-    const lengthMm =
-      Math.abs(position.x - boardPosition.x) + Math.abs(position.y - boardPosition.y);
     const room = device.roomId ? rooms.find((r) => r.id === device.roomId) : undefined;
+    let lengthMeters: number;
+    let path: Point[] | undefined;
+    if (mode === "Wand") {
+      const routed = findWallAwarePath(boardPosition, position, walls, openings);
+      lengthMeters = routed.lengthMm / 1000;
+      path = routed.path;
+    } else {
+      lengthMeters =
+        (Math.abs(position.x - boardPosition.x) + Math.abs(position.y - boardPosition.y)) / 1000;
+    }
     cables.push({
       id: `L-${String(index).padStart(3, "0")}`,
       deviceId: device.id,
       type: cableTypeFor(device),
-      lengthMeters: lengthMm / 1000,
+      lengthMeters,
       mode,
       startLabel: "Schaltschrank",
       targetLabel: `${room?.name ?? "Unbekannt"} · ${deviceLabelFor(device)}`,
+      path,
     });
   }
   return cables;

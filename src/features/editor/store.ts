@@ -1306,6 +1306,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       state.walls,
       state.rooms,
       state.routingMode,
+      state.openings,
     );
     const treeCables = computeTreeBranchCables(
       state.treeBranches,
@@ -1328,6 +1329,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       state.distributionBoard,
       state.walls,
       state.routingMode,
+      state.openings,
     );
     set({ cables: [...starCables, ...treeCables, ...audioCables, ...consumerCables] });
     return true;
