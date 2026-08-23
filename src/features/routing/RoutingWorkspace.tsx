@@ -14,7 +14,7 @@ import { MaterialListTab } from "./MaterialListTab";
 import { LoxoneListTab } from "./LoxoneListTab";
 import { TreeBranchesTab } from "./TreeBranchesTab";
 
-const ROUTING_MODES: RoutingMode[] = ["Boden", "Decke", "Wand", "Hybrid"];
+const ROUTING_MODES: RoutingMode[] = ["Boden", "Decke", "Hybrid"];
 
 type Tab = "kabelliste" | "materialliste" | "loxone" | "tree";
 

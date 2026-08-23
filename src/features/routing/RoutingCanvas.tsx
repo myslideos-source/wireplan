@@ -2,7 +2,7 @@
 
 import type { Cable, CableType } from "@/domain";
 import { useEditorStore } from "@/features/editor/store";
-import { wallsBoundingBox, devicePosition, pointAtOffset } from "@/features/editor/geometry-utils";
+import { floorExtentBox, devicePosition } from "@/features/editor/geometry-utils";
 
 const CABLE_COLORS: Record<CableType, string> = {
   "NYM-J 3x1,5": "#D9A441",
@@ -24,16 +24,15 @@ export function RoutingCanvas({
   selectedCableId: string | null;
   onSelectCable: (id: string | null) => void;
 }) {
-  const walls = useEditorStore((state) => state.walls);
   const rooms = useEditorStore((state) => state.rooms);
   const devices = useEditorStore((state) => state.devices);
+  const backgroundImage = useEditorStore((state) => state.backgroundImage);
   const distributionBoard = useEditorStore((state) => state.distributionBoard);
   const cables = useEditorStore((state) => state.cables);
 
-  const box = wallsBoundingBox(walls);
+  const box = floorExtentBox(rooms, backgroundImage);
   const viewBox = `${box.minX} ${box.minY} ${box.width} ${box.height}`;
-  const boardWall = distributionBoard && walls.find((w) => w.id === distributionBoard.wallId);
-  const boardPosition = boardWall && distributionBoard ? pointAtOffset(boardWall, distributionBoard.offset) : null;
+  const boardPosition = distributionBoard ? distributionBoard.position : null;
 
   // Tree bus cables have no single deviceId (§33) — this device-to-cable
   // lookup only covers the classic star cables this canvas visualizes.
@@ -55,32 +54,17 @@ export function RoutingCanvas({
             fill="#EFE7D8"
           />
         ))}
-        {walls.map((wall) => (
-          <line
-            key={wall.id}
-            x1={wall.start.x}
-            y1={wall.start.y}
-            x2={wall.end.x}
-            y2={wall.end.y}
-            stroke="#303030"
-            strokeWidth={wall.thickness}
-            strokeLinecap="square"
-          />
-        ))}
       </g>
 
       {cables.map((cable) => {
         const device = devices.find((d) => d.id === cable.deviceId);
-        const position = device && devicePosition(device, walls);
+        const position = device && devicePosition(device);
         if (!position || !boardPosition) return null;
         const isSelected = selectedCableId === cable.id;
         const dimmed = selectedCableId !== null && !isSelected;
-        // §16/§31 — "Wand" mode carries its actual routed polyline (bent
-        // through doorways); every other mode still renders as the
-        // simple corner-to-corner line it was always computed as.
-        const d = cable.path
-          ? cable.path.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ")
-          : `M ${boardPosition.x} ${boardPosition.y} L ${position.x} ${boardPosition.y} L ${position.x} ${position.y}`;
+        // Every mode renders as the simple corner-to-corner line it was
+        // always computed as (§47 — Manhattan distance, no wall routing).
+        const d = `M ${boardPosition.x} ${boardPosition.y} L ${position.x} ${boardPosition.y} L ${position.x} ${position.y}`;
         return (
           <path
             key={cable.id}
@@ -100,8 +84,7 @@ export function RoutingCanvas({
       })}
 
       {devices.map((device) => {
-        const position = devicePosition(device, walls);
-        if (!position) return null;
+        const position = devicePosition(device);
         const cable = cablesByDeviceId.get(device.id);
         const dimmed = selectedCableId !== null && cable?.id !== selectedCableId;
         return (

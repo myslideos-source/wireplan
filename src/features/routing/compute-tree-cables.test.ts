@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { orderTreeBusPoints, treeBusLengthMeters, computeTreeBranchCables } from "./compute-tree-cables.ts";
-import type { DistributionBoard, ElectricalDevice, TreeBranch, TreeEdge, TreeJunction, Wall } from "@/domain";
+import type { DistributionBoard, ElectricalDevice, TreeBranch, TreeEdge, TreeJunction } from "@/domain";
 
 test("orderTreeBusPoints walks to the nearest remaining point each step", () => {
   const start = { x: 0, y: 0 };
@@ -28,8 +28,7 @@ test("treeBusLengthMeters sums consecutive hops as one shared bus, not a star", 
   assert.equal(treeBusLengthMeters(start, ordered), 3);
 });
 
-const wall: Wall = { id: "w1", floorId: "f1", start: { x: 0, y: 0 }, end: { x: 5000, y: 0 }, thickness: 150, height: 2500 };
-const board: DistributionBoard = { id: "board1", floorId: "f1", roomId: "r1", wallId: "w1", offset: 0, width: 400, height: 250 };
+const board: DistributionBoard = { id: "board1", floorId: "f1", roomId: "r1", position: { x: 0, y: 0 }, width: 400, height: 250 };
 const branch: TreeBranch = { id: "b1", floorId: "f1", label: "Tree 1", colorHex: "#68d56b" };
 
 function makeDevice(id: string, position: { x: number; y: number }): ElectricalDevice {
@@ -37,7 +36,7 @@ function makeDevice(id: string, position: { x: number; y: number }): ElectricalD
     id,
     floorId: "f1",
     type: "switch",
-    mount: { kind: "point", position, height: 1050 },
+    mount: { position, height: 1050 },
     roomId: "r1",
     smartHomeModelId: "loxone-relay-tree",
     treeBranchId: branch.id,
@@ -54,7 +53,7 @@ test("computeTreeBranchCables sums manually-drawn edges instead of the auto chai
     { id: "e2", treeBranchId: branch.id, fromRef: "junction:j1", toRef: "device:d1" },
     { id: "e3", treeBranchId: branch.id, fromRef: "junction:j1", toRef: "device:d2" },
   ];
-  const cables = computeTreeBranchCables([branch], [d1, d2], [], board, [wall], "Decke", [junction], edges);
+  const cables = computeTreeBranchCables([branch], [d1, d2], [], board, "Decke", [junction], edges);
   assert.equal(cables.length, 1);
   // board->junction 2000mm=2m, junction->d1 1000mm=1m, junction->d2 1000mm=1m => 4m — a
   // real Y-branch through the junction, not a single chain a nearest-neighbor
@@ -65,7 +64,7 @@ test("computeTreeBranchCables sums manually-drawn edges instead of the auto chai
 
 test("computeTreeBranchCables falls back to the automatic nearest-neighbor chain when a branch has no manual edges", () => {
   const d1 = makeDevice("d1", { x: 1000, y: 0 });
-  const cables = computeTreeBranchCables([branch], [d1], [], board, [wall], "Decke");
+  const cables = computeTreeBranchCables([branch], [d1], [], board, "Decke");
   assert.equal(cables.length, 1);
   assert.equal(cables[0].lengthMeters, 1);
   assert.doesNotMatch(cables[0].targetLabel, /manuell verbunden/);

@@ -14,12 +14,13 @@ export type ElectricalDeviceType =
   | "sensor"
   | "network";
 
-/** Wall-mounted devices follow a wall by offset (§66), like doors/windows.
- * Point-mounted devices (ceiling lights, sensors) sit at a fixed plan
- * position instead. */
-export type DeviceMount =
-  | { kind: "wall"; wallId: string; offset: number; height: number }
-  | { kind: "point"; position: Point; height: number };
+/** Every device sits at a fixed plan position (§Phase 11 — the uploaded
+ * plan is a locked background image, so there are no wall vectors left to
+ * mount against). */
+export interface DeviceMount {
+  position: Point;
+  height: number;
+}
 
 /** §13 — a plain "Netzwerk" tool placement is a generic data outlet
  * ("Dose"); these sub-types cover the network-specific hardware a
@@ -75,7 +76,7 @@ export interface ElectricalDevice {
    * e.g. the 2nd Touch on a floor gets number 2, shown as "T02". */
   number: number;
   /** Degrees clockwise, purely cosmetic (§92) — rotates the device's
-   * glyph in place, never affects its position or wall attachment. */
+   * glyph in place, never affects its position. */
   rotation?: number;
   /** Freitext für Planungshinweise (§92) — nie automatisch befüllt. */
   notes?: string;
@@ -87,15 +88,6 @@ export const DEVICE_TYPE_LABELS: Record<ElectricalDeviceType, string> = {
   switch: "Schalter",
   sensor: "Sensor",
   network: "Netzwerk",
-};
-
-/** Whether a device type mounts to a wall or floats at a point (ceiling). */
-export const DEVICE_MOUNT_KIND: Record<ElectricalDeviceType, DeviceMount["kind"]> = {
-  outlet: "wall",
-  switch: "wall",
-  network: "wall",
-  light: "point",
-  sensor: "point",
 };
 
 /** Typical mounting height in mm — outlets/switches/network at working
@@ -175,16 +167,15 @@ export interface Circuit {
 }
 
 /**
- * The distribution board / Loxone Miniserver enclosure (§45-46). Wall-
- * mounted like a device, but it's a fixture rather than a placeable tool
- * category, and every cable route (Phase 7) starts from it.
+ * The distribution board / Loxone Miniserver enclosure (§45-46). Placed
+ * like a device, but it's a fixture rather than a placeable tool category,
+ * and every cable route (Phase 7) starts from it.
  */
 export interface DistributionBoard {
   id: string;
   floorId: string;
   roomId: string;
-  wallId: string;
-  offset: number;
+  position: Point;
   width: number;
   height: number;
   /** Which Loxone (or other smart-home system) controller hardware sits

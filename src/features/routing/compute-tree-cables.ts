@@ -8,10 +8,9 @@ import type {
   TreeBranch,
   TreeEdge,
   TreeJunction,
-  Wall,
 } from "@/domain";
 import { findSmartHomeModel } from "@/domain";
-import { devicePosition, pointAtOffset } from "@/features/editor/geometry-utils";
+import { devicePosition } from "@/features/editor/geometry-utils";
 
 export interface TreeBusPoint {
   id: string;
@@ -22,8 +21,9 @@ export interface TreeBusPoint {
  * Nearest-neighbor bus ordering — starting from the distribution board,
  * repeatedly walk to whichever remaining device is closest. This is a
  * real bus (every hop is device-to-device, not device-to-board like a
- * star), just not yet wall/door-aware pathfinding — that's real routing
- * work deferred to a later phase (§16/§31).
+ * star). The plan has no wall vectors to route around (Phase 11), so
+ * every hop is a plain Manhattan distance — this is the final, permanent
+ * routing model for Tree branches, not an interim approximation.
  */
 export function orderTreeBusPoints(start: Point, points: TreeBusPoint[]): TreeBusPoint[] {
   const remaining = [...points];
@@ -60,14 +60,12 @@ function treeBusPointsForBranch(
   branch: TreeBranch,
   devices: ElectricalDevice[],
   smartHomeDevices: SmartHomeDevice[],
-  walls: Wall[],
 ): TreeBusPoint[] {
   const points: TreeBusPoint[] = [];
   for (const device of devices) {
     if (device.treeBranchId !== branch.id) continue;
     if (!device.smartHomeModelId || !findSmartHomeModel(device.smartHomeModelId)?.countsAsTreeDevice) continue;
-    const position = devicePosition(device, walls);
-    if (position) points.push({ id: device.id, position });
+    points.push({ id: device.id, position: devicePosition(device) });
   }
   for (const device of smartHomeDevices) {
     if (device.treeBranchId !== branch.id) continue;
@@ -86,7 +84,6 @@ function positionForRef(
   boardPosition: Point,
   devices: ElectricalDevice[],
   smartHomeDevices: SmartHomeDevice[],
-  walls: Wall[],
   treeJunctions: TreeJunction[],
 ): Point | null {
   if (ref === "board") return boardPosition;
@@ -96,7 +93,7 @@ function positionForRef(
   const id = ref.slice(separatorIndex + 1);
   if (kind === "device") {
     const device = devices.find((d) => d.id === id);
-    return device ? devicePosition(device, walls) : null;
+    return device ? devicePosition(device) : null;
   }
   if (kind === "smarthome") {
     const device = smartHomeDevices.find((d) => d.id === id);
@@ -122,25 +119,22 @@ export function computeTreeBranchCables(
   devices: ElectricalDevice[],
   smartHomeDevices: SmartHomeDevice[],
   board: DistributionBoard,
-  walls: Wall[],
   mode: RoutingMode,
   treeJunctions: TreeJunction[] = [],
   treeEdges: TreeEdge[] = [],
 ): Cable[] {
-  const boardWall = walls.find((w) => w.id === board.wallId);
-  if (!boardWall) return [];
-  const boardPosition = pointAtOffset(boardWall, board.offset);
+  const boardPosition = board.position;
 
   const cables: Cable[] = [];
   for (const branch of branches) {
-    const points = treeBusPointsForBranch(branch, devices, smartHomeDevices, walls);
+    const points = treeBusPointsForBranch(branch, devices, smartHomeDevices);
     const branchEdges = treeEdges.filter((e) => e.treeBranchId === branch.id);
 
     if (branchEdges.length > 0) {
       let lengthMeters = 0;
       for (const edge of branchEdges) {
-        const from = positionForRef(edge.fromRef, boardPosition, devices, smartHomeDevices, walls, treeJunctions);
-        const to = positionForRef(edge.toRef, boardPosition, devices, smartHomeDevices, walls, treeJunctions);
+        const from = positionForRef(edge.fromRef, boardPosition, devices, smartHomeDevices, treeJunctions);
+        const to = positionForRef(edge.toRef, boardPosition, devices, smartHomeDevices, treeJunctions);
         if (!from || !to) continue;
         lengthMeters += (Math.abs(to.x - from.x) + Math.abs(to.y - from.y)) / 1000;
       }

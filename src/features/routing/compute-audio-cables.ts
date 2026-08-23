@@ -1,6 +1,5 @@
-import type { AudioZone, Cable, CableType, DistributionBoard, RoutingMode, SmartHomeDevice, Wall } from "@/domain";
+import type { AudioZone, Cable, CableType, DistributionBoard, RoutingMode, SmartHomeDevice } from "@/domain";
 import { findSmartHomeModel, formatDeviceNumber, numberingPrefixFor } from "@/domain";
-import { pointAtOffset } from "@/features/editor/geometry-utils";
 
 /**
  * One home-run speaker cable per speaker (§12) — unlike Tree, §12 never
@@ -11,13 +10,10 @@ export function computeAudioCables(
   smartHomeDevices: SmartHomeDevice[],
   audioZones: AudioZone[],
   board: DistributionBoard,
-  walls: Wall[],
   cableType: CableType,
   mode: RoutingMode,
 ): Cable[] {
-  const boardWall = walls.find((w) => w.id === board.wallId);
-  if (!boardWall) return [];
-  const boardPosition = pointAtOffset(boardWall, board.offset);
+  const boardPosition = board.position;
 
   const cables: Cable[] = [];
   for (const device of smartHomeDevices) {

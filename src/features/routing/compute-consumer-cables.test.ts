@@ -1,23 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { computeConsumerCables } from "./compute-consumer-cables.ts";
-import type { DistributionBoard, FixedConsumer, Wall } from "@/domain";
-
-const wall: Wall = {
-  id: "w1",
-  floorId: "f1",
-  start: { x: 0, y: 0 },
-  end: { x: 4000, y: 0 },
-  thickness: 150,
-  height: 2500,
-};
+import type { DistributionBoard, FixedConsumer } from "@/domain";
 
 const board: DistributionBoard = {
   id: "board1",
   floorId: "f1",
   roomId: "r1",
-  wallId: "w1",
-  offset: 0,
+  position: { x: 0, y: 0 },
   width: 400,
   height: 250,
 };
@@ -37,13 +27,13 @@ function makeConsumer(overrides: Partial<FixedConsumer> = {}): FixedConsumer {
 }
 
 test("computeConsumerCables emits only the lead cable when reserveConduit is off", () => {
-  const cables = computeConsumerCables([makeConsumer()], board, [wall], "Boden");
+  const cables = computeConsumerCables([makeConsumer()], board, "Boden");
   assert.equal(cables.length, 1);
   assert.equal(cables[0].type, "NYM-J 5x6");
 });
 
 test("computeConsumerCables emits an extra same-length Leerrohr M25 cable when reserveConduit is on", () => {
-  const cables = computeConsumerCables([makeConsumer({ reserveConduit: true })], board, [wall], "Boden");
+  const cables = computeConsumerCables([makeConsumer({ reserveConduit: true })], board, "Boden");
   assert.equal(cables.length, 2);
   const reserve = cables.find((c) => c.type === "Leerrohr M25");
   assert.ok(reserve);

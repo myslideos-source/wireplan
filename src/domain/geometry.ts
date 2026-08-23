@@ -6,15 +6,6 @@ export interface Point {
   y: number;
 }
 
-export interface Wall {
-  id: string;
-  floorId: string;
-  start: Point;
-  end: Point;
-  thickness: number;
-  height: number;
-}
-
 export interface Room {
   id: string;
   floorId: string;
@@ -34,28 +25,6 @@ export interface Floor {
   level: number;
 }
 
-/** Electrical/smart-home devices mount to a wall offset, not raw x/y (§66) so
- * they follow the wall when it moves. */
-export interface WallMountedDevice {
-  id: string;
-  wallId: string;
-  offset: number;
-  height: number;
-}
-
-/**
- * Doors and windows are openings along a wall, positioned by offset (not
- * x/y) so they stay attached when the wall is edited — same reasoning as
- * WallMountedDevice above.
- */
-export interface Opening {
-  id: string;
-  wallId: string;
-  type: "door" | "window";
-  offset: number;
-  width: number;
-}
-
 export type GeometryStatus =
   | "DRAFT"
   | "IN_REVIEW"
@@ -72,11 +41,4 @@ export function polygonAreaSqMeters(polygon: Point[]): number {
     sumMm2 += a.x * b.y - b.x * a.y;
   }
   return Math.abs(sumMm2) / 2 / 1_000_000;
-}
-
-/** Euclidean wall length in meters from its mm start/end points. */
-export function wallLengthMeters(wall: Pick<Wall, "start" | "end">): number {
-  const dx = wall.end.x - wall.start.x;
-  const dy = wall.end.y - wall.start.y;
-  return Math.sqrt(dx * dx + dy * dy) / 1000;
 }
