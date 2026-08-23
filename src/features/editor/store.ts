@@ -532,6 +532,11 @@ interface EditorState {
   leftPanelTab: "elemente" | "raeume";
   setLeftPanelTab: (tab: "elemente" | "raeume") => void;
 
+  // §8 — Original (the raw uploaded reference plan, if any) vs. Planer
+  // (today's normal vector rendering). Pure UI state.
+  planViewMode: "original" | "planer";
+  setPlanViewMode: (mode: "original" | "planer") => void;
+
   // §51 — snap to grid / wall / room-center / other devices.
   snapEnabled: boolean;
   toggleSnap: () => void;
@@ -1085,6 +1090,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   leftPanelTab: "elemente",
   setLeftPanelTab: (tab) => set({ leftPanelTab: tab }),
+
+  planViewMode: "planer",
+  setPlanViewMode: (mode) => set({ planViewMode: mode }),
 
   snapEnabled: true,
   toggleSnap: () => set((state) => ({ snapEnabled: !state.snapEnabled })),

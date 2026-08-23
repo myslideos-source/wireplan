@@ -56,6 +56,7 @@ export function EditorCanvas() {
     (state) => state.resizeBackgroundImageToPoint,
   );
   const leftPanelTab = useEditorStore((state) => state.leftPanelTab);
+  const planViewMode = useEditorStore((state) => state.planViewMode);
   const treeBranches = useEditorStore((state) => state.treeBranches);
   const treeJunctions = useEditorStore((state) => state.treeJunctions);
   const addTreeJunctionAtPoint = useEditorStore((state) => state.addTreeJunctionAtPoint);
@@ -323,6 +324,45 @@ export function EditorCanvas() {
     event.preventDefault();
     const point = toSvgPoint(event);
     if (point) placeByToolId(toolId, point);
+  }
+
+  // §8-9 — "Original" shows the uploaded reference plan as-is, full
+  // opacity, with no vector overlay; it's a separate view, not a claim
+  // that vector devices sit at the exact same pixel coordinates on the
+  // raw scan (that requires the locked-background architecture, deferred
+  // separately). Honest empty state when nothing's been uploaded yet,
+  // rather than silently falling back to the vector rendering.
+  if (planViewMode === "original") {
+    return (
+      <div className="flex h-full w-full items-center justify-center overflow-auto bg-bg-secondary p-6">
+        {backgroundImage ? (
+          <svg
+            viewBox={`0 0 ${backgroundImage.width} ${backgroundImage.height}`}
+            className="max-h-full max-w-full shadow-lg"
+            style={{ width: backgroundImage.width, height: backgroundImage.height, maxWidth: "100%", maxHeight: "100%" }}
+            role="img"
+            aria-label="Original-Grundriss"
+          >
+            <image
+              href={backgroundImage.dataUrl}
+              x={0}
+              y={0}
+              width={backgroundImage.width}
+              height={backgroundImage.height}
+              preserveAspectRatio="xMidYMid meet"
+            />
+          </svg>
+        ) : (
+          <div className="flex max-w-sm flex-col items-center gap-2 text-center text-sm text-text-muted">
+            <p className="font-medium text-text">Kein Originalplan hochgeladen</p>
+            <p>
+              Wechseln Sie zu &quot;Planer&quot; und laden Sie über das Werkzeug
+              &quot;Hintergrundbild&quot; Ihren Architektenplan hoch.
+            </p>
+          </div>
+        )}
+      </div>
+    );
   }
 
   return (
