@@ -39,6 +39,8 @@ import {
 } from "@/domain";
 import { useEditorStore, type EditorTool, type LayerId, type ViewMode } from "./store";
 import { DRAG_TOOL_MIME } from "./drag-tool";
+import { roomZoneColor } from "./geometry-utils";
+import { formatArea } from "@/lib/utils";
 
 /** Tools that can be dragged straight onto the plan (§3) in addition to
  * the existing click-to-arm-then-click-to-place flow — both keep working. */
@@ -161,6 +163,11 @@ export function EditorToolbar() {
   );
   const treeConnectPendingNodeRef = useEditorStore((state) => state.treeConnectPendingNodeRef);
   const cancelTreeConnect = useEditorStore((state) => state.cancelTreeConnect);
+  const leftPanelTab = useEditorStore((state) => state.leftPanelTab);
+  const setLeftPanelTab = useEditorStore((state) => state.setLeftPanelTab);
+  const rooms = useEditorStore((state) => state.rooms);
+  const selected = useEditorStore((state) => state.selected);
+  const select = useEditorStore((state) => state.select);
   const loxoneEnabled = isFeatureEnabled("LOXONE");
   const backgroundInputRef = useRef<HTMLInputElement>(null);
 
@@ -181,6 +188,83 @@ export function EditorToolbar() {
 
   return (
     <aside className="flex w-56 shrink-0 flex-col gap-6 overflow-y-auto border-r border-border bg-bg-secondary p-3 scrollbar-thin">
+      <div className="flex rounded-[var(--radius-sm)] border border-border p-0.5">
+        <button
+          type="button"
+          onClick={() => setLeftPanelTab("elemente")}
+          className={cn(
+            "flex-1 rounded-[calc(var(--radius-sm)-2px)] px-3 py-1.5 text-sm font-medium transition-colors",
+            leftPanelTab === "elemente"
+              ? "bg-primary/10 text-primary"
+              : "text-text-secondary hover:text-text",
+          )}
+        >
+          Elemente
+        </button>
+        <button
+          type="button"
+          onClick={() => setLeftPanelTab("raeume")}
+          className={cn(
+            "flex-1 rounded-[calc(var(--radius-sm)-2px)] px-3 py-1.5 text-sm font-medium transition-colors",
+            leftPanelTab === "raeume"
+              ? "bg-primary/10 text-primary"
+              : "text-text-secondary hover:text-text",
+          )}
+        >
+          Räume
+        </button>
+      </div>
+
+      {leftPanelTab === "raeume" && (
+        <div>
+          <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
+            Räume definieren
+          </p>
+          <p className="px-2 pb-3 text-xs text-text-muted">
+            Räume sind farblich hervorgehoben. Einen Raum anklicken, um ihn
+            im Grundriss auszuwählen und Details rechts zu bearbeiten.
+          </p>
+          <div className="flex flex-col gap-0.5">
+            {rooms.map((room, index) => {
+              const isSelected = selected?.type === "room" && selected.id === room.id;
+              return (
+                <button
+                  key={room.id}
+                  type="button"
+                  onClick={() => select({ type: "room", id: room.id })}
+                  className={cn(
+                    "flex items-center gap-2.5 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm font-medium transition-colors",
+                    isSelected
+                      ? "bg-primary/10 text-primary"
+                      : "text-text-secondary hover:bg-panel-elevated hover:text-text",
+                  )}
+                >
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: roomZoneColor(index) }}
+                  />
+                  <span className="flex-1 truncate">{room.name}</span>
+                  <span className="tabular-nums-font text-xs text-text-muted">
+                    {formatArea(room.area)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            disabled
+            title="Manuelles Raum-Zeichnen folgt in einer späteren Phase — Demnächst"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-[var(--radius-sm)] border border-border px-3 py-2 text-sm font-medium text-text-muted disabled:cursor-not-allowed"
+          >
+            <Square className="h-4 w-4" />
+            Raum hinzufügen
+          </button>
+        </div>
+      )}
+
+      {leftPanelTab === "elemente" && (
+      <>
       <div>
         <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
           Werkzeuge
@@ -453,6 +537,8 @@ export function EditorToolbar() {
           })}
         </div>
       </div>
+      </>
+      )}
     </aside>
   );
 }

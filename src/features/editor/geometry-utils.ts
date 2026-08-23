@@ -356,6 +356,24 @@ export function computeSpotArrayPositions(
   }));
 }
 
+/** Assigned by room order (§97) — a stable, purely cosmetic color per
+ * room used both for the Räume-tab list swatches and the canvas's
+ * room-editing overlay. Not persisted on the room itself: recomputed
+ * from position in the current `rooms` array so it stays stable as long
+ * as rooms aren't reordered, without needing a stored color field. */
+export const ROOM_ZONE_COLORS = [
+  "#C96F5B", // terracotta
+  "#D9A441", // sand
+  "#4A8FA8", // blue
+  "#7A9D6E", // green
+  "#8F6FB8", // violet
+  "#5FA8A0", // turquoise
+];
+
+export function roomZoneColor(index: number): string {
+  return ROOM_ZONE_COLORS[index % ROOM_ZONE_COLORS.length];
+}
+
 export function isPointInPolygon(point: Point, polygon: Point[]): boolean {
   let inside = false;
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {

@@ -20,6 +20,7 @@ import {
   boundingBoxOfPoints,
   polygonCentroid,
   devicePosition,
+  roomZoneColor,
 } from "./geometry-utils";
 import { formatArea } from "@/lib/utils";
 import { DeviceSymbol } from "./DeviceSymbol";
@@ -54,6 +55,7 @@ export function EditorCanvas() {
   const resizeBackgroundImageToPoint = useEditorStore(
     (state) => state.resizeBackgroundImageToPoint,
   );
+  const leftPanelTab = useEditorStore((state) => state.leftPanelTab);
   const treeBranches = useEditorStore((state) => state.treeBranches);
   const treeJunctions = useEditorStore((state) => state.treeJunctions);
   const addTreeJunctionAtPoint = useEditorStore((state) => state.addTreeJunctionAtPoint);
@@ -362,13 +364,19 @@ export function EditorCanvas() {
 
         {layers.grundriss && (
           <g opacity={dimArchitecture ? 0.25 : 1}>
-            {rooms.map((room) => {
+            {rooms.map((room, index) => {
               const isSelected = selected?.type === "room" && selected.id === room.id;
+              // §97 — the Räume tab shows every room in its own persistent
+              // zone color (a light "editing mode" overlay); otherwise
+              // rooms stay a flat neutral fill and only the selection gets
+              // a color highlight.
+              const inRoomsTab = leftPanelTab === "raeume";
               return (
                 <polygon
                   key={room.id}
                   points={room.polygon.map((p) => `${p.x},${p.y}`).join(" ")}
-                  fill={isSelected ? "rgba(201,111,91,0.14)" : "#EFE7D8"}
+                  fill={inRoomsTab ? roomZoneColor(index) : isSelected ? "#C96F5B" : "#EFE7D8"}
+                  fillOpacity={inRoomsTab ? (isSelected ? 0.32 : 0.2) : isSelected ? 0.14 : 1}
                   stroke={isSelected ? "#C96F5B" : "transparent"}
                   strokeWidth={isSelected ? 40 : 0}
                   className={canSelect ? "cursor-pointer" : undefined}

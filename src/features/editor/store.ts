@@ -525,6 +525,13 @@ interface EditorState {
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
 
+  // §86-87 — the left editor panel's two tabs: "Elemente" (the tool
+  // list, today's default) and "Räume" (a room list + colored room-zone
+  // overlay on the canvas). Pure UI state, like activeTool/viewMode —
+  // not undo-tracked, not per-floor.
+  leftPanelTab: "elemente" | "raeume";
+  setLeftPanelTab: (tab: "elemente" | "raeume") => void;
+
   // §51 — snap to grid / wall / room-center / other devices.
   snapEnabled: boolean;
   toggleSnap: () => void;
@@ -543,7 +550,7 @@ interface EditorState {
   backgroundImageOpacity: number;
   setBackgroundImageOpacity: (opacity: number) => void;
 
-  updateRoom: (id: string, patch: Partial<Pick<Room, "name" | "type" | "height">>) => void;
+  updateRoom: (id: string, patch: Partial<Pick<Room, "name" | "type" | "height" | "notes">>) => void;
   updateWallThickness: (id: string, thicknessMm: number) => void;
   deleteOpening: (id: string) => void;
   addOpeningAtPoint: (type: Opening["type"], point: Point) => boolean;
@@ -1075,6 +1082,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   viewMode: "alle",
   setViewMode: (mode) => set({ viewMode: mode }),
+
+  leftPanelTab: "elemente",
+  setLeftPanelTab: (tab) => set({ leftPanelTab: tab }),
 
   snapEnabled: true,
   toggleSnap: () => set((state) => ({ snapEnabled: !state.snapEnabled })),

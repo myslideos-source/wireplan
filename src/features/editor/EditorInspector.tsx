@@ -810,6 +810,15 @@ export function EditorInspector() {
             </Button>
           )}
         </FieldRow>
+        <FieldRow label="Notizen" as="div">
+          <textarea
+            value={room.notes ?? ""}
+            onChange={(event) => updateRoom(room.id, { notes: event.target.value })}
+            placeholder="Notizen hinzufügen…"
+            rows={3}
+            className={`${inputClass} resize-none`}
+          />
+        </FieldRow>
       </Section>
 
       <Section title="Elektrisch">

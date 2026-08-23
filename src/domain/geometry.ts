@@ -23,6 +23,8 @@ export interface Room {
   polygon: Point[];
   area: number;
   height: number;
+  /** Freitext für Planungshinweise (§99) — nie automatisch befüllt. */
+  notes?: string;
 }
 
 export interface Floor {
