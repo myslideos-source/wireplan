@@ -63,7 +63,7 @@ function UploadPlanDialogContent({
       if (!response.ok) {
         throw new Error(body.error ?? "Analyse fehlgeschlagen.");
       }
-      setResult(body as RealAnalysisResult);
+      setResult(body as RealAnalysisResult, projectId);
 
       onClose();
       router.push("/analysis/real");

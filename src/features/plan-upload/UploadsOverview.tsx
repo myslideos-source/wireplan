@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { UploadCloud, ScanSearch } from "lucide-react";
+import { UploadCloud, ScanSearch, LayoutGrid } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, Button, Badge } from "@/components/ui";
 import { useRealAnalysisStore } from "@/features/plan-analysis/real-analysis-store";
 
@@ -14,6 +14,7 @@ import { useRealAnalysisStore } from "@/features/plan-analysis/real-analysis-sto
  */
 export function UploadsOverview() {
   const result = useRealAnalysisStore((state) => state.result);
+  const projectId = useRealAnalysisStore((state) => state.projectId);
 
   if (!result) {
     return (
@@ -62,6 +63,14 @@ export function UploadsOverview() {
                 KI-Analyse ansehen
               </Button>
             </Link>
+            {projectId && (
+              <Link href={`/editor?project=${projectId}`}>
+                <Button size="sm">
+                  <LayoutGrid className="h-4 w-4" />
+                  Zum Editor
+                </Button>
+              </Link>
+            )}
           </div>
         </CardContent>
       </Card>
