@@ -101,6 +101,10 @@ export interface FixedConsumer {
   position: Point;
   roomId: string | null;
   cableType: CableType;
+  /** §40/§41 — lay a spare empty conduit (Leerrohr M25) alongside this
+   * consumer's lead for future upgrades (e.g. a Wallbox destined for more
+   * amperage later). Off by default; the user opts in per consumer. */
+  reserveConduit: boolean;
   number: number;
 }
 

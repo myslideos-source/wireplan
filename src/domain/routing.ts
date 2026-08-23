@@ -3,7 +3,9 @@
  * shared bus for a Tree branch (§33/§60) — one cable per branch, not one
  * per device, which is why `Cable.deviceId` below is optional. Speaker
  * cabling is its own type (§12) — never assumed to be a Tree cable even
- * when the speaker sits in the same room as Tree hardware.
+ * when the speaker sits in the same room as Tree hardware. "Leerrohr M25"
+ * (§40/§41) is a spare empty conduit run alongside a fixed consumer's
+ * lead for future re-cabling — never a substitute for the real lead.
  */
 export type CableType =
   | "NYM-J 3x1,5"
@@ -13,7 +15,8 @@ export type CableType =
   | "CAT7"
   | "Tree Cable"
   | "Lautsprecherkabel 2x1,5"
-  | "Lautsprecherkabel 2x2,5";
+  | "Lautsprecherkabel 2x2,5"
+  | "Leerrohr M25";
 
 /** The two speaker-cable cross-sections a planner would actually pick
  * from (§12 — "Der Kabeltyp muss konfigurierbar sein"). */

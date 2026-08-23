@@ -242,6 +242,7 @@ export function EditorInspector() {
   const fixedConsumers = useEditorStore((state) => state.fixedConsumers);
   const deleteFixedConsumer = useEditorStore((state) => state.deleteFixedConsumer);
   const updateFixedConsumerCableType = useEditorStore((state) => state.updateFixedConsumerCableType);
+  const setFixedConsumerReserveConduit = useEditorStore((state) => state.setFixedConsumerReserveConduit);
   const openings = useEditorStore((state) => state.openings);
   const deleteOpening = useEditorStore((state) => state.deleteOpening);
   const updateOpeningWidth = useEditorStore((state) => state.updateOpeningWidth);
@@ -579,6 +580,15 @@ export function EditorInspector() {
           <FieldRow label="Raum">
             <span className="text-sm text-text">{room?.name ?? "— (außerhalb eines Raums)"}</span>
           </FieldRow>
+          <label className="flex items-center gap-2 py-1 text-sm text-text">
+            <input
+              type="checkbox"
+              checked={consumer.reserveConduit}
+              onChange={(event) => setFixedConsumerReserveConduit(consumer.id, event.target.checked)}
+              className="h-4 w-4 rounded border-border"
+            />
+            Reserve-Leerrohr mitführen
+          </label>
         </Section>
         <div className="px-5 py-4">
           <Button

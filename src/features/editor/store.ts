@@ -415,6 +415,7 @@ interface EditorState {
   moveFixedConsumerToPoint: (id: string, point: Point) => void;
   deleteFixedConsumer: (id: string) => void;
   updateFixedConsumerCableType: (id: string, cableType: CableType) => void;
+  setFixedConsumerReserveConduit: (id: string, reserveConduit: boolean) => void;
 
   // §47 — undo/redo history for this floor's editable content (not UI
   // state). Recorded automatically by a subscriber set up right after the
@@ -576,6 +577,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       position: point,
       roomId: room?.id ?? null,
       cableType: FIXED_CONSUMER_DEFAULT_CABLE[type],
+      reserveConduit: false,
       number: Math.max(0, ...state.fixedConsumers.map((c) => c.number)) + 1,
     };
     set((s) => ({ fixedConsumers: [...s.fixedConsumers, consumer] }));
@@ -602,6 +604,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   updateFixedConsumerCableType: (id, cableType) =>
     set((state) => ({
       fixedConsumers: state.fixedConsumers.map((c) => (c.id === id ? { ...c, cableType } : c)),
+    })),
+
+  setFixedConsumerReserveConduit: (id, reserveConduit) =>
+    set((state) => ({
+      fixedConsumers: state.fixedConsumers.map((c) => (c.id === id ? { ...c, reserveConduit } : c)),
     })),
 
   spotArrayCount: 1,

@@ -1,4 +1,4 @@
-import type { ElectricalDevice, SmartHomeDevice, TreeBranch } from "@/domain";
+import type { ElectricalDevice, Room, SmartHomeDevice, TreeBranch } from "@/domain";
 import {
   findSmartHomeModel,
   formatDeviceNumber,
@@ -72,5 +72,32 @@ export function computeTreeWarnings(
     }
   }
 
+  return warnings;
+}
+
+/**
+ * §45 — a room that has electrical devices but no circuit assigned yet
+ * (`roomCircuits` from the store, editable in the room inspector). Genuine
+ * data already tracked for the Kabelliste's "Stromkreise" KPI, just not
+ * previously surfaced as an actionable warning.
+ */
+export function computeCircuitWarnings(
+  rooms: Room[],
+  devices: ElectricalDevice[],
+  roomCircuits: Record<string, string | null>,
+): PlanWarning[] {
+  const warnings: PlanWarning[] = [];
+  const roomIdsWithDevices = new Set(
+    devices.map((d) => d.roomId).filter((id): id is string => id !== null),
+  );
+  for (const roomId of roomIdsWithDevices) {
+    if (roomCircuits[roomId]) continue;
+    const room = rooms.find((r) => r.id === roomId);
+    if (!room) continue;
+    warnings.push({
+      id: `no-circuit-${roomId}`,
+      message: `${room.name} hat Geräte, aber keinen zugewiesenen Stromkreis.`,
+    });
+  }
   return warnings;
 }

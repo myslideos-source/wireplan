@@ -19,17 +19,29 @@ export function computeConsumerCables(
   if (!boardWall) return [];
   const boardPosition = pointAtOffset(boardWall, board.offset);
 
-  return consumers.map((consumer) => {
+  return consumers.flatMap((consumer) => {
     const lengthMm =
       Math.abs(consumer.position.x - boardPosition.x) + Math.abs(consumer.position.y - boardPosition.y);
-    return {
+    const label = `${fixedConsumerLabel(consumer)} · ${formatDeviceNumber(FIXED_CONSUMER_PREFIX, consumer.number)}`;
+    const lead: Cable = {
       id: `V-${consumer.id}`,
       deviceId: consumer.id,
       type: consumer.cableType,
       lengthMeters: lengthMm / 1000,
       mode,
       startLabel: "Schaltschrank",
-      targetLabel: `${fixedConsumerLabel(consumer)} · ${formatDeviceNumber(FIXED_CONSUMER_PREFIX, consumer.number)}`,
+      targetLabel: label,
     };
+    if (!consumer.reserveConduit) return [lead];
+    const reserve: Cable = {
+      id: `V-${consumer.id}-reserve`,
+      deviceId: consumer.id,
+      type: "Leerrohr M25",
+      lengthMeters: lengthMm / 1000,
+      mode,
+      startLabel: "Schaltschrank",
+      targetLabel: `${label} (Reserve-Leerrohr)`,
+    };
+    return [lead, reserve];
   });
 }

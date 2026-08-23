@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Cable as CableIcon, Zap, GitBranch, Network } from "lucide-react";
+import { AlertTriangle, Cable as CableIcon, Zap, GitBranch, Network } from "lucide-react";
 import type { CableType, Project, RoutingMode } from "@/domain";
 import { SPEAKER_CABLE_TYPES } from "@/domain";
 import { KpiCard, Button } from "@/components/ui";
 import { formatNumber } from "@/lib/utils";
 import { useEditorStore } from "@/features/editor/store";
+import { computeCircuitWarnings } from "@/features/editor/warnings";
 import { RoutingCanvas } from "./RoutingCanvas";
 import { CableListTable } from "./CableListTable";
 import { MaterialListTab } from "./MaterialListTab";
@@ -19,6 +20,7 @@ type Tab = "kabelliste" | "materialliste" | "loxone" | "tree";
 
 export function RoutingWorkspace({ project }: { project: Project }) {
   const devices = useEditorStore((state) => state.devices);
+  const rooms = useEditorStore((state) => state.rooms);
   const distributionBoard = useEditorStore((state) => state.distributionBoard);
   const smartHomeDevices = useEditorStore((state) => state.smartHomeDevices);
   const cables = useEditorStore((state) => state.cables);
@@ -45,9 +47,20 @@ export function RoutingWorkspace({ project }: { project: Project }) {
   ).length;
 
   const selectedCable = cables.find((c) => c.id === selectedCableId) ?? null;
+  const circuitWarnings = computeCircuitWarnings(rooms, devices, roomCircuits);
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-6 px-8 py-8">
+      {circuitWarnings.length > 0 && (
+        <div className="flex flex-col gap-1.5 rounded-[var(--radius-lg)] border border-warning/40 bg-warning/10 px-4 py-3">
+          {circuitWarnings.map((warning) => (
+            <div key={warning.id} className="flex items-start gap-1.5 text-xs text-warning">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>{warning.message}</span>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <p className="text-sm text-text-secondary">{project.name}</p>

@@ -13,6 +13,7 @@ const CABLE_COLORS: Record<CableType, string> = {
   "Tree Cable": "#68d56b",
   "Lautsprecherkabel 2x1,5": "#f472b6",
   "Lautsprecherkabel 2x2,5": "#f472b6",
+  "Leerrohr M25": "#6b7785",
 };
 
 export function RoutingCanvas({
