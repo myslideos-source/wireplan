@@ -6,6 +6,8 @@ import type {
   RoutingMode,
   SmartHomeDevice,
   TreeBranch,
+  TreeEdge,
+  TreeJunction,
   Wall,
 } from "@/domain";
 import { findSmartHomeModel } from "@/domain";
@@ -75,11 +77,45 @@ function treeBusPointsForBranch(
   return points;
 }
 
+/** §61 — resolves a tagged Tree node reference to a world position, for
+ * turning a manually-drawn edge into an actual length. Mirrors
+ * `resolveTreeNodeRef` in the editor store but stays a pure function here
+ * since routing computations don't touch the store directly. */
+function positionForRef(
+  ref: string,
+  boardPosition: Point,
+  devices: ElectricalDevice[],
+  smartHomeDevices: SmartHomeDevice[],
+  walls: Wall[],
+  treeJunctions: TreeJunction[],
+): Point | null {
+  if (ref === "board") return boardPosition;
+  const separatorIndex = ref.indexOf(":");
+  if (separatorIndex === -1) return null;
+  const kind = ref.slice(0, separatorIndex);
+  const id = ref.slice(separatorIndex + 1);
+  if (kind === "device") {
+    const device = devices.find((d) => d.id === id);
+    return device ? devicePosition(device, walls) : null;
+  }
+  if (kind === "smarthome") {
+    const device = smartHomeDevices.find((d) => d.id === id);
+    return device?.position ?? null;
+  }
+  if (kind === "junction") {
+    const junction = treeJunctions.find((j) => j.id === id);
+    return junction?.position ?? null;
+  }
+  return null;
+}
+
 /**
  * One shared bus cable per Tree branch (§33/§60) — the real correctness
  * fix over treating every Tree device as its own star home-run. Branches
  * with no devices yet are skipped rather than producing a zero-length
- * cable.
+ * cable. A branch with any manually-drawn edges (§61) uses their real
+ * graph length instead of the automatic nearest-neighbor chain — a
+ * genuine Y/T-shaped Tree topology, not just a relabeled straight run.
  */
 export function computeTreeBranchCables(
   branches: TreeBranch[],
@@ -88,6 +124,8 @@ export function computeTreeBranchCables(
   board: DistributionBoard,
   walls: Wall[],
   mode: RoutingMode,
+  treeJunctions: TreeJunction[] = [],
+  treeEdges: TreeEdge[] = [],
 ): Cable[] {
   const boardWall = walls.find((w) => w.id === board.wallId);
   if (!boardWall) return [];
@@ -96,6 +134,28 @@ export function computeTreeBranchCables(
   const cables: Cable[] = [];
   for (const branch of branches) {
     const points = treeBusPointsForBranch(branch, devices, smartHomeDevices, walls);
+    const branchEdges = treeEdges.filter((e) => e.treeBranchId === branch.id);
+
+    if (branchEdges.length > 0) {
+      let lengthMeters = 0;
+      for (const edge of branchEdges) {
+        const from = positionForRef(edge.fromRef, boardPosition, devices, smartHomeDevices, walls, treeJunctions);
+        const to = positionForRef(edge.toRef, boardPosition, devices, smartHomeDevices, walls, treeJunctions);
+        if (!from || !to) continue;
+        lengthMeters += (Math.abs(to.x - from.x) + Math.abs(to.y - from.y)) / 1000;
+      }
+      cables.push({
+        id: `TREE-${branch.id}`,
+        treeBranchId: branch.id,
+        type: "Tree Cable",
+        lengthMeters,
+        mode,
+        startLabel: "Schaltschrank",
+        targetLabel: `${branch.label} · ${points.length} Geräte (manuell verbunden)`,
+      });
+      continue;
+    }
+
     if (points.length === 0) continue;
     const ordered = orderTreeBusPoints(boardPosition, points);
     const lengthMeters = treeBusLengthMeters(boardPosition, ordered);

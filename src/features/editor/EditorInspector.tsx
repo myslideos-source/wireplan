@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { MousePointer2, Plug, Lightbulb, ToggleLeft, Radar, Wifi, Trash2, Server, Home, DoorOpen, AppWindow, Zap, type LucideIcon } from "lucide-react";
+import { MousePointer2, Plug, Lightbulb, ToggleLeft, Radar, Wifi, Trash2, Server, Home, DoorOpen, AppWindow, Zap, GitFork, type LucideIcon } from "lucide-react";
 import { Badge, Button } from "@/components/ui";
 import {
   wallLengthMeters,
@@ -245,6 +245,10 @@ export function EditorInspector() {
   const assignDeviceToTreeBranch = useEditorStore((state) => state.assignDeviceToTreeBranch);
   const assignDeviceToAudioZone = useEditorStore((state) => state.assignDeviceToAudioZone);
   const fixedConsumers = useEditorStore((state) => state.fixedConsumers);
+  const treeJunctions = useEditorStore((state) => state.treeJunctions);
+  const treeEdges = useEditorStore((state) => state.treeEdges);
+  const assignJunctionToTreeBranch = useEditorStore((state) => state.assignJunctionToTreeBranch);
+  const deleteTreeJunction = useEditorStore((state) => state.deleteTreeJunction);
   const deleteFixedConsumer = useEditorStore((state) => state.deleteFixedConsumer);
   const updateFixedConsumerCableType = useEditorStore((state) => state.updateFixedConsumerCableType);
   const setFixedConsumerReserveConduit = useEditorStore((state) => state.setFixedConsumerReserveConduit);
@@ -629,6 +633,53 @@ export function EditorInspector() {
           >
             <Trash2 className="h-3.5 w-3.5" />
             Verbraucher löschen
+          </Button>
+        </div>
+      </aside>
+    );
+  }
+
+  if (selected.type === "junction") {
+    const junction = treeJunctions.find((j) => j.id === selected.id);
+    if (!junction) return null;
+    const edgeCount = treeEdges.filter(
+      (e) => e.fromRef === `junction:${junction.id}` || e.toRef === `junction:${junction.id}`,
+    ).length;
+    return (
+      <aside className="w-80 shrink-0 overflow-y-auto border-l border-border bg-bg-secondary scrollbar-thin">
+        <div className="flex items-center gap-2 border-b border-border px-5 py-4">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-success/10 text-success">
+            <GitFork className="h-4 w-4" />
+          </span>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
+              Tree-Verzweigung
+            </p>
+            <h2 className="text-sm font-semibold text-text">Verzweigungspunkt</h2>
+          </div>
+        </div>
+        <Section title="Verzweigung">
+          <FieldRow label="Tree-Ast">
+            <TreeBranchSelect
+              value={junction.treeBranchId}
+              onChange={(branchId) => assignJunctionToTreeBranch(junction.id, branchId)}
+            />
+          </FieldRow>
+          <FieldRow label="Verbindungen">
+            <span className="text-sm text-text">{edgeCount}</span>
+          </FieldRow>
+        </Section>
+        <div className="px-5 py-4">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              deleteTreeJunction(junction.id);
+              select(null);
+            }}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Verzweigung löschen
           </Button>
         </div>
       </aside>

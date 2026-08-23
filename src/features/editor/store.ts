@@ -14,6 +14,8 @@ import type {
   RoutingMode,
   SmartHomeDevice,
   TreeBranch,
+  TreeJunction,
+  TreeEdge,
   AudioZone,
   FixedConsumer,
   FixedConsumerType,
@@ -52,6 +54,7 @@ import {
   wallsBoundingBox,
   computeSpotArrayPositions,
   polygonCentroid,
+  devicePosition,
   type SplitDirection,
   type SpotArrangement,
 } from "./geometry-utils";
@@ -71,7 +74,9 @@ export type EditorTool =
   | "door"
   | "window"
   | "background"
-  | "cable";
+  | "cable"
+  | "junction"
+  | "treeConnect";
 
 export type LayerId = "grundriss" | "elektro" | "kabelwege" | "beschriftung" | "hintergrund";
 
@@ -101,6 +106,7 @@ export type Selection =
   | { type: "smarthome"; id: string }
   | { type: "opening"; id: string }
   | { type: "consumer"; id: string }
+  | { type: "junction"; id: string }
   | null;
 
 /** §49 — multi-select, scoped to point-placeable items (devices,
@@ -147,6 +153,8 @@ interface FloorMutableSlice {
   treeBranches: TreeBranch[];
   audioZones: AudioZone[];
   fixedConsumers: FixedConsumer[];
+  treeJunctions: TreeJunction[];
+  treeEdges: TreeEdge[];
 }
 
 function freshSliceFromGeometry(geometry: FloorGeometry): FloorMutableSlice {
@@ -164,6 +172,8 @@ function freshSliceFromGeometry(geometry: FloorGeometry): FloorMutableSlice {
     treeBranches: [],
     audioZones: [],
     fixedConsumers: [],
+    treeJunctions: [],
+    treeEdges: [],
   };
 }
 
@@ -185,6 +195,8 @@ const SLICE_KEYS: (keyof FloorMutableSlice)[] = [
   "treeBranches",
   "audioZones",
   "fixedConsumers",
+  "treeJunctions",
+  "treeEdges",
 ];
 
 function sliceOf(state: FloorMutableSlice): FloorMutableSlice {
@@ -285,6 +297,44 @@ function resolveTreeBranchAssignment(
     colorHex: nextTreeBranchColor(state.treeBranches),
   };
   return { treeBranchId: branch.id, treeBranches: [...state.treeBranches, branch] };
+}
+
+/** §61 — resolves a tagged Tree node reference ("board", "device:<id>",
+ * "smarthome:<id>", "junction:<id>") to its world position and current
+ * branch, the one place `handleTreeConnectClick` and the bus-length
+ * calculation both need to turn a reference back into real data. */
+function resolveTreeNodeRef(
+  state: Pick<EditorState, "devices" | "smartHomeDevices" | "treeJunctions" | "walls" | "distributionBoard">,
+  ref: string,
+): { position: Point; treeBranchId: string | undefined } | null {
+  if (ref === "board") {
+    if (!state.distributionBoard) return null;
+    const wall = state.walls.find((w) => w.id === state.distributionBoard!.wallId);
+    if (!wall) return null;
+    return { position: pointAtOffset(wall, state.distributionBoard.offset), treeBranchId: undefined };
+  }
+  const separatorIndex = ref.indexOf(":");
+  if (separatorIndex === -1) return null;
+  const kind = ref.slice(0, separatorIndex);
+  const id = ref.slice(separatorIndex + 1);
+  if (kind === "device") {
+    const device = state.devices.find((d) => d.id === id);
+    if (!device) return null;
+    const position = devicePosition(device, state.walls);
+    if (!position) return null;
+    return { position, treeBranchId: device.treeBranchId };
+  }
+  if (kind === "smarthome") {
+    const device = state.smartHomeDevices.find((d) => d.id === id);
+    if (!device) return null;
+    return { position: device.position, treeBranchId: device.treeBranchId };
+  }
+  if (kind === "junction") {
+    const junction = state.treeJunctions.find((j) => j.id === id);
+    if (!junction) return null;
+    return { position: junction.position, treeBranchId: junction.treeBranchId };
+  }
+  return null;
 }
 
 /** Reads a multi-select item's current position — only point-mounted
@@ -398,6 +448,19 @@ interface EditorState {
   createTreeBranch: (label?: string) => string;
   deleteTreeBranch: (id: string) => void;
   assignDeviceToTreeBranch: (deviceId: string, branchId: string | null) => void;
+
+  // §61 — manual junction points and bus edges, so a branch's topology
+  // can be a real graph instead of always the auto nearest-neighbor chain.
+  treeJunctions: TreeJunction[];
+  treeEdges: TreeEdge[];
+  addTreeJunctionAtPoint: (point: Point) => boolean;
+  moveTreeJunctionToPoint: (id: string, point: Point) => void;
+  deleteTreeJunction: (id: string) => void;
+  assignJunctionToTreeBranch: (id: string, branchId: string | null) => void;
+  treeConnectPendingNodeRef: string | null;
+  handleTreeConnectClick: (nodeRef: string) => void;
+  cancelTreeConnect: () => void;
+  deleteTreeEdge: (id: string) => void;
 
   audioZones: AudioZone[];
   speakerCableType: CableType;
@@ -543,6 +606,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   smartHomePlacementModelId: LOXONE_CATALOG[0].id,
   backgroundImage: null,
   treeBranches: [],
+  treeJunctions: [],
+  treeEdges: [],
+  treeConnectPendingNodeRef: null,
   audioZones: [],
   speakerCableType: SPEAKER_CABLE_TYPES[0],
   setSpeakerCableType: (type) => set({ speakerCableType: type }),
@@ -679,6 +745,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       smartHomeDevices: state.smartHomeDevices.map((d) =>
         d.treeBranchId === id ? { ...d, treeBranchId: undefined } : d,
       ),
+      treeJunctions: state.treeJunctions.filter((j) => j.treeBranchId !== id),
+      treeEdges: state.treeEdges.filter((e) => e.treeBranchId !== id),
     })),
 
   assignDeviceToTreeBranch: (deviceId, branchId) =>
@@ -690,6 +758,86 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         d.id === deviceId ? { ...d, treeBranchId: branchId ?? undefined } : d,
       ),
     })),
+
+  addTreeJunctionAtPoint: (rawPoint) => {
+    const state = get();
+    const point = applySnap(state, rawPoint);
+    const { treeBranchId, treeBranches } = resolveTreeBranchAssignment(
+      state,
+      { countsAsTreeDevice: true },
+      undefined,
+    );
+    if (!treeBranchId) return false;
+    const junction: TreeJunction = {
+      id: generateId("junction"),
+      floorId: state.floorId ?? "",
+      treeBranchId,
+      position: point,
+    };
+    set({ treeBranches, treeJunctions: [...state.treeJunctions, junction] });
+    return true;
+  },
+
+  moveTreeJunctionToPoint: (id, rawPoint) => {
+    const state = get();
+    const point = applySnap(state, rawPoint);
+    set({
+      treeJunctions: state.treeJunctions.map((j) => (j.id === id ? { ...j, position: point } : j)),
+    });
+  },
+
+  deleteTreeJunction: (id) =>
+    set((state) => {
+      const ref = `junction:${id}`;
+      return {
+        treeJunctions: state.treeJunctions.filter((j) => j.id !== id),
+        treeEdges: state.treeEdges.filter((e) => e.fromRef !== ref && e.toRef !== ref),
+        selected: state.selected?.type === "junction" && state.selected.id === id ? null : state.selected,
+      };
+    }),
+
+  assignJunctionToTreeBranch: (id, branchId) =>
+    set((state) => {
+      if (!branchId) return { treeJunctions: state.treeJunctions.filter((j) => j.id !== id) };
+      const ref = `junction:${id}`;
+      return {
+        treeJunctions: state.treeJunctions.map((j) => (j.id === id ? { ...j, treeBranchId: branchId } : j)),
+        // Reassigning to a different branch invalidates this junction's
+        // existing edges (they'd otherwise silently cross branches).
+        treeEdges: state.treeEdges.filter((e) => e.fromRef !== ref && e.toRef !== ref),
+      };
+    }),
+
+  cancelTreeConnect: () => set({ treeConnectPendingNodeRef: null }),
+
+  handleTreeConnectClick: (nodeRef) => {
+    const state = get();
+    const pending = state.treeConnectPendingNodeRef;
+    if (!pending) {
+      set({ treeConnectPendingNodeRef: nodeRef });
+      return;
+    }
+    if (pending === nodeRef) {
+      set({ treeConnectPendingNodeRef: null });
+      return;
+    }
+    const a = resolveTreeNodeRef(state, pending);
+    const b = resolveTreeNodeRef(state, nodeRef);
+    set({ treeConnectPendingNodeRef: null });
+    if (!a || !b) return;
+    // Both ends need a branch, and — when both already belong to one —
+    // they must agree; connecting two different branches would silently
+    // merge them, which is a decision the user should make explicitly
+    // (e.g. by reassigning a device's branch), not a side effect of a click.
+    if (a.treeBranchId && b.treeBranchId && a.treeBranchId !== b.treeBranchId) return;
+    const treeBranchId = a.treeBranchId ?? b.treeBranchId;
+    if (!treeBranchId) return;
+    const edge: TreeEdge = { id: generateId("edge"), treeBranchId, fromRef: pending, toRef: nodeRef };
+    set((s) => ({ treeEdges: [...s.treeEdges, edge] }));
+  },
+
+  deleteTreeEdge: (id) =>
+    set((state) => ({ treeEdges: state.treeEdges.filter((e) => e.id !== id) })),
 
   history: [],
   future: [],
@@ -1097,12 +1245,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   deleteDevice: (id) =>
-    set((state) => ({
-      devices: state.devices.filter((device) => device.id !== id),
-      selected: state.selected?.type === "device" && state.selected.id === id
-        ? null
-        : state.selected,
-    })),
+    set((state) => {
+      const ref = `device:${id}`;
+      return {
+        devices: state.devices.filter((device) => device.id !== id),
+        treeEdges: state.treeEdges.filter((e) => e.fromRef !== ref && e.toRef !== ref),
+        selected: state.selected?.type === "device" && state.selected.id === id
+          ? null
+          : state.selected,
+      };
+    }),
 
   setRoomCircuit: (roomId, circuitId) =>
     set((state) => ({
@@ -1198,12 +1350,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   deleteSmartHomeDevice: (id) =>
-    set((state) => ({
-      smartHomeDevices: state.smartHomeDevices.filter((device) => device.id !== id),
-      selected: state.selected?.type === "smarthome" && state.selected.id === id
-        ? null
-        : state.selected,
-    })),
+    set((state) => {
+      const ref = `smarthome:${id}`;
+      return {
+        smartHomeDevices: state.smartHomeDevices.filter((device) => device.id !== id),
+        treeEdges: state.treeEdges.filter((e) => e.fromRef !== ref && e.toRef !== ref),
+        selected: state.selected?.type === "smarthome" && state.selected.id === id
+          ? null
+          : state.selected,
+      };
+    }),
 
   setSmartHomeDeviceModel: (deviceId, modelId) => {
     const state = get();
@@ -1324,6 +1480,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       state.distributionBoard,
       state.walls,
       state.routingMode,
+      state.treeJunctions,
+      state.treeEdges,
     );
     const audioCables = computeAudioCables(
       state.smartHomeDevices,

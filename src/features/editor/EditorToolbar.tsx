@@ -19,6 +19,8 @@ import {
   Eye,
   EyeOff,
   GitBranch,
+  GitFork,
+  Link2,
   Zap,
   Volume2,
   Network,
@@ -48,6 +50,7 @@ const DRAGGABLE_TOOLS: EditorTool[] = [
   "network",
   "smarthome",
   "consumer",
+  "junction",
 ];
 
 /** §66-71 — a focused view dims everything except one concern. */
@@ -103,6 +106,14 @@ const TOOLS: ToolDef[] = [
   },
   { id: "smarthome", label: "Smart Home", icon: Home, flag: "LOXONE" },
   { id: "consumer", label: "Fester Verbraucher", icon: Zap, flag: "ELECTRICAL_EDITOR" },
+  { id: "junction", label: "Tree-Verzweigung", icon: GitFork, flag: "LOXONE" },
+  {
+    id: "treeConnect",
+    label: "Tree-Äste verbinden",
+    icon: Link2,
+    flag: "LOXONE",
+    note: "Zwei Punkte nacheinander anklicken, um sie manuell zu verbinden",
+  },
   { id: "background", label: "Hintergrundbild", icon: ImageIcon },
   { id: "cable", label: "Kabel / Leitung", icon: Cable, flag: "CABLE_ROUTING" },
 ];
@@ -146,6 +157,8 @@ export function EditorToolbar() {
   const toggleShowLegacySmartHomeDevices = useEditorStore(
     (state) => state.toggleShowLegacySmartHomeDevices,
   );
+  const treeConnectPendingNodeRef = useEditorStore((state) => state.treeConnectPendingNodeRef);
+  const cancelTreeConnect = useEditorStore((state) => state.cancelTreeConnect);
   const loxoneEnabled = isFeatureEnabled("LOXONE");
   const backgroundInputRef = useRef<HTMLInputElement>(null);
 
@@ -279,6 +292,24 @@ export function EditorToolbar() {
                       ),
                     )}
                   </select>
+                )}
+                {tool.id === "treeConnect" && activeTool === "treeConnect" && (
+                  <div className="mx-1 flex flex-col gap-1.5">
+                    <p className="px-1 text-[11px] text-text-muted">
+                      {treeConnectPendingNodeRef
+                        ? "Erster Punkt gewählt — jetzt den zweiten Punkt (Schaltschrank, Gerät oder Verzweigung) anklicken."
+                        : "Ersten Punkt anklicken (Schaltschrank, Gerät oder Verzweigung)."}
+                    </p>
+                    {treeConnectPendingNodeRef && (
+                      <button
+                        type="button"
+                        onClick={cancelTreeConnect}
+                        className="rounded-[var(--radius-sm)] border border-border px-2 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-primary/60 hover:text-text"
+                      >
+                        Abbrechen
+                      </button>
+                    )}
+                  </div>
                 )}
                 {tool.id === "light" && activeTool === "light" && (
                   <div className="mx-1 flex flex-col gap-1.5">

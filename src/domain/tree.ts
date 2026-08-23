@@ -1,3 +1,5 @@
+import type { Point } from "./geometry";
+
 /**
  * Loxone Tree branch/bus modeling (§14/§17/§60/§62). A Tree branch is a
  * shared bus, not a star — every device on it shares the same physical
@@ -15,6 +17,37 @@ export interface TreeBranch {
   floorId: string;
   label: string;
   colorHex: string;
+}
+
+/**
+ * A manual branch/junction point on a Tree bus (§61) — real Tree
+ * installations aren't always a single daisy chain; an installer often
+ * splits the bus at a junction box into two separate runs. A junction is
+ * placeable like any point-mounted device and belongs to exactly one
+ * branch, same as a Tree device.
+ */
+export interface TreeJunction {
+  id: string;
+  floorId: string;
+  treeBranchId: string;
+  position: Point;
+}
+
+/**
+ * A manually-drawn bus segment between two Tree nodes (§61) — lets a
+ * branch's topology be a real graph (e.g. a junction feeding two
+ * separate device chains) instead of always being the single
+ * nearest-neighbor chain `orderTreeBusPoints` produces. `fromRef`/
+ * `toRef` are tagged node references: `"board"`, `"device:<id>"`,
+ * `"smarthome:<id>"`, or `"junction:<id>"`. A branch with no edges keeps
+ * using the automatic nearest-neighbor ordering — this is additive, not
+ * a replacement the user is forced into.
+ */
+export interface TreeEdge {
+  id: string;
+  treeBranchId: string;
+  fromRef: string;
+  toRef: string;
 }
 
 /** Assigned in rotation as branches are created (§18) — device category

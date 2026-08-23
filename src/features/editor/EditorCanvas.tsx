@@ -54,6 +54,14 @@ export function EditorCanvas() {
     (state) => state.resizeBackgroundImageToPoint,
   );
   const treeBranches = useEditorStore((state) => state.treeBranches);
+  const treeJunctions = useEditorStore((state) => state.treeJunctions);
+  const addTreeJunctionAtPoint = useEditorStore((state) => state.addTreeJunctionAtPoint);
+  const moveTreeJunctionToPoint = useEditorStore((state) => state.moveTreeJunctionToPoint);
+  const treeEdges = useEditorStore((state) => state.treeEdges);
+  const deleteTreeEdge = useEditorStore((state) => state.deleteTreeEdge);
+  const treeConnectPendingNodeRef = useEditorStore((state) => state.treeConnectPendingNodeRef);
+  const handleTreeConnectClick = useEditorStore((state) => state.handleTreeConnectClick);
+  const cancelTreeConnect = useEditorStore((state) => state.cancelTreeConnect);
   const viewMode = useEditorStore((state) => state.viewMode);
   const fixedConsumers = useEditorStore((state) => state.fixedConsumers);
   const addFixedConsumerAtPoint = useEditorStore((state) => state.addFixedConsumerAtPoint);
@@ -77,6 +85,7 @@ export function EditorCanvas() {
     | { kind: "smarthome"; id: string }
     | { kind: "opening"; id: string }
     | { kind: "consumer"; id: string }
+    | { kind: "junction"; id: string }
     | { kind: "background" }
     | { kind: "background-resize" }
     | null
@@ -112,11 +121,19 @@ export function EditorCanvas() {
 
   /** One polyline per Tree branch with at least one device — reuses the
    * same nearest-neighbor bus ordering as the actual length calculation
-   * (compute-tree-cables.ts) so what's drawn matches what's counted. */
+   * (compute-tree-cables.ts) so what's drawn matches what's counted. A
+   * branch with any manual edges (§61) is drawn from those edges instead
+   * (see `renderedTreeEdges` below) — skipped here to avoid overlapping,
+   * conflicting visuals for the same branch. */
+  const branchIdsWithManualEdges = useMemo(
+    () => new Set(treeEdges.map((edge) => edge.treeBranchId)),
+    [treeEdges],
+  );
   const treeBusPaths = useMemo(() => {
     if (!boardPosition) return [];
     const paths: { branchId: string; colorHex: string; ordered: TreeBusPoint[] }[] = [];
     for (const branch of treeBranches) {
+      if (branchIdsWithManualEdges.has(branch.id)) continue;
       const points: TreeBusPoint[] = [];
       for (const device of devices) {
         if (device.treeBranchId !== branch.id) continue;
@@ -133,7 +150,44 @@ export function EditorCanvas() {
       paths.push({ branchId: branch.id, colorHex: branch.colorHex, ordered: orderTreeBusPoints(boardPosition, points) });
     }
     return paths;
-  }, [treeBranches, devices, smartHomeDevices, walls, boardPosition]);
+  }, [treeBranches, devices, smartHomeDevices, walls, boardPosition, branchIdsWithManualEdges]);
+
+  /** §61 — resolves a tagged Tree node ref to a world position for
+   * drawing manual edges; mirrors `resolveTreeNodeRef` in store.ts but
+   * stays local since the canvas only needs the position, not the branch. */
+  function treeNodeRefPosition(ref: string): Point | null {
+    if (ref === "board") return boardPosition;
+    const separatorIndex = ref.indexOf(":");
+    if (separatorIndex === -1) return null;
+    const kind = ref.slice(0, separatorIndex);
+    const id = ref.slice(separatorIndex + 1);
+    if (kind === "device") {
+      const device = devices.find((d) => d.id === id);
+      return device ? devicePosition(device, walls) : null;
+    }
+    if (kind === "smarthome") {
+      const device = smartHomeDevices.find((d) => d.id === id);
+      return device?.position ?? null;
+    }
+    if (kind === "junction") {
+      const junction = treeJunctions.find((j) => j.id === id);
+      return junction?.position ?? null;
+    }
+    return null;
+  }
+
+  const renderedTreeEdges = useMemo(() => {
+    return treeEdges
+      .map((edge) => {
+        const branch = treeBranches.find((b) => b.id === edge.treeBranchId);
+        const from = treeNodeRefPosition(edge.fromRef);
+        const to = treeNodeRefPosition(edge.toRef);
+        if (!branch || !from || !to) return null;
+        return { id: edge.id, colorHex: branch.colorHex, from, to };
+      })
+      .filter((e): e is { id: string; colorHex: string; from: Point; to: Point } => e !== null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [treeEdges, treeBranches, devices, smartHomeDevices, treeJunctions, walls, boardPosition]);
 
   function isTreeDevice(device: ElectricalDevice): boolean {
     return !!device.smartHomeModelId && !!findSmartHomeModel(device.smartHomeModelId)?.countsAsTreeDevice;
@@ -165,8 +219,10 @@ export function EditorCanvas() {
   const placingBoard = activeTool === "board";
   const placingSmartHome = activeTool === "smarthome";
   const placingConsumer = activeTool === "consumer";
+  const placingJunction = activeTool === "junction";
   const placingOpeningType = activeTool === "door" ? "door" : activeTool === "window" ? "window" : null;
   const placingBackground = activeTool === "background";
+  const connectingTree = activeTool === "treeConnect";
 
   function toSvgPoint(event: { clientX: number; clientY: number }) {
     const svg = svgRef.current;
@@ -191,6 +247,7 @@ export function EditorCanvas() {
       else if (current.kind === "smarthome") moveSmartHomeDeviceToPoint(current.id, point);
       else if (current.kind === "opening") moveOpeningToPoint(current.id, point);
       else if (current.kind === "consumer") moveFixedConsumerToPoint(current.id, point);
+      else if (current.kind === "junction") moveTreeJunctionToPoint(current.id, point);
       else if (current.kind === "background") moveBackgroundImageToPoint(point);
       else resizeBackgroundImageToPoint(point);
     }
@@ -224,10 +281,11 @@ export function EditorCanvas() {
       return;
     }
     if (toolId === "consumer") addFixedConsumerAtPoint(point);
+    if (toolId === "junction") addTreeJunctionAtPoint(point);
   }
 
   function handleBackgroundClick(event: ReactMouseEvent) {
-    if (placingDeviceType || placingSmartHome || placingConsumer) {
+    if (placingDeviceType || placingSmartHome || placingConsumer || placingJunction) {
       const point = toSvgPoint(event);
       if (point) placeByToolId(activeTool, point);
       return;
@@ -240,6 +298,10 @@ export function EditorCanvas() {
     if (placingOpeningType) {
       const point = toSvgPoint(event);
       if (point) addOpeningAtPoint(placingOpeningType, point);
+      return;
+    }
+    if (connectingTree) {
+      cancelTreeConnect();
       return;
     }
     if (canSelect) {
@@ -265,7 +327,13 @@ export function EditorCanvas() {
       className="relative h-full w-full overflow-hidden bg-bg-secondary"
       style={{
         cursor:
-          placingDeviceType || placingBoard || placingSmartHome || placingConsumer || placingOpeningType
+          placingDeviceType ||
+          placingBoard ||
+          placingSmartHome ||
+          placingConsumer ||
+          placingJunction ||
+          placingOpeningType ||
+          connectingTree
             ? "crosshair"
             : undefined,
       }}
@@ -413,10 +481,14 @@ export function EditorCanvas() {
           const isSelected = selected?.type === "board";
           return (
             <g
-              className={canSelect ? "cursor-grab" : undefined}
+              className={canSelect || connectingTree ? "cursor-pointer" : undefined}
               onClick={(event) => {
-                if (!canSelect) return;
+                if (!canSelect && !connectingTree) return;
                 event.stopPropagation();
+                if (connectingTree) {
+                  handleTreeConnectClick("board");
+                  return;
+                }
                 select({ type: "board" });
               }}
               onMouseDown={(event) => {
@@ -457,12 +529,16 @@ export function EditorCanvas() {
                 device={device}
                 position={position}
                 selected={isSelected}
-                clickable={canSelect}
+                clickable={canSelect || connectingTree}
                 onSelect={(event) => {
+                  if (connectingTree) {
+                    handleTreeConnectClick(`device:${device.id}`);
+                    return;
+                  }
                   if (event.shiftKey) toggleMultiSelect({ type: "device", id: device.id });
                   else select({ type: "device", id: device.id });
                 }}
-                onDragStart={() => setDragging({ kind: "device", id: device.id })}
+                onDragStart={connectingTree ? undefined : () => setDragging({ kind: "device", id: device.id })}
                 dimmed={!isDeviceHighlighted(device)}
                 multiSelected={isMultiSelected("device", device.id)}
               />
@@ -476,10 +552,14 @@ export function EditorCanvas() {
               <g
                 key={device.id}
                 opacity={isSmartHomeHighlighted(device.modelId) ? 1 : 0.25}
-                className={canSelect ? "cursor-grab" : undefined}
+                className={canSelect || connectingTree ? "cursor-pointer" : undefined}
                 onClick={(event) => {
-                  if (!canSelect) return;
+                  if (!canSelect && !connectingTree) return;
                   event.stopPropagation();
+                  if (connectingTree) {
+                    handleTreeConnectClick(`smarthome:${device.id}`);
+                    return;
+                  }
                   if (event.shiftKey) toggleMultiSelect({ type: "smarthome", id: device.id });
                   else select({ type: "smarthome", id: device.id });
                 }}
@@ -585,6 +665,69 @@ export function EditorCanvas() {
                 strokeLinejoin="round"
                 opacity={0.85}
               />
+            );
+          })}
+
+        {layers.kabelwege &&
+          (viewMode === "alle" || viewMode === "tree") &&
+          renderedTreeEdges.map((edge) => (
+            <line
+              key={edge.id}
+              x1={edge.from.x}
+              y1={edge.from.y}
+              x2={edge.to.x}
+              y2={edge.to.y}
+              stroke={edge.colorHex}
+              strokeWidth={30}
+              strokeLinecap="round"
+              opacity={0.85}
+              className={connectingTree ? "cursor-pointer" : undefined}
+              onClick={(event) => {
+                if (!connectingTree) return;
+                event.stopPropagation();
+                deleteTreeEdge(edge.id);
+              }}
+            />
+          ))}
+
+        {layers.elektro &&
+          treeJunctions.map((junction) => {
+            const isSelected = selected?.type === "junction" && selected.id === junction.id;
+            const ref = `junction:${junction.id}`;
+            const isPending = treeConnectPendingNodeRef === ref;
+            const branch = treeBranches.find((b) => b.id === junction.treeBranchId);
+            return (
+              <g
+                key={junction.id}
+                opacity={viewMode === "alle" || viewMode === "tree" ? 1 : 0.25}
+                className={canSelect || connectingTree ? "cursor-pointer" : undefined}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (connectingTree) {
+                    handleTreeConnectClick(ref);
+                    return;
+                  }
+                  if (!canSelect) return;
+                  select({ type: "junction", id: junction.id });
+                }}
+                onMouseDown={(event) => {
+                  if (!canSelect) return;
+                  event.stopPropagation();
+                  setDragging({ kind: "junction", id: junction.id });
+                }}
+              >
+                <rect
+                  x={junction.position.x - 55}
+                  y={junction.position.y - 55}
+                  width={110}
+                  height={110}
+                  transform={`rotate(45 ${junction.position.x} ${junction.position.y})`}
+                  fill="#0b1520"
+                  stroke={isPending ? "#16d8c4" : (branch?.colorHex ?? "#68d56b")}
+                  strokeWidth={isSelected || isPending ? 26 : 16}
+                  strokeDasharray={isPending ? "20 12" : undefined}
+                />
+              </g>
             );
           })}
 
