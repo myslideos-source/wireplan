@@ -187,8 +187,8 @@ export function DigitalPlanSvg() {
       role="img"
       aria-label="Digitalisierter Vektorgrundriss mit Räumen, Wänden, Türen und Fenstern"
     >
-      <rect x={0} y={0} width={800} height={560} fill="#0b1520" />
-      <g stroke="#1a2833" strokeWidth={1}>
+      <rect x={0} y={0} width={800} height={560} fill="#FAF8F4" />
+      <g stroke="#E4DCCC" strokeWidth={1}>
         {Array.from({ length: 33 }).map((_, i) => (
           <line key={`v${i}`} x1={i * 25} y1={0} x2={i * 25} y2={560} />
         ))}
@@ -204,11 +204,11 @@ export function DigitalPlanSvg() {
           y={room.y}
           width={room.w}
           height={room.h}
-          fill="#13212d"
+          fill="#EFE7D8"
         />
       ))}
 
-      <g stroke="#f5f7f9" strokeWidth={4} fill="none" strokeLinecap="square">
+      <g stroke="#303030" strokeWidth={4} fill="none" strokeLinecap="square">
         <rect x={90} y={70} width={620} height={440} />
         <line x1={430} y1={70} x2={430} y2={310} />
         <line x1={90} y1={310} x2={710} y2={310} />
@@ -218,7 +218,7 @@ export function DigitalPlanSvg() {
       </g>
 
       {DOORS.map(([x, y, dir], i) => (
-        <g key={i} stroke="#9aa7b3" strokeWidth={1.25} fill="none">
+        <g key={i} stroke="#6B6459" strokeWidth={1.25} fill="none">
           <path
             d={
               dir === "h"
@@ -242,7 +242,7 @@ export function DigitalPlanSvg() {
           y={dir === "h" ? y - 3 : y}
           width={dir === "h" ? 50 : 6}
           height={dir === "h" ? 6 : 50}
-          fill="#25b7f2"
+          fill="#4A8FA8"
         />
       ))}
 
@@ -255,10 +255,10 @@ export function DigitalPlanSvg() {
           fontSize={12}
           fontFamily="var(--font-inter), sans-serif"
         >
-          <tspan x={room.x + room.w / 2} dy={-6} fill="#f5f7f9" fontWeight={600}>
+          <tspan x={room.x + room.w / 2} dy={-6} fill="#303030" fontWeight={600}>
             {room.name}
           </tspan>
-          <tspan x={room.x + room.w / 2} dy={16} fill="#9aa7b3">
+          <tspan x={room.x + room.w / 2} dy={16} fill="#6B6459">
             {room.area}
           </tspan>
         </text>

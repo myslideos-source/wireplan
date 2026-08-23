@@ -4,11 +4,11 @@ import type { ElectricalDevice, Point } from "@/domain";
 const RADIUS = 130;
 
 const DEVICE_COLORS: Record<ElectricalDevice["type"], string> = {
-  outlet: "#e9ba4d",
-  light: "#e9ba4d",
-  switch: "#9aa7b3",
-  sensor: "#68d56b",
-  network: "#25b7f2",
+  outlet: "#D9A441",
+  light: "#D9A441",
+  switch: "#6B6459",
+  sensor: "#7A9D6E",
+  network: "#4A8FA8",
 };
 
 function Glyph({ type, color }: { type: ElectricalDevice["type"]; color: string }) {
@@ -100,15 +100,15 @@ export function DeviceSymbol({
       }}
     >
       {multiSelected && (
-        <circle r={RADIUS + 50} fill="none" stroke="#16d8c4" strokeWidth={14} strokeDasharray="30 20" />
+        <circle r={RADIUS + 50} fill="none" stroke="#C96F5B" strokeWidth={14} strokeDasharray="30 20" />
       )}
       <circle
         r={RADIUS}
-        fill="#0b1520"
-        stroke={selected ? "#16d8c4" : color}
+        fill="#FFFFFF"
+        stroke={selected ? "#C96F5B" : color}
         strokeWidth={selected ? 26 : 16}
       />
-      <Glyph type={device.type} color={selected ? "#16d8c4" : color} />
+      <Glyph type={device.type} color={selected ? "#C96F5B" : color} />
     </g>
   );
 }

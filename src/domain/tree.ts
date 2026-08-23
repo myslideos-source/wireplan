@@ -54,11 +54,11 @@ export interface TreeEdge {
  * color stays separate from this; this is purely "which branch is this
  * cable" at a glance. */
 export const TREE_BRANCH_COLORS = [
-  "#68d56b", // green
-  "#25b7f2", // turquoise
-  "#a78bfa", // violet
-  "#e9ba4d", // orange
-  "#f472b6", // pink
+  "#7A9D6E", // green
+  "#4A8FA8", // turquoise
+  "#8F6FB8", // violet
+  "#D9A441", // orange
+  "#B8698A", // pink
 ];
 
 export function nextTreeBranchColor(existingBranches: TreeBranch[]): string {

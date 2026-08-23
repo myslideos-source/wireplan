@@ -537,6 +537,12 @@ interface EditorState {
   zoom: number;
   setZoom: (updater: number | ((zoom: number) => number)) => void;
 
+  // §20 — how visible the uploaded reference plan is under the vector
+  // drawing; a view preference like zoom, not floor content, so it isn't
+  // part of undo history or per-floor state.
+  backgroundImageOpacity: number;
+  setBackgroundImageOpacity: (opacity: number) => void;
+
   updateRoom: (id: string, patch: Partial<Pick<Room, "name" | "type" | "height">>) => void;
   updateWallThickness: (id: string, thicknessMm: number) => void;
   deleteOpening: (id: string) => void;
@@ -1076,6 +1082,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   showLegacySmartHomeDevices: false,
   toggleShowLegacySmartHomeDevices: () =>
     set((state) => ({ showLegacySmartHomeDevices: !state.showLegacySmartHomeDevices })),
+
+  backgroundImageOpacity: 0.75,
+  setBackgroundImageOpacity: (opacity) =>
+    set({ backgroundImageOpacity: Math.min(1, Math.max(0.3, opacity)) }),
 
   zoom: 1,
   setZoom: (updater) =>

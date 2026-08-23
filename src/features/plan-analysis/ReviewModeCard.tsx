@@ -59,7 +59,7 @@ export function ReviewModeCard({
         {reviewEnabled ? (
           <Link
             href={`/editor?project=${projectId}&review=1`}
-            className="flex items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-secondary px-4 py-2 text-sm font-medium text-[#041420] transition-colors hover:bg-secondary/90"
+            className="flex items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-secondary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-secondary/90"
           >
             Jetzt prüfen
           </Link>
@@ -69,7 +69,7 @@ export function ReviewModeCard({
               type="button"
               disabled
               title="Der interaktive Review-Modus folgt in Phase 4 — Demnächst"
-              className="flex items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-secondary px-4 py-2 text-sm font-medium text-[#041420] disabled:pointer-events-none disabled:opacity-50"
+              className="flex items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-secondary px-4 py-2 text-sm font-medium text-white disabled:pointer-events-none disabled:opacity-50"
             >
               Jetzt prüfen — Demnächst
             </button>

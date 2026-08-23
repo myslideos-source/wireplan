@@ -51,7 +51,7 @@ export function ReviewActions({
           reviewEnabled ? (
             <Link
               href={`/editor?project=${projectId}&review=1`}
-              className="inline-flex h-9 items-center gap-2 rounded-[var(--radius-sm)] bg-primary px-4 text-sm font-medium text-[#04211d] transition-colors hover:bg-primary/90"
+              className="inline-flex h-9 items-center gap-2 rounded-[var(--radius-sm)] bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-primary/90"
             >
               <AlertTriangle className="h-4 w-4" />
               Fehler prüfen

@@ -140,7 +140,7 @@ function ReviewProblemBody({
                   if (target?.type === "opening") deleteOpening(target.id);
                   onAdvance();
                 }}
-                className="rounded-[var(--radius-sm)] bg-error px-2 py-1 font-medium text-[#2a0a0a]"
+                className="rounded-[var(--radius-sm)] bg-error px-2 py-1 font-medium text-white"
               >
                 Ja, löschen
               </button>

@@ -49,6 +49,7 @@ export function EditorCanvas() {
   const addOpeningAtPoint = useEditorStore((state) => state.addOpeningAtPoint);
   const moveOpeningToPoint = useEditorStore((state) => state.moveOpeningToPoint);
   const backgroundImage = useEditorStore((state) => state.backgroundImage);
+  const backgroundImageOpacity = useEditorStore((state) => state.backgroundImageOpacity);
   const moveBackgroundImageToPoint = useEditorStore((state) => state.moveBackgroundImageToPoint);
   const resizeBackgroundImageToPoint = useEditorStore(
     (state) => state.resizeBackgroundImageToPoint,
@@ -348,7 +349,7 @@ export function EditorCanvas() {
       >
         <defs>
           <pattern id="editor-grid" width={300} height={300} patternUnits="userSpaceOnUse">
-            <path d="M 300 0 L 0 0 0 300" fill="none" stroke="#1a2833" strokeWidth={8} />
+            <path d="M 300 0 L 0 0 0 300" fill="none" stroke="#E4DCCC" strokeWidth={8} />
           </pattern>
         </defs>
         <rect
@@ -367,8 +368,8 @@ export function EditorCanvas() {
                 <polygon
                   key={room.id}
                   points={room.polygon.map((p) => `${p.x},${p.y}`).join(" ")}
-                  fill={isSelected ? "rgba(22,216,196,0.14)" : "#13212d"}
-                  stroke={isSelected ? "#16d8c4" : "transparent"}
+                  fill={isSelected ? "rgba(201,111,91,0.14)" : "#EFE7D8"}
+                  stroke={isSelected ? "#C96F5B" : "transparent"}
                   strokeWidth={isSelected ? 40 : 0}
                   className={canSelect ? "cursor-pointer" : undefined}
                   onClick={(event) => {
@@ -395,7 +396,7 @@ export function EditorCanvas() {
                     y1={wall.start.y}
                     x2={wall.end.x}
                     y2={wall.end.y}
-                    stroke={isSelected ? "#16d8c4" : "#f5f7f9"}
+                    stroke={isSelected ? "#C96F5B" : "#303030"}
                     strokeWidth={wall.thickness}
                     strokeLinecap="square"
                     pointerEvents="none"
@@ -449,8 +450,8 @@ export function EditorCanvas() {
                     y={center.y - height / 2}
                     width={width}
                     height={height}
-                    fill={isWindow ? "#25b7f2" : "#0b1520"}
-                    stroke={isSelected ? "#16d8c4" : isWindow ? "none" : "#9aa7b3"}
+                    fill={isWindow ? "#4A8FA8" : "#5C5648"}
+                    stroke={isSelected ? "#C96F5B" : isWindow ? "none" : "#6B6459"}
                     strokeWidth={isSelected ? 30 : isWindow ? 0 : 20}
                   />
                   {isFocused && (
@@ -459,7 +460,7 @@ export function EditorCanvas() {
                       cy={center.y}
                       r={Math.max(width, height) * 0.9}
                       fill="none"
-                      stroke="#16d8c4"
+                      stroke="#C96F5B"
                       strokeWidth={30}
                       strokeDasharray="60 40"
                     />
@@ -502,15 +503,15 @@ export function EditorCanvas() {
                 y={center.y - height / 2}
                 width={width}
                 height={height}
-                fill="rgba(104,213,107,0.12)"
-                stroke={isSelected ? "#16d8c4" : "#68d56b"}
+                fill="rgba(122,157,110,0.12)"
+                stroke={isSelected ? "#C96F5B" : "#7A9D6E"}
                 strokeWidth={isSelected ? 36 : 24}
               />
               <text x={center.x} y={center.y} textAnchor="middle" pointerEvents="none">
-                <tspan x={center.x} dy={-60} fontSize={230} fontWeight={600} fill="#68d56b">
+                <tspan x={center.x} dy={-60} fontSize={230} fontWeight={600} fill="#7A9D6E">
                   Verteiler / Schaltschrank
                 </tspan>
-                <tspan x={center.x} dy={280} fontSize={200} fill="#9aa7b3">
+                <tspan x={center.x} dy={280} fontSize={200} fill="#6B6459">
                   Loxone Miniserver
                 </tspan>
               </text>
@@ -575,7 +576,7 @@ export function EditorCanvas() {
                     cy={device.position.y}
                     r={210}
                     fill="none"
-                    stroke="#16d8c4"
+                    stroke="#C96F5B"
                     strokeWidth={14}
                     strokeDasharray="30 20"
                   />
@@ -584,11 +585,11 @@ export function EditorCanvas() {
                   cx={device.position.x}
                   cy={device.position.y}
                   r={160}
-                  fill="rgba(37,183,242,0.18)"
-                  stroke={isSelected ? "#16d8c4" : "#25b7f2"}
+                  fill="rgba(74,143,168,0.18)"
+                  stroke={isSelected ? "#C96F5B" : "#4A8FA8"}
                   strokeWidth={isSelected ? 36 : 24}
                 />
-                <circle cx={device.position.x} cy={device.position.y} r={50} fill="#25b7f2" />
+                <circle cx={device.position.x} cy={device.position.y} r={50} fill="#4A8FA8" />
               </g>
             );
           })}
@@ -620,7 +621,7 @@ export function EditorCanvas() {
                     width={400}
                     height={400}
                     fill="none"
-                    stroke="#16d8c4"
+                    stroke="#C96F5B"
                     strokeWidth={14}
                     strokeDasharray="30 20"
                   />
@@ -630,8 +631,8 @@ export function EditorCanvas() {
                   y={consumer.position.y - 150}
                   width={300}
                   height={300}
-                  fill="rgba(242,96,96,0.15)"
-                  stroke={isSelected ? "#16d8c4" : "#f26060"}
+                  fill="rgba(196,83,74,0.15)"
+                  stroke={isSelected ? "#C96F5B" : "#C4534A"}
                   strokeWidth={isSelected ? 30 : 20}
                 />
                 <text
@@ -641,7 +642,7 @@ export function EditorCanvas() {
                   dominantBaseline="central"
                   fontSize={180}
                   fontWeight={700}
-                  fill={isSelected ? "#16d8c4" : "#f26060"}
+                  fill={isSelected ? "#C96F5B" : "#C4534A"}
                   pointerEvents="none"
                 >
                   V
@@ -722,8 +723,8 @@ export function EditorCanvas() {
                   width={110}
                   height={110}
                   transform={`rotate(45 ${junction.position.x} ${junction.position.y})`}
-                  fill="#0b1520"
-                  stroke={isPending ? "#16d8c4" : (branch?.colorHex ?? "#68d56b")}
+                  fill="#FFFFFF"
+                  stroke={isPending ? "#C96F5B" : (branch?.colorHex ?? "#7A9D6E")}
                   strokeWidth={isSelected || isPending ? 26 : 16}
                   strokeDasharray={isPending ? "20 12" : undefined}
                 />
@@ -743,10 +744,10 @@ export function EditorCanvas() {
                 pointerEvents="none"
                 opacity={dimArchitecture ? 0.25 : 1}
               >
-                <tspan x={centroid.x} dy={-90} fontSize={340} fontWeight={600} fill="#f5f7f9">
+                <tspan x={centroid.x} dy={-90} fontSize={340} fontWeight={600} fill="#303030">
                   {room.name}
                 </tspan>
-                <tspan x={centroid.x} dy={380} fontSize={300} fill="#9aa7b3">
+                <tspan x={centroid.x} dy={380} fontSize={300} fill="#6B6459">
                   {formatArea(room.area)}
                 </tspan>
               </text>
@@ -761,7 +762,7 @@ export function EditorCanvas() {
               y={backgroundImage.y}
               width={backgroundImage.width}
               height={backgroundImage.height}
-              opacity={0.55}
+              opacity={backgroundImageOpacity}
               preserveAspectRatio="none"
               style={{ cursor: placingBackground ? "grab" : undefined }}
               pointerEvents={placingBackground ? "auto" : "none"}
@@ -777,8 +778,8 @@ export function EditorCanvas() {
                 y={backgroundImage.y + backgroundImage.height - 120}
                 width={240}
                 height={240}
-                fill="#16d8c4"
-                stroke="#071019"
+                fill="#C96F5B"
+                stroke="#FAF8F4"
                 strokeWidth={20}
                 style={{ cursor: "nwse-resize" }}
                 onMouseDown={(event) => {

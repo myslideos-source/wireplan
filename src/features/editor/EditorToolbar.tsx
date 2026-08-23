@@ -139,6 +139,8 @@ export function EditorToolbar() {
   const backgroundImage = useEditorStore((state) => state.backgroundImage);
   const setBackgroundImage = useEditorStore((state) => state.setBackgroundImage);
   const clearBackgroundImage = useEditorStore((state) => state.clearBackgroundImage);
+  const backgroundImageOpacity = useEditorStore((state) => state.backgroundImageOpacity);
+  const setBackgroundImageOpacity = useEditorStore((state) => state.setBackgroundImageOpacity);
   const viewMode = useEditorStore((state) => state.viewMode);
   const setViewMode = useEditorStore((state) => state.setViewMode);
   const spotArrayCount = useEditorStore((state) => state.spotArrayCount);
@@ -371,6 +373,19 @@ export function EditorToolbar() {
                           Bild ziehen zum Verschieben, Ecke unten rechts zum
                           Skalieren.
                         </p>
+                        <label className="flex flex-col gap-1 px-1 text-[11px] text-text-muted">
+                          Plan Hintergrund — {Math.round(backgroundImageOpacity * 100)}%
+                          <input
+                            type="range"
+                            min={30}
+                            max={100}
+                            value={Math.round(backgroundImageOpacity * 100)}
+                            onChange={(event) =>
+                              setBackgroundImageOpacity(Number(event.target.value) / 100)
+                            }
+                            className="accent-primary"
+                          />
+                        </label>
                         <button
                           type="button"
                           onClick={clearBackgroundImage}

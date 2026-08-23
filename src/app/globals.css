@@ -1,23 +1,23 @@
 @import "tailwindcss";
 
 :root {
-  --color-bg: #071019;
-  --color-bg-secondary: #0b1520;
-  --color-panel: #0f1a25;
-  --color-panel-elevated: #13212d;
-  --color-border: #22313d;
-  --color-border-subtle: #1a2833;
+  --color-bg: #faf8f4;
+  --color-bg-secondary: #f6f2ea;
+  --color-panel: #ffffff;
+  --color-panel-elevated: #f6f2ea;
+  --color-border: #e4dccc;
+  --color-border-subtle: #ede7da;
 
-  --color-primary: #16d8c4;
-  --color-primary-soft: #16d8c4;
-  --color-secondary: #25b7f2;
-  --color-success: #68d56b;
-  --color-warning: #e9ba4d;
-  --color-error: #f26060;
+  --color-primary: #c96f5b;
+  --color-primary-soft: #c96f5b;
+  --color-secondary: #4a8fa8;
+  --color-success: #7a9d6e;
+  --color-warning: #d9a441;
+  --color-error: #c4534a;
 
-  --color-text: #f5f7f9;
-  --color-text-secondary: #9aa7b3;
-  --color-text-muted: #687684;
+  --color-text: #303030;
+  --color-text-secondary: #6b6459;
+  --color-text-muted: #9c9587;
 
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -51,7 +51,7 @@
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
@@ -71,8 +71,8 @@ body {
 
 .bg-grid {
   background-image:
-    linear-gradient(to right, rgba(34, 49, 61, 0.35) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(34, 49, 61, 0.35) 1px, transparent 1px);
+    linear-gradient(to right, rgba(48, 48, 48, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(48, 48, 48, 0.08) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 

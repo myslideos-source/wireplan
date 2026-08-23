@@ -8,12 +8,12 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "bg-primary text-[#04211d] hover:bg-primary/90 shadow-[0_0_0_1px_rgba(22,216,196,0.25)]",
+          "bg-primary text-white hover:bg-primary/90 shadow-[0_0_0_1px_rgba(201,111,91,0.25)]",
         secondary:
           "bg-transparent text-text border border-border hover:border-primary/60 hover:text-primary",
         ghost:
           "bg-transparent text-text-secondary hover:bg-panel-elevated hover:text-text",
-        danger: "bg-error text-[#2a0a0a] hover:bg-error/90",
+        danger: "bg-error text-white hover:bg-error/90",
       },
       size: {
         sm: "h-8 px-3 text-xs",

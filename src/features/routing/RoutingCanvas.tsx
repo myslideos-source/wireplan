@@ -5,16 +5,16 @@ import { useEditorStore } from "@/features/editor/store";
 import { wallsBoundingBox, devicePosition, pointAtOffset } from "@/features/editor/geometry-utils";
 
 const CABLE_COLORS: Record<CableType, string> = {
-  "NYM-J 3x1,5": "#e9ba4d",
-  "NYM-J 3x2,5": "#f26060",
-  "NYM-J 5x2,5": "#f26060",
-  "NYM-J 5x6": "#f26060",
-  CAT7: "#25b7f2",
-  "CAT7 Duplex": "#25b7f2",
-  "Tree Cable": "#68d56b",
-  "Lautsprecherkabel 2x1,5": "#f472b6",
-  "Lautsprecherkabel 2x2,5": "#f472b6",
-  "Leerrohr M25": "#6b7785",
+  "NYM-J 3x1,5": "#D9A441",
+  "NYM-J 3x2,5": "#C4534A",
+  "NYM-J 5x2,5": "#C4534A",
+  "NYM-J 5x6": "#C4534A",
+  CAT7: "#4A8FA8",
+  "CAT7 Duplex": "#4A8FA8",
+  "Tree Cable": "#7A9D6E",
+  "Lautsprecherkabel 2x1,5": "#B8698A",
+  "Lautsprecherkabel 2x2,5": "#B8698A",
+  "Leerrohr M25": "#8A8272",
 };
 
 export function RoutingCanvas({
@@ -52,7 +52,7 @@ export function RoutingCanvas({
           <polygon
             key={room.id}
             points={room.polygon.map((p) => `${p.x},${p.y}`).join(" ")}
-            fill="#13212d"
+            fill="#EFE7D8"
           />
         ))}
         {walls.map((wall) => (
@@ -62,7 +62,7 @@ export function RoutingCanvas({
             y1={wall.start.y}
             x2={wall.end.x}
             y2={wall.end.y}
-            stroke="#f5f7f9"
+            stroke="#303030"
             strokeWidth={wall.thickness}
             strokeLinecap="square"
           />
@@ -110,8 +110,8 @@ export function RoutingCanvas({
             cx={position.x}
             cy={position.y}
             r={110}
-            fill="#0b1520"
-            stroke="#9aa7b3"
+            fill="#FFFFFF"
+            stroke="#6B6459"
             strokeWidth={16}
             opacity={dimmed ? 0.3 : 1}
           />
@@ -124,8 +124,8 @@ export function RoutingCanvas({
           y={boardPosition.y - 125}
           width={400}
           height={250}
-          fill="rgba(104,213,107,0.15)"
-          stroke="#68d56b"
+          fill="rgba(122,157,110,0.15)"
+          stroke="#7A9D6E"
           strokeWidth={24}
         />
       )}

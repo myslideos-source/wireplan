@@ -28,7 +28,7 @@ export function ProjectHeroCard({ project }: { project: Project }) {
           <div className="flex items-center gap-2">
             <Link
               href={`/editor?project=${project.id}`}
-              className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-primary px-4 py-2 text-sm font-medium text-[#04211d] transition-colors hover:bg-primary/90"
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90"
             >
               Im Editor öffnen
               <ArrowUpRight className="h-4 w-4" />

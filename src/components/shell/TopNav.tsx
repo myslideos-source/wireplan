@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, ChevronDown, Moon, User } from "lucide-react";
+import { Bell, ChevronDown, Sun, Moon, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Dropdown,
@@ -43,7 +43,7 @@ export function TopNav() {
               >
                 {item.label}
                 {isActive && (
-                  <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-primary shadow-[0_0_8px_rgba(22,216,196,0.7)]" />
+                  <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-primary shadow-[0_0_8px_rgba(201,111,91,0.6)]" />
                 )}
               </Link>
             );
@@ -55,17 +55,18 @@ export function TopNav() {
         <Dropdown
           trigger={
             <span className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-sm)] text-text-secondary transition-colors hover:bg-panel-elevated hover:text-text">
-              <Moon className="h-4 w-4" />
+              <Sun className="h-4 w-4" />
             </span>
           }
         >
           <DropdownLabel>Theme</DropdownLabel>
           <DropdownItem className="text-text">
-            <Moon className="h-4 w-4 text-primary" />
-            Dark (aktiv)
+            <Sun className="h-4 w-4 text-primary" />
+            Light (aktiv)
           </DropdownItem>
           <DropdownItem disabled title="Demnächst verfügbar">
-            Light — Demnächst
+            <Moon className="h-4 w-4" />
+            Dark — Demnächst
           </DropdownItem>
         </Dropdown>
 
