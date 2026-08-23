@@ -466,6 +466,11 @@ interface EditorState {
   snapEnabled: boolean;
   toggleSnap: () => void;
 
+  // §5 — hide superseded/discontinued Loxone hardware from pickers by
+  // default; already-assigned legacy devices stay visible/selectable.
+  showLegacySmartHomeDevices: boolean;
+  toggleShowLegacySmartHomeDevices: () => void;
+
   zoom: number;
   setZoom: (updater: number | ((zoom: number) => number)) => void;
 
@@ -919,6 +924,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   snapEnabled: true,
   toggleSnap: () => set((state) => ({ snapEnabled: !state.snapEnabled })),
+
+  showLegacySmartHomeDevices: false,
+  toggleShowLegacySmartHomeDevices: () =>
+    set((state) => ({ showLegacySmartHomeDevices: !state.showLegacySmartHomeDevices })),
 
   zoom: 1,
   setZoom: (updater) =>

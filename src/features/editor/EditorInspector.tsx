@@ -111,8 +111,10 @@ function SmartHomeModelSelect({
   value: string | undefined;
   onChange: (modelId: string | null) => void;
 }) {
-  const options = getSmartHomeCatalog(LOXONE_SYSTEM.id).filter((model) =>
-    categories.includes(model.category),
+  const showLegacyDevices = useEditorStore((state) => state.showLegacySmartHomeDevices);
+  const options = getSmartHomeCatalog(LOXONE_SYSTEM.id).filter(
+    (model) =>
+      categories.includes(model.category) && (showLegacyDevices || !model.legacy || model.id === value),
   );
   if (options.length === 0) {
     return <DemoField value="—" />;
@@ -127,6 +129,7 @@ function SmartHomeModelSelect({
       {options.map((model) => (
         <option key={model.id} value={model.id}>
           {model.label}
+          {model.legacy ? " (Legacy)" : ""}
         </option>
       ))}
     </select>

@@ -75,6 +75,10 @@ export interface SmartHomeDeviceModel {
    * audio and 230V hardware are never Tree devices even though some sit
    * in the same physical room (§62). */
   countsAsTreeDevice: boolean;
+  /** §5 — a superseded/discontinued product, hidden from the picker by
+   * default (still plannable for an existing installation being
+   * extended, via "Legacy-Geräte anzeigen"). Absent/false = current. */
+  legacy?: boolean;
 }
 
 /**
@@ -86,6 +90,12 @@ export interface SmartHomeDeviceModel {
  * knowledge, not a live fetch of the current Loxone catalog. Treat this
  * as a starting point to review against the official Loxone documentation
  * before ordering hardware, not as a verified source of truth (§46).
+ *
+ * The one `legacy: true` entry (Miniserver Gen. 1) is a deliberately
+ * conservative example of §5's "superseded product" toggle — it reflects
+ * a well-known generational naming change, not a claim about the exact
+ * current discontinuation status of any other model. Do not add further
+ * `legacy` entries without the same live-verification caveat in mind.
  */
 export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
   {
@@ -96,6 +106,16 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     description: "Zentrale Steuereinheit der gesamten Loxone-Installation.",
     technology: "loxone-tree",
     countsAsTreeDevice: false,
+  },
+  {
+    id: "loxone-miniserver-gen1",
+    systemId: LOXONE_SYSTEM.id,
+    category: "controller",
+    label: "Miniserver (Gen. 1)",
+    description: "Vorgängergeneration des Miniservers, durch Gen. 2 abgelöst — nur für die Erweiterung bestehender Altinstallationen relevant.",
+    technology: "loxone-tree",
+    countsAsTreeDevice: false,
+    legacy: true,
   },
   {
     id: "loxone-extension",

@@ -1,4 +1,4 @@
-import type { ElectricalDevice, Room, SmartHomeDevice, TreeBranch } from "@/domain";
+import type { DistributionBoard, ElectricalDevice, Room, SmartHomeDevice, TreeBranch } from "@/domain";
 import {
   findSmartHomeModel,
   formatDeviceNumber,
@@ -99,5 +99,47 @@ export function computeCircuitWarnings(
       message: `${room.name} hat Geräte, aber keinen zugewiesenen Stromkreis.`,
     });
   }
+  return warnings;
+}
+
+/**
+ * §5 — flags every placed Loxone device/board using a `legacy: true`
+ * catalog model, so a legacy assignment is never silently invisible just
+ * because the picker hides it from new placements by default.
+ */
+export function computeLegacyWarnings(
+  devices: ElectricalDevice[],
+  smartHomeDevices: SmartHomeDevice[],
+  distributionBoard: DistributionBoard | null,
+): PlanWarning[] {
+  const warnings: PlanWarning[] = [];
+
+  for (const device of devices) {
+    const model = device.smartHomeModelId ? findSmartHomeModel(device.smartHomeModelId) : undefined;
+    if (!model?.legacy) continue;
+    const number = formatDeviceNumber(numberingPrefixFor({ type: device.type }), device.number);
+    warnings.push({ id: `legacy-device-${device.id}`, message: `${number} verwendet ein Legacy-Produkt (${model.label}).` });
+  }
+
+  for (const device of smartHomeDevices) {
+    const model = findSmartHomeModel(device.modelId);
+    if (!model?.legacy) continue;
+    const number = formatDeviceNumber(
+      numberingPrefixFor({ category: model.category, technology: model.technology }),
+      device.number,
+    );
+    warnings.push({ id: `legacy-device-${device.id}`, message: `${number} verwendet ein Legacy-Produkt (${model.label}).` });
+  }
+
+  if (distributionBoard?.smartHomeModelId) {
+    const model = findSmartHomeModel(distributionBoard.smartHomeModelId);
+    if (model?.legacy) {
+      warnings.push({
+        id: `legacy-board-${distributionBoard.id}`,
+        message: `Der Schaltschrank verwendet ein Legacy-Produkt (${model.label}).`,
+      });
+    }
+  }
+
   return warnings;
 }

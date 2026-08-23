@@ -142,6 +142,10 @@ export function EditorToolbar() {
   const setNetworkDevicePlacementSubtype = useEditorStore(
     (state) => state.setNetworkDevicePlacementSubtype,
   );
+  const showLegacySmartHomeDevices = useEditorStore((state) => state.showLegacySmartHomeDevices);
+  const toggleShowLegacySmartHomeDevices = useEditorStore(
+    (state) => state.toggleShowLegacySmartHomeDevices,
+  );
   const loxoneEnabled = isFeatureEnabled("LOXONE");
   const backgroundInputRef = useRef<HTMLInputElement>(null);
 
@@ -206,17 +210,31 @@ export function EditorToolbar() {
                   {tool.label}
                 </button>
                 {tool.id === "smarthome" && loxoneEnabled && activeTool === "smarthome" && (
-                  <select
-                    value={smartHomePlacementModelId}
-                    onChange={(event) => setSmartHomePlacementModelId(event.target.value)}
-                    className="mx-1 rounded-[var(--radius-sm)] border border-border bg-bg px-2 py-1.5 text-xs text-text outline-none focus:border-primary/60"
-                  >
-                    {LOXONE_CATALOG.map((model) => (
-                      <option key={model.id} value={model.id}>
-                        {SMART_HOME_CATEGORY_LABELS[model.category]} · {model.label}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="mx-1 flex flex-col gap-1.5">
+                    <select
+                      value={smartHomePlacementModelId}
+                      onChange={(event) => setSmartHomePlacementModelId(event.target.value)}
+                      className="rounded-[var(--radius-sm)] border border-border bg-bg px-2 py-1.5 text-xs text-text outline-none focus:border-primary/60"
+                    >
+                      {LOXONE_CATALOG.filter((model) => showLegacySmartHomeDevices || !model.legacy).map(
+                        (model) => (
+                          <option key={model.id} value={model.id}>
+                            {SMART_HOME_CATEGORY_LABELS[model.category]} · {model.label}
+                            {model.legacy ? " (Legacy)" : ""}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                    <label className="flex items-center gap-1.5 px-1 text-[11px] text-text-muted">
+                      <input
+                        type="checkbox"
+                        checked={showLegacySmartHomeDevices}
+                        onChange={toggleShowLegacySmartHomeDevices}
+                        className="h-3.5 w-3.5 rounded border-border"
+                      />
+                      Legacy-Geräte anzeigen
+                    </label>
+                  </div>
                 )}
                 {tool.id === "consumer" && activeTool === "consumer" && (
                   <div className="mx-1 flex flex-col gap-1.5">
