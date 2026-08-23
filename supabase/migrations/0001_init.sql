@@ -40,19 +40,10 @@ create table if not exists plan_uploads (
   created_at timestamptz not null default now()
 );
 
--- Coordinates are stored in millimeters, never pixels (§63).
-create table if not exists walls (
-  id uuid primary key default gen_random_uuid(),
-  floor_id uuid not null references floors (id) on delete cascade,
-  start_x numeric not null,
-  start_y numeric not null,
-  end_x numeric not null,
-  end_y numeric not null,
-  thickness numeric not null default 150,
-  height numeric not null default 2500,
-  created_at timestamptz not null default now()
-);
-
+-- Coordinates are stored in millimeters, never pixels (§63). Rooms are
+-- polygons the user traces directly over the floor's locked plan_uploads
+-- image (Phase 11) — there is no walls table: the uploaded plan is never
+-- redrawn as vector geometry.
 create table if not exists rooms (
   id uuid primary key default gen_random_uuid(),
   floor_id uuid not null references floors (id) on delete cascade,
@@ -79,16 +70,15 @@ create table if not exists smart_home_devices (
   system_id text not null references smart_home_systems (id),
   manufacturer_id text not null,
   room_id uuid references rooms (id) on delete set null,
-  wall_id uuid references walls (id) on delete set null,
-  wall_offset numeric,
-  wall_height numeric,
+  position_x numeric not null,
+  position_y numeric not null,
+  height numeric,
   created_at timestamptz not null default now()
 );
 
 alter table projects enable row level security;
 alter table floors enable row level security;
 alter table plan_uploads enable row level security;
-alter table walls enable row level security;
 alter table rooms enable row level security;
 alter table smart_home_devices enable row level security;
 
@@ -111,17 +101,6 @@ create policy "Owners manage their plan uploads"
   with check (exists (
     select 1 from floors f join projects p on p.id = f.project_id
     where f.id = plan_uploads.floor_id and p.owner_id = auth.uid()
-  ));
-
-create policy "Owners manage their walls"
-  on walls for all
-  using (exists (
-    select 1 from floors f join projects p on p.id = f.project_id
-    where f.id = walls.floor_id and p.owner_id = auth.uid()
-  ))
-  with check (exists (
-    select 1 from floors f join projects p on p.id = f.project_id
-    where f.id = walls.floor_id and p.owner_id = auth.uid()
   ));
 
 create policy "Owners manage their rooms"

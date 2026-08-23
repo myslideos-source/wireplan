@@ -2,18 +2,14 @@ import type {
   DistributionBoard,
   ElectricalDevice,
   FixedConsumer,
-  Opening,
   Room,
   SmartHomeDevice,
-  Wall,
 } from "@/domain";
 import { DEVICE_TYPE_LABELS, findSmartHomeModel, formatDeviceNumber, numberingPrefixFor, fixedConsumerLabel, NETWORK_DEVICE_LABELS } from "@/domain";
 import {
   devicePosition,
-  pointAtOffset,
   polygonCentroid,
-  wallOrientation,
-  wallsBoundingBox,
+  floorExtentBox,
 } from "@/features/editor/geometry-utils";
 
 const DEVICE_COLORS: Record<ElectricalDevice["type"], string> = {
@@ -40,17 +36,16 @@ interface LegendEntry {
 export function buildFloorPlanSvg(params: {
   projectName: string;
   floorName: string;
-  walls: Wall[];
   rooms: Room[];
-  openings: Opening[];
   devices: ElectricalDevice[];
   smartHomeDevices: SmartHomeDevice[];
   fixedConsumers: FixedConsumer[];
   distributionBoard: DistributionBoard | null;
+  backgroundImage?: { x: number; y: number; width: number; height: number } | null;
 }): string {
-  const { projectName, floorName, walls, rooms, openings, devices, smartHomeDevices, fixedConsumers, distributionBoard } =
+  const { projectName, floorName, rooms, devices, smartHomeDevices, fixedConsumers, distributionBoard, backgroundImage } =
     params;
-  const box = wallsBoundingBox(walls, 900);
+  const box = floorExtentBox(rooms, backgroundImage ?? null, 900);
   const legendHeight = 900;
   const totalHeight = box.height + legendHeight;
 
@@ -69,31 +64,10 @@ export function buildFloorPlanSvg(params: {
     );
   }
 
-  for (const wall of walls) {
-    parts.push(
-      `<line x1="${wall.start.x}" y1="${wall.start.y}" x2="${wall.end.x}" y2="${wall.end.y}" stroke="#303030" stroke-width="${wall.thickness}" stroke-linecap="square" />`,
-    );
-  }
-
-  for (const opening of openings) {
-    const wall = walls.find((w) => w.id === opening.wallId);
-    if (!wall) continue;
-    const center = pointAtOffset(wall, opening.offset);
-    const orientation = wallOrientation(wall);
-    const across = wall.thickness + 60;
-    const isWindow = opening.type === "window";
-    const width = orientation === "h" ? opening.width : across;
-    const height = orientation === "h" ? across : opening.width;
-    parts.push(
-      `<rect x="${center.x - width / 2}" y="${center.y - height / 2}" width="${width}" height="${height}" fill="${isWindow ? "#4A8FA8" : "#FFFFFF"}" />`,
-    );
-  }
-
   const legend = new Map<string, LegendEntry>();
 
   for (const device of devices) {
-    const position = devicePosition(device, walls);
-    if (!position) continue;
+    const position = devicePosition(device);
     const color = DEVICE_COLORS[device.type];
     const prefix = numberingPrefixFor({ type: device.type, networkDeviceSubtype: device.networkDeviceSubtype });
     const number = formatDeviceNumber(prefix, device.number);
@@ -128,16 +102,13 @@ export function buildFloorPlanSvg(params: {
   }
 
   if (distributionBoard) {
-    const wall = walls.find((w) => w.id === distributionBoard.wallId);
-    if (wall) {
-      const center = pointAtOffset(wall, distributionBoard.offset);
-      parts.push(
-        `<rect x="${center.x - 200}" y="${center.y - 125}" width="400" height="250" fill="rgba(122,157,110,0.15)" stroke="#7A9D6E" stroke-width="24" />`,
-      );
-      parts.push(
-        `<text x="${center.x}" y="${center.y}" text-anchor="middle" font-size="180" fill="#7A9D6E">HV</text>`,
-      );
-    }
+    const center = distributionBoard.position;
+    parts.push(
+      `<rect x="${center.x - 200}" y="${center.y - 125}" width="400" height="250" fill="rgba(122,157,110,0.15)" stroke="#7A9D6E" stroke-width="24" />`,
+    );
+    parts.push(
+      `<text x="${center.x}" y="${center.y}" text-anchor="middle" font-size="180" fill="#7A9D6E">HV</text>`,
+    );
   }
 
   // §42 legend, §73 PDF/export metadata — drawn below the plan itself.

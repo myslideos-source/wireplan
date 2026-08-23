@@ -23,9 +23,8 @@ function downloadBlob(blob: Blob, filename: string) {
 export function ExportsWorkspace({ project }: { project: Project }) {
   const floors = useEditorStore((state) => state.floors);
   const floorId = useEditorStore((state) => state.floorId);
-  const walls = useEditorStore((state) => state.walls);
   const rooms = useEditorStore((state) => state.rooms);
-  const openings = useEditorStore((state) => state.openings);
+  const backgroundImage = useEditorStore((state) => state.backgroundImage);
   const devices = useEditorStore((state) => state.devices);
   const smartHomeDevices = useEditorStore((state) => state.smartHomeDevices);
   const fixedConsumers = useEditorStore((state) => state.fixedConsumers);
@@ -153,13 +152,12 @@ export function ExportsWorkspace({ project }: { project: Project }) {
     return buildFloorPlanSvg({
       projectName: project.name,
       floorName,
-      walls,
       rooms,
-      openings,
       devices,
       smartHomeDevices,
       fixedConsumers,
       distributionBoard,
+      backgroundImage,
     });
   }
 
