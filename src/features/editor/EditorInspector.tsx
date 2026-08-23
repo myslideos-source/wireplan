@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { MousePointer2, Plug, Lightbulb, ToggleLeft, Radar, Wifi, Trash2, Server, Home, DoorOpen, AppWindow, type LucideIcon } from "lucide-react";
+import { MousePointer2, Plug, Lightbulb, ToggleLeft, Radar, Wifi, Trash2, Server, Home, DoorOpen, AppWindow, Zap, type LucideIcon } from "lucide-react";
 import { Badge, Button } from "@/components/ui";
 import {
   wallLengthMeters,
@@ -16,7 +16,9 @@ import {
   numberingPrefixFor,
   formatDeviceNumber,
   MAX_TREE_DEVICES_PER_BRANCH,
+  fixedConsumerLabel,
   type ElectricalDeviceType,
+  type CableType,
 } from "@/domain";
 import { isFeatureEnabled } from "@/lib/feature-flags";
 import { formatArea, formatNumber } from "@/lib/utils";
@@ -34,6 +36,13 @@ const ROOM_TYPES = [
   "Abstellraum",
   "Technikraum",
   "Sonstiges",
+];
+
+const FIXED_CONSUMER_CABLE_OPTIONS: CableType[] = [
+  "NYM-J 3x1,5",
+  "NYM-J 3x2,5",
+  "NYM-J 5x2,5",
+  "NYM-J 5x6",
 ];
 
 const DEVICE_ICONS: Record<ElectricalDeviceType, LucideIcon> = {
@@ -230,6 +239,9 @@ export function EditorInspector() {
   const setSmartHomeDeviceModel = useEditorStore((state) => state.setSmartHomeDeviceModel);
   const assignDeviceToTreeBranch = useEditorStore((state) => state.assignDeviceToTreeBranch);
   const assignDeviceToAudioZone = useEditorStore((state) => state.assignDeviceToAudioZone);
+  const fixedConsumers = useEditorStore((state) => state.fixedConsumers);
+  const deleteFixedConsumer = useEditorStore((state) => state.deleteFixedConsumer);
+  const updateFixedConsumerCableType = useEditorStore((state) => state.updateFixedConsumerCableType);
   const openings = useEditorStore((state) => state.openings);
   const deleteOpening = useEditorStore((state) => state.deleteOpening);
   const updateOpeningWidth = useEditorStore((state) => state.updateOpeningWidth);
@@ -521,6 +533,64 @@ export function EditorInspector() {
           >
             <Trash2 className="h-3.5 w-3.5" />
             {opening.type === "door" ? "Tür" : "Fenster"} löschen
+          </Button>
+        </div>
+      </aside>
+    );
+  }
+
+  if (selected.type === "consumer") {
+    const consumer = fixedConsumers.find((c) => c.id === selected.id);
+    if (!consumer) return null;
+    const room = consumer.roomId ? rooms.find((r) => r.id === consumer.roomId) : undefined;
+    const number = formatDeviceNumber("V", consumer.number);
+    return (
+      <aside className="w-80 shrink-0 overflow-y-auto border-l border-border bg-bg-secondary scrollbar-thin">
+        <div className="flex items-center gap-2 border-b border-border px-5 py-4">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-error/10 text-error">
+            <Zap className="h-4 w-4" />
+          </span>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
+              Fester Verbraucher · {number}
+            </p>
+            <h2 className="text-sm font-semibold text-text">{fixedConsumerLabel(consumer)}</h2>
+          </div>
+        </div>
+        <Section title="Verbraucher">
+          <FieldRow label="Nummer">
+            <span className="tabular-nums-font text-sm font-medium text-text">{number}</span>
+          </FieldRow>
+          <FieldRow label="Zuleitung">
+            <select
+              value={consumer.cableType}
+              onChange={(event) =>
+                updateFixedConsumerCableType(consumer.id, event.target.value as CableType)
+              }
+              className={inputClass}
+            >
+              {FIXED_CONSUMER_CABLE_OPTIONS.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+          </FieldRow>
+          <FieldRow label="Raum">
+            <span className="text-sm text-text">{room?.name ?? "— (außerhalb eines Raums)"}</span>
+          </FieldRow>
+        </Section>
+        <div className="px-5 py-4">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              deleteFixedConsumer(consumer.id);
+              select(null);
+            }}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Verbraucher löschen
           </Button>
         </div>
       </aside>

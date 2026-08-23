@@ -7,6 +7,9 @@
  */
 export type CableType =
   | "NYM-J 3x1,5"
+  | "NYM-J 3x2,5"
+  | "NYM-J 5x2,5"
+  | "NYM-J 5x6"
   | "CAT7"
   | "Tree Cable"
   | "Lautsprecherkabel 2x1,5"

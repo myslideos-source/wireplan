@@ -55,6 +55,9 @@ export function EditorCanvas() {
   );
   const treeBranches = useEditorStore((state) => state.treeBranches);
   const treeViewActive = useEditorStore((state) => state.treeViewActive);
+  const fixedConsumers = useEditorStore((state) => state.fixedConsumers);
+  const addFixedConsumerAtPoint = useEditorStore((state) => state.addFixedConsumerAtPoint);
+  const moveFixedConsumerToPoint = useEditorStore((state) => state.moveFixedConsumerToPoint);
 
   const svgRef = useRef<SVGSVGElement>(null);
   const [dragging, setDragging] = useState<
@@ -62,6 +65,7 @@ export function EditorCanvas() {
     | { kind: "device"; id: string }
     | { kind: "smarthome"; id: string }
     | { kind: "opening"; id: string }
+    | { kind: "consumer"; id: string }
     | { kind: "background" }
     | { kind: "background-resize" }
     | null
@@ -130,6 +134,7 @@ export function EditorCanvas() {
     : null;
   const placingBoard = activeTool === "board";
   const placingSmartHome = activeTool === "smarthome";
+  const placingConsumer = activeTool === "consumer";
   const placingOpeningType = activeTool === "door" ? "door" : activeTool === "window" ? "window" : null;
   const placingBackground = activeTool === "background";
 
@@ -155,6 +160,7 @@ export function EditorCanvas() {
       else if (current.kind === "device") moveDeviceToPoint(current.id, point);
       else if (current.kind === "smarthome") moveSmartHomeDeviceToPoint(current.id, point);
       else if (current.kind === "opening") moveOpeningToPoint(current.id, point);
+      else if (current.kind === "consumer") moveFixedConsumerToPoint(current.id, point);
       else if (current.kind === "background") moveBackgroundImageToPoint(point);
       else resizeBackgroundImageToPoint(point);
     }
@@ -183,11 +189,15 @@ export function EditorCanvas() {
       addDeviceAtPoint(toolId as ElectricalDevice["type"], point);
       return;
     }
-    if (toolId === "smarthome") addSmartHomeDeviceAtPoint(point);
+    if (toolId === "smarthome") {
+      addSmartHomeDeviceAtPoint(point);
+      return;
+    }
+    if (toolId === "consumer") addFixedConsumerAtPoint(point);
   }
 
   function handleBackgroundClick(event: ReactMouseEvent) {
-    if (placingDeviceType || placingSmartHome) {
+    if (placingDeviceType || placingSmartHome || placingConsumer) {
       const point = toSvgPoint(event);
       if (point) placeByToolId(activeTool, point);
       return;
@@ -222,7 +232,7 @@ export function EditorCanvas() {
       className="relative h-full w-full overflow-hidden bg-bg-secondary"
       style={{
         cursor:
-          placingDeviceType || placingBoard || placingSmartHome || placingOpeningType
+          placingDeviceType || placingBoard || placingSmartHome || placingConsumer || placingOpeningType
             ? "crosshair"
             : undefined,
       }}
@@ -451,6 +461,50 @@ export function EditorCanvas() {
                   strokeWidth={isSelected ? 36 : 24}
                 />
                 <circle cx={device.position.x} cy={device.position.y} r={50} fill="#25b7f2" />
+              </g>
+            );
+          })}
+
+        {layers.elektro &&
+          fixedConsumers.map((consumer) => {
+            const isSelected = selected?.type === "consumer" && selected.id === consumer.id;
+            return (
+              <g
+                key={consumer.id}
+                opacity={treeViewActive ? 0.25 : 1}
+                className={canSelect ? "cursor-grab" : undefined}
+                onClick={(event) => {
+                  if (!canSelect) return;
+                  event.stopPropagation();
+                  select({ type: "consumer", id: consumer.id });
+                }}
+                onMouseDown={(event) => {
+                  if (!canSelect) return;
+                  event.stopPropagation();
+                  setDragging({ kind: "consumer", id: consumer.id });
+                }}
+              >
+                <rect
+                  x={consumer.position.x - 150}
+                  y={consumer.position.y - 150}
+                  width={300}
+                  height={300}
+                  fill="rgba(242,96,96,0.15)"
+                  stroke={isSelected ? "#16d8c4" : "#f26060"}
+                  strokeWidth={isSelected ? 30 : 20}
+                />
+                <text
+                  x={consumer.position.x}
+                  y={consumer.position.y}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fontSize={180}
+                  fontWeight={700}
+                  fill={isSelected ? "#16d8c4" : "#f26060"}
+                  pointerEvents="none"
+                >
+                  V
+                </text>
               </g>
             );
           })}

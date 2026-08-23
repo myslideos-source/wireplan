@@ -6,6 +6,9 @@ import { wallsBoundingBox, devicePosition, pointAtOffset } from "@/features/edit
 
 const CABLE_COLORS: Record<CableType, string> = {
   "NYM-J 3x1,5": "#e9ba4d",
+  "NYM-J 3x2,5": "#f26060",
+  "NYM-J 5x2,5": "#f26060",
+  "NYM-J 5x6": "#f26060",
   CAT7: "#25b7f2",
   "Tree Cable": "#68d56b",
   "Lautsprecherkabel 2x1,5": "#f472b6",

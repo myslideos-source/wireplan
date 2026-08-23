@@ -15,6 +15,8 @@ import type {
   SmartHomeDevice,
   TreeBranch,
   AudioZone,
+  FixedConsumer,
+  FixedConsumerType,
 } from "@/domain";
 import {
   polygonAreaSqMeters,
@@ -27,12 +29,14 @@ import {
   nextTreeBranchColor,
   MAX_TREE_DEVICES_PER_BRANCH,
   SPEAKER_CABLE_TYPES,
+  FIXED_CONSUMER_DEFAULT_CABLE,
 } from "@/domain";
 import type { FloorGeometry } from "./mock-geometry";
 import type { FlaggedArea, FlaggedAreaTarget } from "@/features/plan-analysis/types";
 import { computeCables } from "@/features/routing/compute-cables";
 import { computeTreeBranchCables } from "@/features/routing/compute-tree-cables";
 import { computeAudioCables } from "@/features/routing/compute-audio-cables";
+import { computeConsumerCables } from "@/features/routing/compute-consumer-cables";
 import {
   isAxisAlignedRectangle,
   splitRectangle,
@@ -61,6 +65,7 @@ export type EditorTool =
   | "network"
   | "board"
   | "smarthome"
+  | "consumer"
   | "door"
   | "window"
   | "background"
@@ -93,6 +98,7 @@ export type Selection =
   | { type: "board" }
   | { type: "smarthome"; id: string }
   | { type: "opening"; id: string }
+  | { type: "consumer"; id: string }
   | null;
 
 const DEFAULT_OPENING_WIDTH: Record<"door" | "window", number> = {
@@ -129,6 +135,7 @@ interface FloorMutableSlice {
   backgroundImage: BackgroundImage | null;
   treeBranches: TreeBranch[];
   audioZones: AudioZone[];
+  fixedConsumers: FixedConsumer[];
 }
 
 function freshSliceFromGeometry(geometry: FloorGeometry): FloorMutableSlice {
@@ -145,6 +152,7 @@ function freshSliceFromGeometry(geometry: FloorGeometry): FloorMutableSlice {
     backgroundImage: null,
     treeBranches: [],
     audioZones: [],
+    fixedConsumers: [],
   };
 }
 
@@ -165,6 +173,7 @@ const SLICE_KEYS: (keyof FloorMutableSlice)[] = [
   "backgroundImage",
   "treeBranches",
   "audioZones",
+  "fixedConsumers",
 ];
 
 function sliceOf(state: FloorMutableSlice): FloorMutableSlice {
@@ -321,6 +330,17 @@ interface EditorState {
   deleteAudioZone: (id: string) => void;
   assignDeviceToAudioZone: (deviceId: string, zoneId: string | null) => void;
 
+  // §10 — Feste Verbraucher / Zuleitungen.
+  fixedConsumers: FixedConsumer[];
+  fixedConsumerPlacementType: FixedConsumerType;
+  fixedConsumerCustomLabel: string;
+  setFixedConsumerPlacementType: (type: FixedConsumerType) => void;
+  setFixedConsumerCustomLabel: (label: string) => void;
+  addFixedConsumerAtPoint: (point: Point) => boolean;
+  moveFixedConsumerToPoint: (id: string, point: Point) => void;
+  deleteFixedConsumer: (id: string) => void;
+  updateFixedConsumerCableType: (id: string, cableType: CableType) => void;
+
   // §47 — undo/redo history for this floor's editable content (not UI
   // state). Recorded automatically by a subscriber set up right after the
   // store is created; see SLICE_KEYS/sliceChanged/isRestoringHistory above.
@@ -446,6 +466,52 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         d.id === deviceId ? { ...d, audioZoneId: zoneId ?? undefined } : d,
       ),
     })),
+
+  fixedConsumers: [],
+  fixedConsumerPlacementType: "herd",
+  fixedConsumerCustomLabel: "",
+  setFixedConsumerPlacementType: (type) => set({ fixedConsumerPlacementType: type }),
+  setFixedConsumerCustomLabel: (label) => set({ fixedConsumerCustomLabel: label }),
+
+  addFixedConsumerAtPoint: (point) => {
+    const state = get();
+    const room = state.rooms.find((r) => isPointInPolygon(point, r.polygon));
+    const type = state.fixedConsumerPlacementType;
+    const consumer: FixedConsumer = {
+      id: generateId("consumer"),
+      floorId: state.floorId ?? "",
+      type,
+      customLabel: type === "custom" ? state.fixedConsumerCustomLabel || undefined : undefined,
+      position: point,
+      roomId: room?.id ?? null,
+      cableType: FIXED_CONSUMER_DEFAULT_CABLE[type],
+      number: Math.max(0, ...state.fixedConsumers.map((c) => c.number)) + 1,
+    };
+    set((s) => ({ fixedConsumers: [...s.fixedConsumers, consumer] }));
+    return true;
+  },
+
+  moveFixedConsumerToPoint: (id, point) => {
+    const state = get();
+    const room = state.rooms.find((r) => isPointInPolygon(point, r.polygon));
+    set((s) => ({
+      fixedConsumers: s.fixedConsumers.map((c) =>
+        c.id === id ? { ...c, position: point, roomId: room?.id ?? null } : c,
+      ),
+    }));
+  },
+
+  deleteFixedConsumer: (id) =>
+    set((state) => ({
+      fixedConsumers: state.fixedConsumers.filter((c) => c.id !== id),
+      selected: state.selected?.type === "consumer" && state.selected.id === id ? null : state.selected,
+    })),
+
+  updateFixedConsumerCableType: (id, cableType) =>
+    set((state) => ({
+      fixedConsumers: state.fixedConsumers.map((c) => (c.id === id ? { ...c, cableType } : c)),
+    })),
+
   spotArrayCount: 1,
   spotArrayArrangement: "grid",
   setSpotArrayCount: (count) => set({ spotArrayCount: count }),
@@ -996,7 +1062,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       state.speakerCableType,
       state.routingMode,
     );
-    set({ cables: [...starCables, ...treeCables, ...audioCables] });
+    const consumerCables = computeConsumerCables(
+      state.fixedConsumers,
+      state.distributionBoard,
+      state.walls,
+      state.routingMode,
+    );
+    set({ cables: [...starCables, ...treeCables, ...audioCables, ...consumerCables] });
     return true;
   },
 

@@ -19,17 +19,26 @@ import {
   Eye,
   EyeOff,
   GitBranch,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isFeatureEnabled, type FeatureFlag } from "@/lib/feature-flags";
-import { LOXONE_CATALOG, SMART_HOME_CATEGORY_LABELS } from "@/domain";
+import { LOXONE_CATALOG, SMART_HOME_CATEGORY_LABELS, FIXED_CONSUMER_LABELS, type FixedConsumerType } from "@/domain";
 import { useEditorStore, type EditorTool, type LayerId } from "./store";
 import { DRAG_TOOL_MIME } from "./drag-tool";
 
 /** Tools that can be dragged straight onto the plan (§3) in addition to
  * the existing click-to-arm-then-click-to-place flow — both keep working. */
-const DRAGGABLE_TOOLS: EditorTool[] = ["outlet", "light", "switch", "sensor", "network", "smarthome"];
+const DRAGGABLE_TOOLS: EditorTool[] = [
+  "outlet",
+  "light",
+  "switch",
+  "sensor",
+  "network",
+  "smarthome",
+  "consumer",
+];
 
 const SPOT_COUNTS = [2, 3, 4, 5, 6, 8, 10, 12];
 const SPOT_ARRANGEMENTS: { id: "line" | "grid" | "rectangle" | "circle" | "manual"; label: string }[] = [
@@ -69,6 +78,7 @@ const TOOLS: ToolDef[] = [
     note: "Zuerst Technikraum festlegen",
   },
   { id: "smarthome", label: "Smart Home", icon: Home, flag: "LOXONE" },
+  { id: "consumer", label: "Fester Verbraucher", icon: Zap, flag: "ELECTRICAL_EDITOR" },
   { id: "background", label: "Hintergrundbild", icon: ImageIcon },
   { id: "cable", label: "Kabel / Leitung", icon: Cable, flag: "CABLE_ROUTING" },
 ];
@@ -100,6 +110,10 @@ export function EditorToolbar() {
   const setSpotArrayCount = useEditorStore((state) => state.setSpotArrayCount);
   const spotArrayArrangement = useEditorStore((state) => state.spotArrayArrangement);
   const setSpotArrayArrangement = useEditorStore((state) => state.setSpotArrayArrangement);
+  const fixedConsumerPlacementType = useEditorStore((state) => state.fixedConsumerPlacementType);
+  const setFixedConsumerPlacementType = useEditorStore((state) => state.setFixedConsumerPlacementType);
+  const fixedConsumerCustomLabel = useEditorStore((state) => state.fixedConsumerCustomLabel);
+  const setFixedConsumerCustomLabel = useEditorStore((state) => state.setFixedConsumerCustomLabel);
   const loxoneEnabled = isFeatureEnabled("LOXONE");
   const backgroundInputRef = useRef<HTMLInputElement>(null);
 
@@ -175,6 +189,33 @@ export function EditorToolbar() {
                       </option>
                     ))}
                   </select>
+                )}
+                {tool.id === "consumer" && activeTool === "consumer" && (
+                  <div className="mx-1 flex flex-col gap-1.5">
+                    <select
+                      value={fixedConsumerPlacementType}
+                      onChange={(event) =>
+                        setFixedConsumerPlacementType(event.target.value as FixedConsumerType)
+                      }
+                      className="rounded-[var(--radius-sm)] border border-border bg-bg px-2 py-1.5 text-xs text-text outline-none focus:border-primary/60"
+                    >
+                      {(Object.entries(FIXED_CONSUMER_LABELS) as [FixedConsumerType, string][]).map(
+                        ([type, label]) => (
+                          <option key={type} value={type}>
+                            {label}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                    {fixedConsumerPlacementType === "custom" && (
+                      <input
+                        value={fixedConsumerCustomLabel}
+                        onChange={(event) => setFixedConsumerCustomLabel(event.target.value)}
+                        placeholder="Bezeichnung"
+                        className="rounded-[var(--radius-sm)] border border-border bg-bg px-2 py-1.5 text-xs text-text outline-none focus:border-primary/60"
+                      />
+                    )}
+                  </div>
                 )}
                 {tool.id === "light" && activeTool === "light" && (
                   <div className="mx-1 flex flex-col gap-1.5">
