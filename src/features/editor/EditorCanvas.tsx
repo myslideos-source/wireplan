@@ -54,7 +54,7 @@ export function EditorCanvas() {
     (state) => state.resizeBackgroundImageToPoint,
   );
   const treeBranches = useEditorStore((state) => state.treeBranches);
-  const treeViewActive = useEditorStore((state) => state.treeViewActive);
+  const viewMode = useEditorStore((state) => state.viewMode);
   const fixedConsumers = useEditorStore((state) => state.fixedConsumers);
   const addFixedConsumerAtPoint = useEditorStore((state) => state.addFixedConsumerAtPoint);
   const moveFixedConsumerToPoint = useEditorStore((state) => state.moveFixedConsumerToPoint);
@@ -127,6 +127,25 @@ export function EditorCanvas() {
   function isTreeDevice(device: ElectricalDevice): boolean {
     return !!device.smartHomeModelId && !!findSmartHomeModel(device.smartHomeModelId)?.countsAsTreeDevice;
   }
+
+  // §66-71 — each focused view highlights one concern and dims the rest;
+  // "alle" highlights everything (nothing dimmed).
+  const dimArchitecture = viewMode !== "alle";
+  function isDeviceHighlighted(device: ElectricalDevice): boolean {
+    if (viewMode === "alle") return true;
+    if (viewMode === "tree") return isTreeDevice(device);
+    if (viewMode === "network") return device.type === "network";
+    if (viewMode === "power") return device.type === "outlet";
+    return false;
+  }
+  function isSmartHomeHighlighted(modelId: string): boolean {
+    const model = findSmartHomeModel(modelId);
+    if (viewMode === "alle") return true;
+    if (viewMode === "tree") return !!model?.countsAsTreeDevice;
+    if (viewMode === "audio") return model?.technology === "audio";
+    return false;
+  }
+  const consumerHighlighted = viewMode === "alle" || viewMode === "power";
 
   const canSelect = activeTool === "select";
   const placingDeviceType = PLACEABLE_DEVICE_TOOLS.includes(activeTool)
@@ -259,7 +278,7 @@ export function EditorCanvas() {
         />
 
         {layers.grundriss && (
-          <g opacity={treeViewActive ? 0.25 : 1}>
+          <g opacity={dimArchitecture ? 0.25 : 1}>
             {rooms.map((room) => {
               const isSelected = selected?.type === "room" && selected.id === room.id;
               return (
@@ -427,7 +446,7 @@ export function EditorCanvas() {
                 clickable={canSelect}
                 onSelect={() => select({ type: "device", id: device.id })}
                 onDragStart={() => setDragging({ kind: "device", id: device.id })}
-                dimmed={treeViewActive && !isTreeDevice(device)}
+                dimmed={!isDeviceHighlighted(device)}
               />
             );
           })}
@@ -435,11 +454,10 @@ export function EditorCanvas() {
         {layers.elektro &&
           smartHomeDevices.map((device) => {
             const isSelected = selected?.type === "smarthome" && selected.id === device.id;
-            const isTree = !!findSmartHomeModel(device.modelId)?.countsAsTreeDevice;
             return (
               <g
                 key={device.id}
-                opacity={treeViewActive && !isTree ? 0.25 : 1}
+                opacity={isSmartHomeHighlighted(device.modelId) ? 1 : 0.25}
                 className={canSelect ? "cursor-grab" : undefined}
                 onClick={(event) => {
                   if (!canSelect) return;
@@ -471,7 +489,7 @@ export function EditorCanvas() {
             return (
               <g
                 key={consumer.id}
-                opacity={treeViewActive ? 0.25 : 1}
+                opacity={consumerHighlighted ? 1 : 0.25}
                 className={canSelect ? "cursor-grab" : undefined}
                 onClick={(event) => {
                   if (!canSelect) return;
@@ -510,6 +528,7 @@ export function EditorCanvas() {
           })}
 
         {layers.kabelwege &&
+          (viewMode === "alle" || viewMode === "tree") &&
           treeBusPaths.map(({ branchId, colorHex, ordered }) => {
             const start = boardPosition!;
             const pathD = [`M ${start.x} ${start.y}`, ...ordered.map((p) => `L ${p.position.x} ${p.position.y}`)].join(" ");
@@ -536,7 +555,7 @@ export function EditorCanvas() {
                 y={centroid.y}
                 textAnchor="middle"
                 pointerEvents="none"
-                opacity={treeViewActive ? 0.25 : 1}
+                opacity={dimArchitecture ? 0.25 : 1}
               >
                 <tspan x={centroid.x} dy={-90} fontSize={340} fontWeight={600} fill="#f5f7f9">
                   {room.name}

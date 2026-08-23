@@ -73,9 +73,9 @@ export type EditorTool =
 
 export type LayerId = "grundriss" | "elektro" | "kabelwege" | "beschriftung" | "hintergrund";
 
-/** §67 "Tree View" — a separate on/off switch (not a LayerId toggle,
- * since it dims *most* layers rather than hiding one) that focuses the
- * canvas on Tree devices and their bus cabling. */
+/** §66-71 — focused views that dim everything except one concern, rather
+ * than a LayerId toggle (which only shows/hides a whole layer). */
+export type ViewMode = "alle" | "tree" | "audio" | "network" | "power";
 
 /** The real, original uploaded plan image, positioned/scaled over the
  * floor's geometry as a tracing reference — for when the AI's estimated
@@ -365,8 +365,10 @@ interface EditorState {
   layers: Record<LayerId, boolean>;
   toggleLayer: (layer: LayerId) => void;
 
-  treeViewActive: boolean;
-  toggleTreeView: () => void;
+  // §66-71 — a focused view dims everything except the layer it's about;
+  // "alle" is the normal, undimmed editor.
+  viewMode: ViewMode;
+  setViewMode: (mode: ViewMode) => void;
 
   zoom: number;
   setZoom: (updater: number | ((zoom: number) => number)) => void;
@@ -663,8 +665,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   toggleLayer: (layer) =>
     set((state) => ({ layers: { ...state.layers, [layer]: !state.layers[layer] } })),
 
-  treeViewActive: false,
-  toggleTreeView: () => set((state) => ({ treeViewActive: !state.treeViewActive })),
+  viewMode: "alle",
+  setViewMode: (mode) => set({ viewMode: mode }),
 
   zoom: 1,
   setZoom: (updater) =>

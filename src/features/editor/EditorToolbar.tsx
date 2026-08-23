@@ -20,12 +20,15 @@ import {
   EyeOff,
   GitBranch,
   Zap,
+  Volume2,
+  Network,
+  Layers,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isFeatureEnabled, type FeatureFlag } from "@/lib/feature-flags";
 import { LOXONE_CATALOG, SMART_HOME_CATEGORY_LABELS, FIXED_CONSUMER_LABELS, type FixedConsumerType } from "@/domain";
-import { useEditorStore, type EditorTool, type LayerId } from "./store";
+import { useEditorStore, type EditorTool, type LayerId, type ViewMode } from "./store";
 import { DRAG_TOOL_MIME } from "./drag-tool";
 
 /** Tools that can be dragged straight onto the plan (§3) in addition to
@@ -38,6 +41,20 @@ const DRAGGABLE_TOOLS: EditorTool[] = [
   "network",
   "smarthome",
   "consumer",
+];
+
+/** §66-71 — a focused view dims everything except one concern. */
+const VIEW_MODES: { id: ViewMode; label: string; icon: LucideIcon; title: string }[] = [
+  { id: "alle", label: "Alle", icon: Layers, title: "Alles normal sichtbar" },
+  {
+    id: "tree",
+    label: "Tree View",
+    icon: GitBranch,
+    title: "Blendet alles außer Tree-Geräten und Tree-Verkabelung ab",
+  },
+  { id: "audio", label: "Audio View", icon: Volume2, title: "Blendet alles außer Lautsprechern ab" },
+  { id: "network", label: "Network View", icon: Network, title: "Blendet alles außer Netzwerkdosen ab" },
+  { id: "power", label: "Power View", icon: Zap, title: "Blendet alles außer Steckdosen und Verbrauchern ab" },
 ];
 
 const SPOT_COUNTS = [2, 3, 4, 5, 6, 8, 10, 12];
@@ -104,8 +121,8 @@ export function EditorToolbar() {
   const backgroundImage = useEditorStore((state) => state.backgroundImage);
   const setBackgroundImage = useEditorStore((state) => state.setBackgroundImage);
   const clearBackgroundImage = useEditorStore((state) => state.clearBackgroundImage);
-  const treeViewActive = useEditorStore((state) => state.treeViewActive);
-  const toggleTreeView = useEditorStore((state) => state.toggleTreeView);
+  const viewMode = useEditorStore((state) => state.viewMode);
+  const setViewMode = useEditorStore((state) => state.setViewMode);
   const spotArrayCount = useEditorStore((state) => state.spotArrayCount);
   const setSpotArrayCount = useEditorStore((state) => state.setSpotArrayCount);
   const spotArrayArrangement = useEditorStore((state) => state.spotArrayArrangement);
@@ -295,23 +312,28 @@ export function EditorToolbar() {
       </div>
 
       <div>
-        <button
-          type="button"
-          onClick={toggleTreeView}
-          title="Blendet alles außer Tree-Geräten und Tree-Verkabelung ab"
-          className={cn(
-            "flex w-full items-center justify-between gap-3 rounded-[var(--radius-sm)] border px-3 py-2 text-sm font-medium transition-colors",
-            treeViewActive
-              ? "border-primary/60 bg-primary/10 text-primary"
-              : "border-border text-text-secondary hover:border-primary/40 hover:text-text",
-          )}
-        >
-          <span className="flex items-center gap-2">
-            <GitBranch className="h-4 w-4" />
-            Tree View
-          </span>
-          {treeViewActive && <span className="text-xs font-semibold">An</span>}
-        </button>
+        <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
+          Ansicht
+        </p>
+        <div className="flex flex-col gap-0.5">
+          {VIEW_MODES.map((mode) => (
+            <button
+              key={mode.id}
+              type="button"
+              onClick={() => setViewMode(mode.id)}
+              title={mode.title}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2 text-sm font-medium transition-colors",
+                viewMode === mode.id
+                  ? "bg-primary/10 text-primary"
+                  : "text-text-secondary hover:bg-panel-elevated hover:text-text",
+              )}
+            >
+              <mode.icon className="h-4 w-4 shrink-0" />
+              {mode.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div>
