@@ -486,6 +486,7 @@ interface EditorState {
   networkDevicePlacementSubtype: NetworkDeviceSubtype;
   setNetworkDevicePlacementSubtype: (subtype: NetworkDeviceSubtype) => void;
   updateDeviceNetworkSubtype: (id: string, subtype: NetworkDeviceSubtype) => void;
+  updateDeviceMeta: (id: string, patch: Partial<Pick<ElectricalDevice, "rotation" | "notes">>) => void;
 
   // §47 — undo/redo history for this floor's editable content (not UI
   // state). Recorded automatically by a subscriber set up right after the
@@ -712,6 +713,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   updateDeviceNetworkSubtype: (id, subtype) =>
     set((state) => ({
       devices: state.devices.map((d) => (d.id === id ? { ...d, networkDeviceSubtype: subtype } : d)),
+    })),
+
+  updateDeviceMeta: (id, patch) =>
+    set((state) => ({
+      devices: state.devices.map((d) => (d.id === id ? { ...d, ...patch } : d)),
     })),
 
   spotArrayCount: 1,

@@ -85,7 +85,7 @@ export function DeviceSymbol({
 
   return (
     <g
-      transform={`translate(${position.x} ${position.y})`}
+      transform={`translate(${position.x} ${position.y}) rotate(${device.rotation ?? 0})`}
       opacity={dimmed ? 0.25 : 1}
       className={clickable ? "cursor-grab" : undefined}
       onClick={(event) => {

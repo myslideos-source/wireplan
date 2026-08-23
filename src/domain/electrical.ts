@@ -74,6 +74,11 @@ export interface ElectricalDevice {
   /** Auto-assigned display number (§26), unique per prefix per floor —
    * e.g. the 2nd Touch on a floor gets number 2, shown as "T02". */
   number: number;
+  /** Degrees clockwise, purely cosmetic (§92) — rotates the device's
+   * glyph in place, never affects its position or wall attachment. */
+  rotation?: number;
+  /** Freitext für Planungshinweise (§92) — nie automatisch befüllt. */
+  notes?: string;
 }
 
 export const DEVICE_TYPE_LABELS: Record<ElectricalDeviceType, string> = {

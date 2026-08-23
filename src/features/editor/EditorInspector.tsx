@@ -253,6 +253,7 @@ export function EditorInspector() {
   const updateFixedConsumerCableType = useEditorStore((state) => state.updateFixedConsumerCableType);
   const setFixedConsumerReserveConduit = useEditorStore((state) => state.setFixedConsumerReserveConduit);
   const updateDeviceNetworkSubtype = useEditorStore((state) => state.updateDeviceNetworkSubtype);
+  const updateDeviceMeta = useEditorStore((state) => state.updateDeviceMeta);
   const openings = useEditorStore((state) => state.openings);
   const deleteOpening = useEditorStore((state) => state.deleteOpening);
   const updateOpeningWidth = useEditorStore((state) => state.updateOpeningWidth);
@@ -336,6 +337,36 @@ export function EditorInspector() {
           </FieldRow>
           <FieldRow label="Raum">
             <span className="text-sm text-text">{room?.name ?? "—"}</span>
+          </FieldRow>
+          <FieldRow label="Position">
+            <span className="tabular-nums-font text-sm text-text">
+              {device.mount.kind === "point"
+                ? `${formatNumber(device.mount.position.x / 1000, 2)} / ${formatNumber(device.mount.position.y / 1000, 2)} m`
+                : `${formatNumber(device.mount.offset / 1000, 2)} m ab Wandanfang`}
+            </span>
+          </FieldRow>
+          <FieldRow label="Rotation">
+            <div className="flex items-center gap-1.5">
+              <input
+                type="number"
+                min={0}
+                max={359}
+                step={15}
+                value={device.rotation ?? 0}
+                onChange={(event) => updateDeviceMeta(device.id, { rotation: Number(event.target.value) })}
+                className={inputClass}
+              />
+              <span className="text-xs text-text-muted">°</span>
+            </div>
+          </FieldRow>
+          <FieldRow label="Notiz" as="div">
+            <textarea
+              value={device.notes ?? ""}
+              onChange={(event) => updateDeviceMeta(device.id, { notes: event.target.value })}
+              placeholder="Notiz hinzufügen…"
+              rows={2}
+              className={`${inputClass} resize-none`}
+            />
           </FieldRow>
         </Section>
         <Section title="Smart Home (Loxone)">
