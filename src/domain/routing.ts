@@ -1,9 +1,23 @@
 /**
  * Cable types used for routing (§49, §54, §28). "Tree Cable" is the
  * shared bus for a Tree branch (§33/§60) — one cable per branch, not one
- * per device, which is why `Cable.deviceId` below is optional.
+ * per device, which is why `Cable.deviceId` below is optional. Speaker
+ * cabling is its own type (§12) — never assumed to be a Tree cable even
+ * when the speaker sits in the same room as Tree hardware.
  */
-export type CableType = "NYM-J 3x1,5" | "CAT7" | "Tree Cable";
+export type CableType =
+  | "NYM-J 3x1,5"
+  | "CAT7"
+  | "Tree Cable"
+  | "Lautsprecherkabel 2x1,5"
+  | "Lautsprecherkabel 2x2,5";
+
+/** The two speaker-cable cross-sections a planner would actually pick
+ * from (§12 — "Der Kabeltyp muss konfigurierbar sein"). */
+export const SPEAKER_CABLE_TYPES: CableType[] = [
+  "Lautsprecherkabel 2x1,5",
+  "Lautsprecherkabel 2x2,5",
+];
 
 /** §48 — how the cable run is assumed to travel. Recorded per calculation
  * run; the length estimate itself doesn't yet vary by mode (see

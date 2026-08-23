@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Cable as CableIcon, Zap, GitBranch, Network } from "lucide-react";
-import type { Project, RoutingMode } from "@/domain";
+import type { CableType, Project, RoutingMode } from "@/domain";
+import { SPEAKER_CABLE_TYPES } from "@/domain";
 import { KpiCard, Button } from "@/components/ui";
 import { formatNumber } from "@/lib/utils";
 import { useEditorStore } from "@/features/editor/store";
@@ -30,6 +31,9 @@ export function RoutingWorkspace({ project }: { project: Project }) {
   const switchFloor = useEditorStore((state) => state.switchFloor);
   const treeBranches = useEditorStore((state) => state.treeBranches);
   const deleteTreeBranch = useEditorStore((state) => state.deleteTreeBranch);
+  const audioZones = useEditorStore((state) => state.audioZones);
+  const speakerCableType = useEditorStore((state) => state.speakerCableType);
+  const setSpeakerCableType = useEditorStore((state) => state.setSpeakerCableType);
 
   const [tab, setTab] = useState<Tab>("kabelliste");
   const [selectedCableId, setSelectedCableId] = useState<string | null>(null);
@@ -73,6 +77,18 @@ export function RoutingWorkspace({ project }: { project: Project }) {
             {ROUTING_MODES.map((mode) => (
               <option key={mode} value={mode}>
                 {mode}
+              </option>
+            ))}
+          </select>
+          <select
+            value={speakerCableType}
+            onChange={(event) => setSpeakerCableType(event.target.value as CableType)}
+            title="Lautsprecherkabel-Typ (§12)"
+            className="rounded-[var(--radius-sm)] border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-primary/60"
+          >
+            {SPEAKER_CABLE_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {type}
               </option>
             ))}
           </select>
@@ -161,6 +177,7 @@ export function RoutingWorkspace({ project }: { project: Project }) {
               devices={devices}
               distributionBoard={distributionBoard}
               smartHomeDevices={smartHomeDevices}
+              audioZones={audioZones}
             />
           )}
 

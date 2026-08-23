@@ -31,6 +31,15 @@ import { DRAG_TOOL_MIME } from "./drag-tool";
  * the existing click-to-arm-then-click-to-place flow — both keep working. */
 const DRAGGABLE_TOOLS: EditorTool[] = ["outlet", "light", "switch", "sensor", "network", "smarthome"];
 
+const SPOT_COUNTS = [2, 3, 4, 5, 6, 8, 10, 12];
+const SPOT_ARRANGEMENTS: { id: "line" | "grid" | "rectangle" | "circle" | "manual"; label: string }[] = [
+  { id: "grid", label: "Raster" },
+  { id: "line", label: "Gerade Linie" },
+  { id: "rectangle", label: "Rechteck" },
+  { id: "circle", label: "Kreis" },
+  { id: "manual", label: "Manuell" },
+];
+
 interface ToolDef {
   id: EditorTool;
   label: string;
@@ -87,6 +96,10 @@ export function EditorToolbar() {
   const clearBackgroundImage = useEditorStore((state) => state.clearBackgroundImage);
   const treeViewActive = useEditorStore((state) => state.treeViewActive);
   const toggleTreeView = useEditorStore((state) => state.toggleTreeView);
+  const spotArrayCount = useEditorStore((state) => state.spotArrayCount);
+  const setSpotArrayCount = useEditorStore((state) => state.setSpotArrayCount);
+  const spotArrayArrangement = useEditorStore((state) => state.spotArrayArrangement);
+  const setSpotArrayArrangement = useEditorStore((state) => state.setSpotArrayArrangement);
   const loxoneEnabled = isFeatureEnabled("LOXONE");
   const backgroundInputRef = useRef<HTMLInputElement>(null);
 
@@ -162,6 +175,44 @@ export function EditorToolbar() {
                       </option>
                     ))}
                   </select>
+                )}
+                {tool.id === "light" && activeTool === "light" && (
+                  <div className="mx-1 flex flex-col gap-1.5">
+                    <p className="px-1 text-[11px] text-text-muted">Mehrere Spots platzieren</p>
+                    <select
+                      value={spotArrayCount}
+                      onChange={(event) => setSpotArrayCount(Number(event.target.value))}
+                      className="rounded-[var(--radius-sm)] border border-border bg-bg px-2 py-1.5 text-xs text-text outline-none focus:border-primary/60"
+                    >
+                      <option value={1}>Einzeln</option>
+                      {SPOT_COUNTS.map((count) => (
+                        <option key={count} value={count}>
+                          {count} Spots
+                        </option>
+                      ))}
+                    </select>
+                    {spotArrayCount > 1 && (
+                      <select
+                        value={spotArrayArrangement}
+                        onChange={(event) =>
+                          setSpotArrayArrangement(event.target.value as (typeof SPOT_ARRANGEMENTS)[number]["id"])
+                        }
+                        className="rounded-[var(--radius-sm)] border border-border bg-bg px-2 py-1.5 text-xs text-text outline-none focus:border-primary/60"
+                      >
+                        {SPOT_ARRANGEMENTS.map((arrangement) => (
+                          <option key={arrangement.id} value={arrangement.id}>
+                            {arrangement.label}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {spotArrayCount > 1 && (
+                      <p className="px-1 text-[11px] text-text-muted">
+                        Klicken Sie in einen Raum — die Spots werden dort verteilt und lassen sich
+                        danach einzeln verschieben.
+                      </p>
+                    )}
+                  </div>
                 )}
                 {tool.id === "background" && activeTool === "background" && (
                   <div className="mx-1 flex flex-col gap-1.5">

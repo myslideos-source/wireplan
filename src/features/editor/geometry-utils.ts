@@ -278,6 +278,84 @@ export function findNearestWall(walls: Wall[], point: Point): Wall | null {
 }
 
 /** Standard ray-casting point-in-polygon test. */
+export type SpotArrangement = "line" | "grid" | "rectangle" | "circle" | "manual";
+
+function pointOnRectanglePerimeter(
+  box: { minX: number; minY: number; width: number; height: number },
+  distance: number,
+): Point {
+  const { minX, minY, width, height } = box;
+  let d = distance;
+  if (d <= width) return { x: minX + d, y: minY };
+  d -= width;
+  if (d <= height) return { x: minX + width, y: minY + d };
+  d -= height;
+  if (d <= width) return { x: minX + width - d, y: minY + height };
+  d -= width;
+  return { x: minX, y: minY + height - d };
+}
+
+/**
+ * Auto-distributes `count` points inside a room for the multi-spot
+ * placement tool (§8). Points are a starting layout, not a final one —
+ * every spot stays individually selectable and movable afterward, same
+ * as any other point-mounted device.
+ */
+export function computeSpotArrayPositions(
+  room: Room,
+  count: number,
+  arrangement: SpotArrangement,
+): Point[] {
+  const box = boundingBoxOfPoints(room.polygon, -600);
+  const cx = box.minX + box.width / 2;
+  const cy = box.minY + box.height / 2;
+  if (count <= 1) return [{ x: cx, y: cy }];
+
+  if (arrangement === "line") {
+    const usableWidth = box.width * 0.8;
+    return Array.from({ length: count }, (_, i) => ({
+      x: box.minX + box.width * 0.1 + (usableWidth * i) / (count - 1),
+      y: cy,
+    }));
+  }
+
+  if (arrangement === "grid") {
+    const cols = Math.ceil(Math.sqrt(count));
+    const rows = Math.ceil(count / cols);
+    return Array.from({ length: count }, (_, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      return {
+        x: cols === 1 ? cx : box.minX + (box.width * (col + 0.5)) / cols,
+        y: rows === 1 ? cy : box.minY + (box.height * (row + 0.5)) / rows,
+      };
+    });
+  }
+
+  if (arrangement === "rectangle") {
+    const perimeter = 2 * (box.width + box.height);
+    return Array.from({ length: count }, (_, i) =>
+      pointOnRectanglePerimeter(box, (perimeter * i) / count),
+    );
+  }
+
+  if (arrangement === "circle") {
+    const radius = Math.min(box.width, box.height) / 2;
+    return Array.from({ length: count }, (_, i) => {
+      const angle = (2 * Math.PI * i) / count - Math.PI / 2;
+      return { x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) };
+    });
+  }
+
+  // "manual" — a modest diagonal stagger near the room center rather than
+  // a real one-by-one placement flow (that would need N separate clicks);
+  // every spot is immediately draggable to its real position from here.
+  return Array.from({ length: count }, (_, i) => ({
+    x: cx + i * 220 - ((count - 1) * 220) / 2,
+    y: cy + i * 60 - ((count - 1) * 60) / 2,
+  }));
+}
+
 export function isPointInPolygon(point: Point, polygon: Point[]): boolean {
   let inside = false;
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {

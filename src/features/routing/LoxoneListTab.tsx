@@ -1,14 +1,16 @@
-import type { ElectricalDevice, DistributionBoard, SmartHomeDevice } from "@/domain";
+import type { AudioZone, ElectricalDevice, DistributionBoard, SmartHomeDevice } from "@/domain";
 import { DEVICE_TYPE_LABELS, findSmartHomeModel } from "@/domain";
 
 export function LoxoneListTab({
   devices,
   distributionBoard,
   smartHomeDevices,
+  audioZones,
 }: {
   devices: ElectricalDevice[];
   distributionBoard: DistributionBoard | null;
   smartHomeDevices: SmartHomeDevice[];
+  audioZones: AudioZone[];
 }) {
   const assignedDevices = devices.filter((d) => d.smartHomeModelId);
   const boardModelId = distributionBoard?.smartHomeModelId;
@@ -81,6 +83,21 @@ export function LoxoneListTab({
               </span>
             </div>
           ))}
+        </div>
+      )}
+
+      {audioZones.length > 0 && (
+        <div className="mt-2 flex flex-col gap-1.5 border-t border-border pt-3">
+          <p className="text-xs font-medium text-text-secondary">Audio-Zonen</p>
+          {audioZones.map((zone) => {
+            const count = smartHomeDevices.filter((d) => d.audioZoneId === zone.id).length;
+            return (
+              <div key={zone.id} className="flex items-center justify-between text-xs">
+                <span className="text-text-secondary">{zone.name}</span>
+                <span className="font-medium text-text">{count} Lautsprecher</span>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

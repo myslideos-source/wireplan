@@ -10,9 +10,11 @@ import type {
   ElectricalDeviceType,
   DistributionBoard,
   Cable,
+  CableType,
   RoutingMode,
   SmartHomeDevice,
   TreeBranch,
+  AudioZone,
 } from "@/domain";
 import {
   polygonAreaSqMeters,
@@ -24,11 +26,13 @@ import {
   numberingPrefixFor,
   nextTreeBranchColor,
   MAX_TREE_DEVICES_PER_BRANCH,
+  SPEAKER_CABLE_TYPES,
 } from "@/domain";
 import type { FloorGeometry } from "./mock-geometry";
 import type { FlaggedArea, FlaggedAreaTarget } from "@/features/plan-analysis/types";
 import { computeCables } from "@/features/routing/compute-cables";
 import { computeTreeBranchCables } from "@/features/routing/compute-tree-cables";
+import { computeAudioCables } from "@/features/routing/compute-audio-cables";
 import {
   isAxisAlignedRectangle,
   splitRectangle,
@@ -41,7 +45,9 @@ import {
   wallNormal,
   roomWalls,
   wallsBoundingBox,
+  computeSpotArrayPositions,
   type SplitDirection,
+  type SpotArrangement,
 } from "./geometry-utils";
 
 export type EditorTool =
@@ -122,6 +128,7 @@ interface FloorMutableSlice {
   smartHomeDevices: SmartHomeDevice[];
   backgroundImage: BackgroundImage | null;
   treeBranches: TreeBranch[];
+  audioZones: AudioZone[];
 }
 
 function freshSliceFromGeometry(geometry: FloorGeometry): FloorMutableSlice {
@@ -137,8 +144,44 @@ function freshSliceFromGeometry(geometry: FloorGeometry): FloorMutableSlice {
     smartHomeDevices: [],
     backgroundImage: null,
     treeBranches: [],
+    audioZones: [],
   };
 }
+
+/** The keys that make up one floor's editable content (§47's undo/redo
+ * history operates on exactly this — not on UI state like selection,
+ * zoom, or the active tool, which shouldn't be undoable). Also reused by
+ * switchFloor to snapshot/restore a floor's slice. */
+const SLICE_KEYS: (keyof FloorMutableSlice)[] = [
+  "walls",
+  "rooms",
+  "openings",
+  "devices",
+  "roomCircuits",
+  "technikraumRoomId",
+  "distributionBoard",
+  "cables",
+  "smartHomeDevices",
+  "backgroundImage",
+  "treeBranches",
+  "audioZones",
+];
+
+function sliceOf(state: FloorMutableSlice): FloorMutableSlice {
+  const entries = SLICE_KEYS.map((key) => [key, state[key]] as const);
+  return Object.fromEntries(entries) as unknown as FloorMutableSlice;
+}
+
+function sliceChanged(a: FloorMutableSlice, b: FloorMutableSlice): boolean {
+  return SLICE_KEYS.some((key) => a[key] !== b[key]);
+}
+
+const MAX_HISTORY = 100;
+
+/** Guards the undo/redo-triggered `set()` calls (and floor hydration/
+ * switching) from being recorded as new history entries by the subscriber
+ * below — those are restorations or floor swaps, not user edits. */
+let isRestoringHistory = false;
 
 /** Next free display number for a given prefix (§26) — scans both device
  * arrays so e.g. Touch Tree placed via the standalone Smart-Home tool and
@@ -224,6 +267,32 @@ function resolveTreeBranchAssignment(
   return { treeBranchId: branch.id, treeBranches: [...state.treeBranches, branch] };
 }
 
+/** Resolves what a speaker's `audioZoneId` should become (§12/§76): keep
+ * an existing assignment, reuse a zone already named after the device's
+ * room, create a room-named zone, or clear it for a non-audio model.
+ * Unlike Tree branches there's no capacity limit to route around. */
+function resolveAudioZoneAssignment(
+  state: Pick<EditorState, "audioZones" | "rooms" | "floorId">,
+  model: { technology: string } | undefined,
+  existingZoneId: string | undefined,
+  roomId: string | null,
+): { audioZoneId: string | undefined; audioZones: AudioZone[] } {
+  if (model?.technology !== "audio") {
+    return { audioZoneId: undefined, audioZones: state.audioZones };
+  }
+  if (existingZoneId) {
+    return { audioZoneId: existingZoneId, audioZones: state.audioZones };
+  }
+  const roomName = roomId ? state.rooms.find((r) => r.id === roomId)?.name : undefined;
+  const zoneName = roomName ?? `Zone ${state.audioZones.length + 1}`;
+  const existingZone = state.audioZones.find((z) => z.name === zoneName);
+  if (existingZone) {
+    return { audioZoneId: existingZone.id, audioZones: state.audioZones };
+  }
+  const zone: AudioZone = { id: generateId("audio-zone"), floorId: state.floorId ?? "", name: zoneName };
+  return { audioZoneId: zone.id, audioZones: [...state.audioZones, zone] };
+}
+
 interface EditorState {
   floorId: string | null;
   floors: FloorGeometry[];
@@ -244,6 +313,22 @@ interface EditorState {
   createTreeBranch: (label?: string) => string;
   deleteTreeBranch: (id: string) => void;
   assignDeviceToTreeBranch: (deviceId: string, branchId: string | null) => void;
+
+  audioZones: AudioZone[];
+  speakerCableType: CableType;
+  setSpeakerCableType: (type: CableType) => void;
+  createAudioZone: (name?: string) => string;
+  deleteAudioZone: (id: string) => void;
+  assignDeviceToAudioZone: (deviceId: string, zoneId: string | null) => void;
+
+  // §47 — undo/redo history for this floor's editable content (not UI
+  // state). Recorded automatically by a subscriber set up right after the
+  // store is created; see SLICE_KEYS/sliceChanged/isRestoringHistory above.
+  history: FloorMutableSlice[];
+  future: FloorMutableSlice[];
+  undo: () => void;
+  redo: () => void;
+
   hydrate: (geometries: FloorGeometry[]) => void;
   switchFloor: (floorId: string) => void;
   setBackgroundImage: (dataUrl: string, naturalWidth: number, naturalHeight: number) => void;
@@ -273,6 +358,14 @@ interface EditorState {
   moveOpeningToPoint: (openingId: string, point: Point) => void;
   updateOpeningWidth: (id: string, width: number) => void;
   addDeviceAtPoint: (type: ElectricalDeviceType, point: Point) => boolean;
+  // §8 — "Mehrere Spots platzieren": when count > 1, a light-tool click
+  // fills the clicked room with an auto-distributed spot array instead of
+  // a single light at the exact click point.
+  spotArrayCount: number;
+  spotArrayArrangement: SpotArrangement;
+  setSpotArrayCount: (count: number) => void;
+  setSpotArrayArrangement: (arrangement: SpotArrangement) => void;
+  addSpotArrayAtPoint: (point: Point) => boolean;
   moveDeviceToPoint: (deviceId: string, point: Point) => void;
   deleteDevice: (id: string) => void;
   assignDeviceSmartHomeModel: (deviceId: string, modelId: string | null) => void;
@@ -327,6 +420,59 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   smartHomePlacementModelId: LOXONE_CATALOG[0].id,
   backgroundImage: null,
   treeBranches: [],
+  audioZones: [],
+  speakerCableType: SPEAKER_CABLE_TYPES[0],
+  setSpeakerCableType: (type) => set({ speakerCableType: type }),
+  createAudioZone: (name) => {
+    const state = get();
+    const zone: AudioZone = {
+      id: generateId("audio-zone"),
+      floorId: state.floorId ?? "",
+      name: name ?? `Zone ${state.audioZones.length + 1}`,
+    };
+    set((s) => ({ audioZones: [...s.audioZones, zone] }));
+    return zone.id;
+  },
+  deleteAudioZone: (id) =>
+    set((state) => ({
+      audioZones: state.audioZones.filter((z) => z.id !== id),
+      smartHomeDevices: state.smartHomeDevices.map((d) =>
+        d.audioZoneId === id ? { ...d, audioZoneId: undefined } : d,
+      ),
+    })),
+  assignDeviceToAudioZone: (deviceId, zoneId) =>
+    set((state) => ({
+      smartHomeDevices: state.smartHomeDevices.map((d) =>
+        d.id === deviceId ? { ...d, audioZoneId: zoneId ?? undefined } : d,
+      ),
+    })),
+  spotArrayCount: 1,
+  spotArrayArrangement: "grid",
+  setSpotArrayCount: (count) => set({ spotArrayCount: count }),
+  setSpotArrayArrangement: (arrangement) => set({ spotArrayArrangement: arrangement }),
+
+  addSpotArrayAtPoint: (point) => {
+    const state = get();
+    const room = state.rooms.find((r) => isPointInPolygon(point, r.polygon));
+    if (!room) return false;
+    const positions = computeSpotArrayPositions(room, state.spotArrayCount, state.spotArrayArrangement);
+    const height = DEVICE_DEFAULT_HEIGHT.light;
+    let number = nextNumberForPrefix(state, numberingPrefixFor({ type: "light" }));
+    const newDevices: ElectricalDevice[] = positions.map((position) => {
+      const device: ElectricalDevice = {
+        id: generateId("device"),
+        floorId: state.floorId ?? "",
+        type: "light",
+        mount: { kind: "point", position, height },
+        roomId: room.id,
+        number,
+      };
+      number += 1;
+      return device;
+    });
+    set((s) => ({ devices: [...s.devices, ...newDevices] }));
+    return true;
+  },
 
   createTreeBranch: (label) => {
     const state = get();
@@ -361,6 +507,37 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ),
     })),
 
+  history: [],
+  future: [],
+  undo: () => {
+    const state = get();
+    if (state.history.length === 0) return;
+    const previous = state.history[state.history.length - 1];
+    const currentSnapshot = sliceOf(state);
+    isRestoringHistory = true;
+    set({
+      ...previous,
+      history: state.history.slice(0, -1),
+      future: [...state.future, currentSnapshot].slice(-MAX_HISTORY),
+      selected: null,
+    });
+    isRestoringHistory = false;
+  },
+  redo: () => {
+    const state = get();
+    if (state.future.length === 0) return;
+    const next = state.future[state.future.length - 1];
+    const currentSnapshot = sliceOf(state);
+    isRestoringHistory = true;
+    set({
+      ...next,
+      future: state.future.slice(0, -1),
+      history: [...state.history, currentSnapshot].slice(-MAX_HISTORY),
+      selected: null,
+    });
+    isRestoringHistory = false;
+  },
+
   hydrate: (geometries) => {
     // Re-hydrate whenever a different project's floors are passed in (e.g.
     // navigating from one project's editor to another's without a full
@@ -368,32 +545,24 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const first = geometries[0];
     if (!first) return;
     if (get().floors[0]?.floor.projectId === first.floor.projectId) return;
+    isRestoringHistory = true;
     set({
       floors: geometries,
       floorCache: {},
       floorId: first.floor.id,
       ...freshSliceFromGeometry(first),
       selected: null,
+      history: [],
+      future: [],
     });
+    isRestoringHistory = false;
   },
 
   switchFloor: (floorId) => {
     const state = get();
     if (state.floorId === floorId) return;
     const currentFloorId = state.floorId;
-    const currentSlice: FloorMutableSlice = {
-      walls: state.walls,
-      rooms: state.rooms,
-      openings: state.openings,
-      devices: state.devices,
-      roomCircuits: state.roomCircuits,
-      technikraumRoomId: state.technikraumRoomId,
-      distributionBoard: state.distributionBoard,
-      cables: state.cables,
-      smartHomeDevices: state.smartHomeDevices,
-      backgroundImage: state.backgroundImage,
-      treeBranches: state.treeBranches,
-    };
+    const currentSlice = sliceOf(state);
     const newCache = currentFloorId
       ? { ...state.floorCache, [currentFloorId]: currentSlice }
       : state.floorCache;
@@ -402,13 +571,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (!target) return;
     const slice = newCache[floorId] ?? freshSliceFromGeometry(target);
 
+    isRestoringHistory = true;
     set({
       floorCache: newCache,
       floorId,
       ...slice,
       selected: null,
       activeTool: "select",
+      // Undo history is per-floor content, but this phase keeps it simple
+      // and doesn't cache history alongside the rest of the floor slice —
+      // switching floors starts a fresh history rather than carrying it.
+      history: [],
+      future: [],
     });
+    isRestoringHistory = false;
   },
 
   selected: null,
@@ -647,6 +823,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       model,
       undefined,
     );
+    const { audioZoneId, audioZones: newZones } = resolveAudioZoneAssignment(
+      state,
+      model,
+      undefined,
+      room?.id ?? null,
+    );
 
     const device: SmartHomeDevice = {
       id: generateId("smarthome"),
@@ -656,9 +838,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       position: point,
       roomId: room?.id ?? null,
       treeBranchId,
+      audioZoneId,
       number,
     };
-    set((s) => ({ smartHomeDevices: [...s.smartHomeDevices, device], treeBranches: newBranches }));
+    set((s) => ({
+      smartHomeDevices: [...s.smartHomeDevices, device],
+      treeBranches: newBranches,
+      audioZones: newZones,
+    }));
     return true;
   },
 
@@ -691,10 +878,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       model,
       device?.treeBranchId,
     );
+    const { audioZoneId, audioZones } = resolveAudioZoneAssignment(
+      state,
+      model,
+      device?.audioZoneId,
+      device?.roomId ?? null,
+    );
     set({
       treeBranches,
+      audioZones,
       smartHomeDevices: state.smartHomeDevices.map((d) =>
-        d.id === deviceId ? { ...d, modelId, treeBranchId } : d,
+        d.id === deviceId ? { ...d, modelId, treeBranchId, audioZoneId } : d,
       ),
     });
   },
@@ -794,7 +988,15 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       state.walls,
       state.routingMode,
     );
-    set({ cables: [...starCables, ...treeCables] });
+    const audioCables = computeAudioCables(
+      state.smartHomeDevices,
+      state.audioZones,
+      state.distributionBoard,
+      state.walls,
+      state.speakerCableType,
+      state.routingMode,
+    );
+    set({ cables: [...starCables, ...treeCables, ...audioCables] });
     return true;
   },
 
@@ -917,6 +1119,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   exitReview: () =>
     set({ reviewActive: false, reviewQueue: [], reviewIndex: 0, focusTarget: null }),
 }));
+
+// §47 undo/redo history recorder. Runs after every state change; records
+// the *previous* slice whenever a structural field actually changed,
+// except when the change was itself an undo/redo/floor-swap (guarded by
+// isRestoringHistory) — those already carry their own history handling.
+useEditorStore.subscribe((state, previousState) => {
+  if (isRestoringHistory) return;
+  if (!sliceChanged(state, previousState)) return;
+  useEditorStore.setState((current) => ({
+    history: [...current.history, sliceOf(previousState)].slice(-MAX_HISTORY),
+    future: [],
+  }));
+});
 
 export function roomAreaSqMeters(room: Room): number {
   return polygonAreaSqMeters(room.polygon);

@@ -38,6 +38,8 @@ export function EditorCanvas() {
   const activeTool = useEditorStore((state) => state.activeTool);
   const focusTarget = useEditorStore((state) => state.focusTarget);
   const addDeviceAtPoint = useEditorStore((state) => state.addDeviceAtPoint);
+  const spotArrayCount = useEditorStore((state) => state.spotArrayCount);
+  const addSpotArrayAtPoint = useEditorStore((state) => state.addSpotArrayAtPoint);
   const distributionBoard = useEditorStore((state) => state.distributionBoard);
   const placeDistributionBoard = useEditorStore((state) => state.placeDistributionBoard);
   const smartHomeDevices = useEditorStore((state) => state.smartHomeDevices);
@@ -173,6 +175,10 @@ export function EditorCanvas() {
    * (armed implicitly by what was dragged), so there's exactly one place
    * that turns a tool id into a device. */
   function placeByToolId(toolId: string, point: Point) {
+    if (toolId === "light" && spotArrayCount > 1) {
+      addSpotArrayAtPoint(point);
+      return;
+    }
     if (PLACEABLE_DEVICE_TOOLS.includes(toolId as EditorTool)) {
       addDeviceAtPoint(toolId as ElectricalDevice["type"], point);
       return;

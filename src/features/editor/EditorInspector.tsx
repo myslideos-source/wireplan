@@ -173,6 +173,41 @@ function TreeBranchSelect({
   );
 }
 
+/** Audio-Zone picker (§12/§27) — only rendered for speakers. Same
+ * "suggest, never force" pattern as TreeBranchSelect. */
+function AudioZoneSelect({
+  value,
+  onChange,
+}: {
+  value: string | undefined;
+  onChange: (zoneId: string | null) => void;
+}) {
+  const audioZones = useEditorStore((state) => state.audioZones);
+  const createAudioZone = useEditorStore((state) => state.createAudioZone);
+
+  return (
+    <select
+      value={value ?? ""}
+      onChange={(event) => {
+        if (event.target.value === "__new__") {
+          onChange(createAudioZone());
+          return;
+        }
+        onChange(event.target.value || null);
+      }}
+      className={inputClass}
+    >
+      <option value="">— keine Audio-Zone —</option>
+      {audioZones.map((zone) => (
+        <option key={zone.id} value={zone.id}>
+          {zone.name}
+        </option>
+      ))}
+      <option value="__new__">+ Neue Audio-Zone</option>
+    </select>
+  );
+}
+
 export function EditorInspector() {
   const selected = useEditorStore((state) => state.selected);
   const rooms = useEditorStore((state) => state.rooms);
@@ -194,6 +229,7 @@ export function EditorInspector() {
   const deleteSmartHomeDevice = useEditorStore((state) => state.deleteSmartHomeDevice);
   const setSmartHomeDeviceModel = useEditorStore((state) => state.setSmartHomeDeviceModel);
   const assignDeviceToTreeBranch = useEditorStore((state) => state.assignDeviceToTreeBranch);
+  const assignDeviceToAudioZone = useEditorStore((state) => state.assignDeviceToAudioZone);
   const openings = useEditorStore((state) => state.openings);
   const deleteOpening = useEditorStore((state) => state.deleteOpening);
   const updateOpeningWidth = useEditorStore((state) => state.updateOpeningWidth);
@@ -390,6 +426,14 @@ export function EditorInspector() {
               <TreeBranchSelect
                 value={device.treeBranchId}
                 onChange={(branchId) => assignDeviceToTreeBranch(device.id, branchId)}
+              />
+            </FieldRow>
+          )}
+          {model?.technology === "audio" && (
+            <FieldRow label="Audio-Zone">
+              <AudioZoneSelect
+                value={device.audioZoneId}
+                onChange={(zoneId) => assignDeviceToAudioZone(device.id, zoneId)}
               />
             </FieldRow>
           )}

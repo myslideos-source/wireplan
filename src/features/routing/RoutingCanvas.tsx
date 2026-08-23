@@ -8,6 +8,8 @@ const CABLE_COLORS: Record<CableType, string> = {
   "NYM-J 3x1,5": "#e9ba4d",
   CAT7: "#25b7f2",
   "Tree Cable": "#68d56b",
+  "Lautsprecherkabel 2x1,5": "#f472b6",
+  "Lautsprecherkabel 2x2,5": "#f472b6",
 };
 
 export function RoutingCanvas({

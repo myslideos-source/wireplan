@@ -27,6 +27,9 @@ export interface SmartHomeDevice {
   /** Which Tree branch this device's Tree bus cable belongs to — only
    * meaningful when the model is a Tree device. */
   treeBranchId?: string;
+  /** Which Audio zone this speaker belongs to (§12) — only meaningful for
+   * technology "audio" models. */
+  audioZoneId?: string;
   /** Auto-assigned display number (§26), unique per prefix per floor. */
   number: number;
 }
