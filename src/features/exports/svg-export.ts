@@ -7,7 +7,7 @@ import type {
   SmartHomeDevice,
   Wall,
 } from "@/domain";
-import { DEVICE_TYPE_LABELS, findSmartHomeModel, formatDeviceNumber, numberingPrefixFor, fixedConsumerLabel } from "@/domain";
+import { DEVICE_TYPE_LABELS, findSmartHomeModel, formatDeviceNumber, numberingPrefixFor, fixedConsumerLabel, NETWORK_DEVICE_LABELS } from "@/domain";
 import {
   devicePosition,
   pointAtOffset,
@@ -95,9 +95,10 @@ export function buildFloorPlanSvg(params: {
     const position = devicePosition(device, walls);
     if (!position) continue;
     const color = DEVICE_COLORS[device.type];
-    const prefix = numberingPrefixFor({ type: device.type });
+    const prefix = numberingPrefixFor({ type: device.type, networkDeviceSubtype: device.networkDeviceSubtype });
     const number = formatDeviceNumber(prefix, device.number);
-    legend.set(prefix, { prefix, label: DEVICE_TYPE_LABELS[device.type] });
+    const label = device.type === "network" ? NETWORK_DEVICE_LABELS[device.networkDeviceSubtype ?? "dose"] : DEVICE_TYPE_LABELS[device.type];
+    legend.set(prefix, { prefix, label });
     parts.push(`<circle cx="${position.x}" cy="${position.y}" r="130" fill="#0b1520" stroke="${color}" stroke-width="16" />`);
     parts.push(
       `<text x="${position.x}" y="${position.y + 230}" text-anchor="middle" font-size="150" fill="${color}">${number}</text>`,

@@ -17,8 +17,10 @@ import {
   formatDeviceNumber,
   MAX_TREE_DEVICES_PER_BRANCH,
   fixedConsumerLabel,
+  NETWORK_DEVICE_LABELS,
   type ElectricalDeviceType,
   type CableType,
+  type NetworkDeviceSubtype,
 } from "@/domain";
 import { isFeatureEnabled } from "@/lib/feature-flags";
 import { formatArea, formatNumber } from "@/lib/utils";
@@ -243,6 +245,7 @@ export function EditorInspector() {
   const deleteFixedConsumer = useEditorStore((state) => state.deleteFixedConsumer);
   const updateFixedConsumerCableType = useEditorStore((state) => state.updateFixedConsumerCableType);
   const setFixedConsumerReserveConduit = useEditorStore((state) => state.setFixedConsumerReserveConduit);
+  const updateDeviceNetworkSubtype = useEditorStore((state) => state.updateDeviceNetworkSubtype);
   const openings = useEditorStore((state) => state.openings);
   const deleteOpening = useEditorStore((state) => state.deleteOpening);
   const updateOpeningWidth = useEditorStore((state) => state.updateOpeningWidth);
@@ -269,7 +272,12 @@ export function EditorInspector() {
     const Icon = DEVICE_ICONS[device.type];
     const room = device.roomId ? rooms.find((r) => r.id === device.roomId) : undefined;
     const assignedModel = device.smartHomeModelId ? findSmartHomeModel(device.smartHomeModelId) : undefined;
-    const deviceNumber = formatDeviceNumber(numberingPrefixFor({ type: device.type }), device.number);
+    const networkSubtype = device.networkDeviceSubtype ?? "dose";
+    const deviceLabel = device.type === "network" ? NETWORK_DEVICE_LABELS[networkSubtype] : DEVICE_TYPE_LABELS[device.type];
+    const deviceNumber = formatDeviceNumber(
+      numberingPrefixFor({ type: device.type, networkDeviceSubtype: networkSubtype }),
+      device.number,
+    );
     return (
       <aside className="w-80 shrink-0 overflow-y-auto border-l border-border bg-bg-secondary scrollbar-thin">
         <div className="flex items-center gap-2 border-b border-border px-5 py-4">
@@ -280,9 +288,7 @@ export function EditorInspector() {
             <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
               Gerät · {deviceNumber}
             </p>
-            <h2 className="text-sm font-semibold text-text">
-              {DEVICE_TYPE_LABELS[device.type]}
-            </h2>
+            <h2 className="text-sm font-semibold text-text">{deviceLabel}</h2>
           </div>
         </div>
         <Section title="Gerät">
@@ -292,6 +298,25 @@ export function EditorInspector() {
           <FieldRow label="Typ">
             <span className="text-sm text-text">{DEVICE_TYPE_LABELS[device.type]}</span>
           </FieldRow>
+          {device.type === "network" && (
+            <FieldRow label="Subtyp">
+              <select
+                value={networkSubtype}
+                onChange={(event) =>
+                  updateDeviceNetworkSubtype(device.id, event.target.value as NetworkDeviceSubtype)
+                }
+                className={inputClass}
+              >
+                {(Object.entries(NETWORK_DEVICE_LABELS) as [NetworkDeviceSubtype, string][]).map(
+                  ([subtype, label]) => (
+                    <option key={subtype} value={subtype}>
+                      {label}
+                    </option>
+                  ),
+                )}
+              </select>
+            </FieldRow>
+          )}
           <FieldRow label="Montage">
             <span className="text-sm text-text">
               {device.mount.kind === "wall" ? "Wand" : "Decke"}

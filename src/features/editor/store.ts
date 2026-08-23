@@ -17,6 +17,7 @@ import type {
   AudioZone,
   FixedConsumer,
   FixedConsumerType,
+  NetworkDeviceSubtype,
 } from "@/domain";
 import {
   polygonAreaSqMeters,
@@ -207,7 +208,7 @@ let isRestoringHistory = false;
  * a future Touch-typed ElectricalDevice would never collide on "T01". */
 function nextNumberForPrefix(state: Pick<EditorState, "devices" | "smartHomeDevices">, prefix: string): number {
   const deviceNumbers = state.devices
-    .filter((d) => numberingPrefixFor({ type: d.type }) === prefix)
+    .filter((d) => numberingPrefixFor({ type: d.type, networkDeviceSubtype: d.networkDeviceSubtype }) === prefix)
     .map((d) => d.number);
   const smartHomeNumbers = state.smartHomeDevices
     .filter((d) => {
@@ -417,6 +418,12 @@ interface EditorState {
   updateFixedConsumerCableType: (id: string, cableType: CableType) => void;
   setFixedConsumerReserveConduit: (id: string, reserveConduit: boolean) => void;
 
+  // §13 — Netzwerkgeräte-Subtyp (Dose/Access Point/Kamera/Türsprechanlage/
+  // PoE-Switch), each with its own Nummerierungspräfix and Kabeltyp.
+  networkDevicePlacementSubtype: NetworkDeviceSubtype;
+  setNetworkDevicePlacementSubtype: (subtype: NetworkDeviceSubtype) => void;
+  updateDeviceNetworkSubtype: (id: string, subtype: NetworkDeviceSubtype) => void;
+
   // §47 — undo/redo history for this floor's editable content (not UI
   // state). Recorded automatically by a subscriber set up right after the
   // store is created; see SLICE_KEYS/sliceChanged/isRestoringHistory above.
@@ -609,6 +616,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setFixedConsumerReserveConduit: (id, reserveConduit) =>
     set((state) => ({
       fixedConsumers: state.fixedConsumers.map((c) => (c.id === id ? { ...c, reserveConduit } : c)),
+    })),
+
+  networkDevicePlacementSubtype: "dose",
+  setNetworkDevicePlacementSubtype: (subtype) => set({ networkDevicePlacementSubtype: subtype }),
+  updateDeviceNetworkSubtype: (id, subtype) =>
+    set((state) => ({
+      devices: state.devices.map((d) => (d.id === id ? { ...d, networkDeviceSubtype: subtype } : d)),
     })),
 
   spotArrayCount: 1,
@@ -977,7 +991,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const state = get();
     const mountKind = DEVICE_MOUNT_KIND[type];
     const height = DEVICE_DEFAULT_HEIGHT[type];
-    const number = nextNumberForPrefix(state, numberingPrefixFor({ type }));
+    const networkDeviceSubtype = type === "network" ? state.networkDevicePlacementSubtype : undefined;
+    const number = nextNumberForPrefix(state, numberingPrefixFor({ type, networkDeviceSubtype }));
     const point = mountKind === "point" ? applySnap(state, rawPoint) : rawPoint;
 
     if (mountKind === "wall") {
@@ -1004,6 +1019,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         type,
         mount: { kind: "wall", wallId: wall.id, offset, height },
         roomId: room?.id ?? null,
+        networkDeviceSubtype,
         number,
       };
       set((s) => ({ devices: [...s.devices, device] }));
@@ -1018,6 +1034,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       type,
       mount: { kind: "point", position: point, height },
       roomId: room.id,
+      networkDeviceSubtype,
       number,
     };
     set((s) => ({ devices: [...s.devices, device] }));

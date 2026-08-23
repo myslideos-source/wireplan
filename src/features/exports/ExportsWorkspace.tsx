@@ -5,7 +5,7 @@ import { FileDown, Image as ImageIcon, FileCode } from "lucide-react";
 import type { Project } from "@/domain";
 import { Card, CardHeader, CardTitle, CardContent, Button, KpiCard } from "@/components/ui";
 import { useEditorStore } from "@/features/editor/store";
-import { findSmartHomeModel, numberingPrefixFor, DEVICE_TYPE_LABELS } from "@/domain";
+import { findSmartHomeModel, numberingPrefixFor, DEVICE_TYPE_LABELS, NETWORK_DEVICE_LABELS } from "@/domain";
 import { formatNumber } from "@/lib/utils";
 import { buildFloorPlanSvg } from "./svg-export";
 
@@ -121,7 +121,11 @@ export function ExportsWorkspace({ project }: { project: Project }) {
       line("Legende", 14, 8);
       const legend = new Map<string, string>();
       for (const device of devices) {
-        legend.set(numberingPrefixFor({ type: device.type }), DEVICE_TYPE_LABELS[device.type]);
+        const label = device.type === "network" ? NETWORK_DEVICE_LABELS[device.networkDeviceSubtype ?? "dose"] : DEVICE_TYPE_LABELS[device.type];
+        legend.set(
+          numberingPrefixFor({ type: device.type, networkDeviceSubtype: device.networkDeviceSubtype }),
+          label,
+        );
       }
       for (const device of smartHomeDevices) {
         const model = findSmartHomeModel(device.modelId);

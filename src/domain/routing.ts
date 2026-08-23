@@ -6,6 +6,9 @@
  * when the speaker sits in the same room as Tree hardware. "Leerrohr M25"
  * (§40/§41) is a spare empty conduit run alongside a fixed consumer's
  * lead for future re-cabling — never a substitute for the real lead.
+ * "CAT7 Duplex" (§13) is a doubled data run for Access Points/Kameras
+ * that need a second path (redundancy or a future device) already in
+ * the wall, never used for a plain Netzwerkdose.
  */
 export type CableType =
   | "NYM-J 3x1,5"
@@ -13,6 +16,7 @@ export type CableType =
   | "NYM-J 5x2,5"
   | "NYM-J 5x6"
   | "CAT7"
+  | "CAT7 Duplex"
   | "Tree Cable"
   | "Lautsprecherkabel 2x1,5"
   | "Lautsprecherkabel 2x2,5"

@@ -27,7 +27,14 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isFeatureEnabled, type FeatureFlag } from "@/lib/feature-flags";
-import { LOXONE_CATALOG, SMART_HOME_CATEGORY_LABELS, FIXED_CONSUMER_LABELS, type FixedConsumerType } from "@/domain";
+import {
+  LOXONE_CATALOG,
+  SMART_HOME_CATEGORY_LABELS,
+  FIXED_CONSUMER_LABELS,
+  NETWORK_DEVICE_LABELS,
+  type FixedConsumerType,
+  type NetworkDeviceSubtype,
+} from "@/domain";
 import { useEditorStore, type EditorTool, type LayerId, type ViewMode } from "./store";
 import { DRAG_TOOL_MIME } from "./drag-tool";
 
@@ -131,6 +138,10 @@ export function EditorToolbar() {
   const setFixedConsumerPlacementType = useEditorStore((state) => state.setFixedConsumerPlacementType);
   const fixedConsumerCustomLabel = useEditorStore((state) => state.fixedConsumerCustomLabel);
   const setFixedConsumerCustomLabel = useEditorStore((state) => state.setFixedConsumerCustomLabel);
+  const networkDevicePlacementSubtype = useEditorStore((state) => state.networkDevicePlacementSubtype);
+  const setNetworkDevicePlacementSubtype = useEditorStore(
+    (state) => state.setNetworkDevicePlacementSubtype,
+  );
   const loxoneEnabled = isFeatureEnabled("LOXONE");
   const backgroundInputRef = useRef<HTMLInputElement>(null);
 
@@ -233,6 +244,23 @@ export function EditorToolbar() {
                       />
                     )}
                   </div>
+                )}
+                {tool.id === "network" && activeTool === "network" && (
+                  <select
+                    value={networkDevicePlacementSubtype}
+                    onChange={(event) =>
+                      setNetworkDevicePlacementSubtype(event.target.value as NetworkDeviceSubtype)
+                    }
+                    className="mx-1 rounded-[var(--radius-sm)] border border-border bg-bg px-2 py-1.5 text-xs text-text outline-none focus:border-primary/60"
+                  >
+                    {(Object.entries(NETWORK_DEVICE_LABELS) as [NetworkDeviceSubtype, string][]).map(
+                      ([subtype, label]) => (
+                        <option key={subtype} value={subtype}>
+                          {label}
+                        </option>
+                      ),
+                    )}
+                  </select>
                 )}
                 {tool.id === "light" && activeTool === "light" && (
                   <div className="mx-1 flex flex-col gap-1.5">

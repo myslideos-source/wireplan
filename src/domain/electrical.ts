@@ -1,5 +1,6 @@
 import type { Point } from "./geometry";
 import type { SmartHomeDeviceCategory, SmartHomeTechnology } from "./smarthome";
+import type { CableType } from "./routing";
 
 /**
  * The five placeable device categories from the editor toolbar (§35).
@@ -20,6 +21,39 @@ export type DeviceMount =
   | { kind: "wall"; wallId: string; offset: number; height: number }
   | { kind: "point"; position: Point; height: number };
 
+/** §13 — a plain "Netzwerk" tool placement is a generic data outlet
+ * ("Dose"); these sub-types cover the network-specific hardware a
+ * planner actually distinguishes on a plan, each with its own numbering
+ * prefix and cable requirement (see NETWORK_DEVICE_CABLE below). */
+export type NetworkDeviceSubtype = "dose" | "access-point" | "camera" | "door-intercom" | "poe-switch";
+
+export const NETWORK_DEVICE_LABELS: Record<NetworkDeviceSubtype, string> = {
+  dose: "Netzwerkdose",
+  "access-point": "Access Point",
+  camera: "Kamera",
+  "door-intercom": "Türsprechanlage",
+  "poe-switch": "PoE-Switch",
+};
+
+export const NETWORK_DEVICE_PREFIX: Record<NetworkDeviceSubtype, string> = {
+  dose: "LAN",
+  "access-point": "AP",
+  camera: "CAM",
+  "door-intercom": "TS",
+  "poe-switch": "SW",
+};
+
+/** Access points and cameras get a duplex (double) run so a second data
+ * path is already in the wall for a future device or redundant PoE —
+ * every other network subtype gets a single CAT7. */
+export const NETWORK_DEVICE_CABLE: Record<NetworkDeviceSubtype, CableType> = {
+  dose: "CAT7",
+  "access-point": "CAT7 Duplex",
+  camera: "CAT7 Duplex",
+  "door-intercom": "CAT7",
+  "poe-switch": "CAT7",
+};
+
 export interface ElectricalDevice {
   id: string;
   floorId: string;
@@ -33,6 +67,10 @@ export interface ElectricalDevice {
   /** Which Tree branch this device's Tree bus cable belongs to — only
    * meaningful when the assigned smart-home model is a Tree device. */
   treeBranchId?: string;
+  /** Only meaningful when type === "network" (§13) — defaults to "dose"
+   * when absent, so existing/legacy network devices keep behaving as
+   * plain data outlets. */
+  networkDeviceSubtype?: NetworkDeviceSubtype;
   /** Auto-assigned display number (§26), unique per prefix per floor —
    * e.g. the 2nd Touch on a floor gets number 2, shown as "T02". */
   number: number;
@@ -108,10 +146,12 @@ export function numberingPrefixFor(params: {
   type?: ElectricalDeviceType;
   category?: SmartHomeDeviceCategory;
   technology?: SmartHomeTechnology;
+  networkDeviceSubtype?: NetworkDeviceSubtype;
 }): string {
   if (params.technology === "audio") return "SPK";
   if (params.technology === "loxone-air" && params.category === "sensor") return "FK";
   if (params.category) return SMART_HOME_CATEGORY_PREFIX[params.category];
+  if (params.type === "network") return NETWORK_DEVICE_PREFIX[params.networkDeviceSubtype ?? "dose"];
   if (params.type) return ELECTRICAL_TYPE_PREFIX[params.type];
   return "G";
 }
