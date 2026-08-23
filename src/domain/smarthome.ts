@@ -24,6 +24,11 @@ export interface SmartHomeDevice {
   modelId: string;
   position: Point;
   roomId: string | null;
+  /** Which Tree branch this device's Tree bus cable belongs to — only
+   * meaningful when the model is a Tree device. */
+  treeBranchId?: string;
+  /** Auto-assigned display number (§26), unique per prefix per floor. */
+  number: number;
 }
 
 export const LOXONE_SYSTEM: SmartHomeSystem = {
@@ -49,16 +54,36 @@ export const SMART_HOME_CATEGORY_LABELS: Record<SmartHomeDeviceCategory, string>
   climate: "Klima",
 };
 
+/** Which physical layer a device belongs to — the load-bearing distinction
+ * for cabling (§33/§60): Tree devices share one bus per branch, Air
+ * devices are wireless (no Tree cable at all), audio/network/230V each
+ * get their own separate cable type and are never counted as Tree. */
+export type SmartHomeTechnology = "loxone-tree" | "loxone-air" | "network" | "audio" | "230v";
+
 export interface SmartHomeDeviceModel {
   id: string;
   systemId: string;
   category: SmartHomeDeviceCategory;
   label: string;
   description: string;
+  technology: SmartHomeTechnology;
+  /** True only for genuine Loxone Tree devices — these share a Tree bus
+   * and count against a branch's 50-device / 500m limits. Air, network,
+   * audio and 230V hardware are never Tree devices even though some sit
+   * in the same physical room (§62). */
+  countsAsTreeDevice: boolean;
 }
 
-/** Loxone's real Tree/Air product line — the genuine hardware names a
- * planner would actually assign, not a fabricated placeholder catalog. */
+/**
+ * Loxone's Tree/Air product line — the genuine hardware names a planner
+ * would actually assign, not a fabricated placeholder catalog.
+ *
+ * NOT live-verified: this session has no network access to loxone.com
+ * (blocked by egress policy), so these entries come from training
+ * knowledge, not a live fetch of the current Loxone catalog. Treat this
+ * as a starting point to review against the official Loxone documentation
+ * before ordering hardware, not as a verified source of truth (§46).
+ */
 export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
   {
     id: "loxone-miniserver-gen2",
@@ -66,6 +91,8 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     category: "controller",
     label: "Miniserver Gen. 2",
     description: "Zentrale Steuereinheit der gesamten Loxone-Installation.",
+    technology: "loxone-tree",
+    countsAsTreeDevice: false,
   },
   {
     id: "loxone-extension",
@@ -73,6 +100,8 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     category: "controller",
     label: "Extension",
     description: "Erweitert den Miniserver um zusätzliche Ein-/Ausgänge.",
+    technology: "loxone-tree",
+    countsAsTreeDevice: false,
   },
   {
     id: "loxone-air-base-extension",
@@ -80,6 +109,8 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     category: "controller",
     label: "Air Base Extension",
     description: "Funkbasis für kabellose Loxone Air Geräte.",
+    technology: "loxone-tree",
+    countsAsTreeDevice: false,
   },
   {
     id: "loxone-relay-tree",
@@ -87,6 +118,8 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     category: "actuator",
     label: "Relay Tree",
     description: "Schaltet bis zu 8 Stromkreise, z.B. Steckdosen.",
+    technology: "loxone-tree",
+    countsAsTreeDevice: true,
   },
   {
     id: "loxone-dimmer-tree",
@@ -94,6 +127,8 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     category: "actuator",
     label: "Dimmer Tree",
     description: "Dimmt bis zu 4 Beleuchtungskreise.",
+    technology: "loxone-tree",
+    countsAsTreeDevice: true,
   },
   {
     id: "loxone-nano-dimmer-tree",
@@ -101,6 +136,8 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     category: "actuator",
     label: "Nano Dimmer Tree",
     description: "Unterputz-Dimmer für eine einzelne Leuchte.",
+    technology: "loxone-tree",
+    countsAsTreeDevice: true,
   },
   {
     id: "loxone-touch-pure-tree",
@@ -108,6 +145,8 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     category: "input",
     label: "Touch Pure Tree",
     description: "Wandtaster mit Temperaturfühler und Statusanzeige.",
+    technology: "loxone-tree",
+    countsAsTreeDevice: true,
   },
   {
     id: "loxone-touch-tree",
@@ -115,6 +154,17 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     category: "input",
     label: "Touch Tree",
     description: "Einfacher beleuchteter Wandtaster.",
+    technology: "loxone-tree",
+    countsAsTreeDevice: true,
+  },
+  {
+    id: "loxone-touch-pure-flex",
+    systemId: LOXONE_SYSTEM.id,
+    category: "input",
+    label: "Touch Pure Flex",
+    description: "Rahmenloser Wandtaster für den flächenbündigen Einbau.",
+    technology: "loxone-tree",
+    countsAsTreeDevice: true,
   },
   {
     id: "loxone-room-comfort-sensor-tree",
@@ -122,6 +172,8 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     category: "sensor",
     label: "Room Comfort Sensor Tree",
     description: "Misst Temperatur, Luftfeuchtigkeit und Luftqualität im Raum.",
+    technology: "loxone-tree",
+    countsAsTreeDevice: true,
   },
   {
     id: "loxone-motion-sensor-tree",
@@ -129,6 +181,17 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     category: "sensor",
     label: "Motion Sensor Tree",
     description: "Bewegungsmelder für Präsenzerkennung.",
+    technology: "loxone-tree",
+    countsAsTreeDevice: true,
+  },
+  {
+    id: "loxone-presence-sensor-ceiling-tree",
+    systemId: LOXONE_SYSTEM.id,
+    category: "sensor",
+    label: "Präsenzmelder Deckeneinbau Tree",
+    description: "Deckenbündiger Präsenzmelder für feine Bewegungserkennung im Raum.",
+    technology: "loxone-tree",
+    countsAsTreeDevice: true,
   },
   {
     id: "loxone-weather-station",
@@ -136,6 +199,8 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     category: "sensor",
     label: "Weather Station",
     description: "Außensensor für Wind, Regen, Helligkeit und Temperatur.",
+    technology: "loxone-tree",
+    countsAsTreeDevice: true,
   },
   {
     id: "loxone-valve-actuator-tree",
@@ -143,6 +208,44 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     category: "climate",
     label: "Valve Actuator Tree",
     description: "Steuert Heizkörper- oder Fußbodenheizungsventile.",
+    technology: "loxone-tree",
+    countsAsTreeDevice: true,
+  },
+  {
+    id: "loxone-led-spot-rgbw-tree",
+    systemId: LOXONE_SYSTEM.id,
+    category: "actuator",
+    label: "LED Spot RGBW Tree",
+    description: "Deckenspot mit RGBW-Leuchtmittel und eigenem Tree-Anschluss.",
+    technology: "loxone-tree",
+    countsAsTreeDevice: true,
+  },
+  {
+    id: "loxone-window-contact-air",
+    systemId: LOXONE_SYSTEM.id,
+    category: "sensor",
+    label: "Fensterkontakt Air",
+    description: "Funk-Öffnungsmelder für Fenster, verbunden über Air Base Extension.",
+    technology: "loxone-air",
+    countsAsTreeDevice: false,
+  },
+  {
+    id: "loxone-door-contact-air",
+    systemId: LOXONE_SYSTEM.id,
+    category: "sensor",
+    label: "Türkontakt Air",
+    description: "Funk-Öffnungsmelder für Türen, verbunden über Air Base Extension.",
+    technology: "loxone-air",
+    countsAsTreeDevice: false,
+  },
+  {
+    id: "loxone-ceiling-speaker",
+    systemId: LOXONE_SYSTEM.id,
+    category: "actuator",
+    label: "Deckeneinbaulautsprecher",
+    description: "Multiroom-Audio über eine Audio-Zone, eigenes Lautsprecherkabel statt Tree.",
+    technology: "audio",
+    countsAsTreeDevice: false,
   },
 ];
 

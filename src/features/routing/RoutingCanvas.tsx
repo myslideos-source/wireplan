@@ -7,6 +7,7 @@ import { wallsBoundingBox, devicePosition, pointAtOffset } from "@/features/edit
 const CABLE_COLORS: Record<CableType, string> = {
   "NYM-J 3x1,5": "#e9ba4d",
   CAT7: "#25b7f2",
+  "Tree Cable": "#68d56b",
 };
 
 export function RoutingCanvas({
@@ -27,7 +28,11 @@ export function RoutingCanvas({
   const boardWall = distributionBoard && walls.find((w) => w.id === distributionBoard.wallId);
   const boardPosition = boardWall && distributionBoard ? pointAtOffset(boardWall, distributionBoard.offset) : null;
 
-  const cablesByDeviceId = new Map<string, Cable>(cables.map((c) => [c.deviceId, c]));
+  // Tree bus cables have no single deviceId (§33) — this device-to-cable
+  // lookup only covers the classic star cables this canvas visualizes.
+  const cablesByDeviceId = new Map<string, Cable>(
+    cables.filter((c) => c.deviceId).map((c) => [c.deviceId as string, c]),
+  );
 
   return (
     <svg

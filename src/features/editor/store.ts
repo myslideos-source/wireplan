@@ -12,6 +12,7 @@ import type {
   Cable,
   RoutingMode,
   SmartHomeDevice,
+  TreeBranch,
 } from "@/domain";
 import {
   polygonAreaSqMeters,
@@ -19,10 +20,15 @@ import {
   DEVICE_DEFAULT_HEIGHT,
   LOXONE_SYSTEM,
   LOXONE_CATALOG,
+  findSmartHomeModel,
+  numberingPrefixFor,
+  nextTreeBranchColor,
+  MAX_TREE_DEVICES_PER_BRANCH,
 } from "@/domain";
 import type { FloorGeometry } from "./mock-geometry";
 import type { FlaggedArea, FlaggedAreaTarget } from "@/features/plan-analysis/types";
 import { computeCables } from "@/features/routing/compute-cables";
+import { computeTreeBranchCables } from "@/features/routing/compute-tree-cables";
 import {
   isAxisAlignedRectangle,
   splitRectangle,
@@ -55,6 +61,10 @@ export type EditorTool =
   | "cable";
 
 export type LayerId = "grundriss" | "elektro" | "kabelwege" | "beschriftung" | "hintergrund";
+
+/** §67 "Tree View" — a separate on/off switch (not a LayerId toggle,
+ * since it dims *most* layers rather than hiding one) that focuses the
+ * canvas on Tree devices and their bus cabling. */
 
 /** The real, original uploaded plan image, positioned/scaled over the
  * floor's geometry as a tracing reference — for when the AI's estimated
@@ -111,6 +121,7 @@ interface FloorMutableSlice {
   cables: Cable[];
   smartHomeDevices: SmartHomeDevice[];
   backgroundImage: BackgroundImage | null;
+  treeBranches: TreeBranch[];
 }
 
 function freshSliceFromGeometry(geometry: FloorGeometry): FloorMutableSlice {
@@ -125,7 +136,92 @@ function freshSliceFromGeometry(geometry: FloorGeometry): FloorMutableSlice {
     cables: [],
     smartHomeDevices: [],
     backgroundImage: null,
+    treeBranches: [],
   };
+}
+
+/** Next free display number for a given prefix (§26) — scans both device
+ * arrays so e.g. Touch Tree placed via the standalone Smart-Home tool and
+ * a future Touch-typed ElectricalDevice would never collide on "T01". */
+function nextNumberForPrefix(state: Pick<EditorState, "devices" | "smartHomeDevices">, prefix: string): number {
+  const deviceNumbers = state.devices
+    .filter((d) => numberingPrefixFor({ type: d.type }) === prefix)
+    .map((d) => d.number);
+  const smartHomeNumbers = state.smartHomeDevices
+    .filter((d) => {
+      const model = findSmartHomeModel(d.modelId);
+      return (
+        model &&
+        numberingPrefixFor({ category: model.category, technology: model.technology }) === prefix
+      );
+    })
+    .map((d) => d.number);
+  return Math.max(0, ...deviceNumbers, ...smartHomeNumbers) + 1;
+}
+
+/** Tree-device count per branch, across both device arrays — used both to
+ * pick a sensible default branch on placement (§77) and to render the
+ * Tree-Ast-Übersicht. */
+function countTreeDevicesByBranch(
+  state: Pick<EditorState, "devices" | "smartHomeDevices">,
+): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const device of state.smartHomeDevices) {
+    if (!device.treeBranchId) continue;
+    const model = findSmartHomeModel(device.modelId);
+    if (!model?.countsAsTreeDevice) continue;
+    counts[device.treeBranchId] = (counts[device.treeBranchId] ?? 0) + 1;
+  }
+  for (const device of state.devices) {
+    if (!device.treeBranchId) continue;
+    const model = device.smartHomeModelId ? findSmartHomeModel(device.smartHomeModelId) : undefined;
+    if (!model?.countsAsTreeDevice) continue;
+    counts[device.treeBranchId] = (counts[device.treeBranchId] ?? 0) + 1;
+  }
+  return counts;
+}
+
+/** Picks the most recently created Tree branch on this floor that still
+ * has room, or signals that a new one should be created — the "intelligent
+ * default" from §77/§78: the user is never forced to manually assign a
+ * branch, but always free to change the suggestion afterward. */
+function suggestTreeBranchId(
+  state: Pick<EditorState, "devices" | "smartHomeDevices" | "treeBranches">,
+): string | null {
+  const counts = countTreeDevicesByBranch(state);
+  for (let i = state.treeBranches.length - 1; i >= 0; i -= 1) {
+    const branch = state.treeBranches[i];
+    if ((counts[branch.id] ?? 0) < MAX_TREE_DEVICES_PER_BRANCH) return branch.id;
+  }
+  return null;
+}
+
+/** Resolves what a device's `treeBranchId` should become after a model
+ * (re)assignment: keep an existing assignment, suggest/create a branch for
+ * a newly-Tree device, or clear it for a non-Tree model — the one place
+ * this decision is made, reused by every placement/reassignment path. */
+function resolveTreeBranchAssignment(
+  state: Pick<EditorState, "devices" | "smartHomeDevices" | "treeBranches" | "floorId">,
+  model: { countsAsTreeDevice: boolean } | undefined,
+  existingBranchId: string | undefined,
+): { treeBranchId: string | undefined; treeBranches: TreeBranch[] } {
+  if (!model?.countsAsTreeDevice) {
+    return { treeBranchId: undefined, treeBranches: state.treeBranches };
+  }
+  if (existingBranchId) {
+    return { treeBranchId: existingBranchId, treeBranches: state.treeBranches };
+  }
+  const suggested = suggestTreeBranchId(state);
+  if (suggested) {
+    return { treeBranchId: suggested, treeBranches: state.treeBranches };
+  }
+  const branch: TreeBranch = {
+    id: generateId("tree"),
+    floorId: state.floorId ?? "",
+    label: `Tree ${state.treeBranches.length + 1}`,
+    colorHex: nextTreeBranchColor(state.treeBranches),
+  };
+  return { treeBranchId: branch.id, treeBranches: [...state.treeBranches, branch] };
 }
 
 interface EditorState {
@@ -144,6 +240,10 @@ interface EditorState {
   smartHomeDevices: SmartHomeDevice[];
   smartHomePlacementModelId: string;
   backgroundImage: BackgroundImage | null;
+  treeBranches: TreeBranch[];
+  createTreeBranch: (label?: string) => string;
+  deleteTreeBranch: (id: string) => void;
+  assignDeviceToTreeBranch: (deviceId: string, branchId: string | null) => void;
   hydrate: (geometries: FloorGeometry[]) => void;
   switchFloor: (floorId: string) => void;
   setBackgroundImage: (dataUrl: string, naturalWidth: number, naturalHeight: number) => void;
@@ -159,6 +259,9 @@ interface EditorState {
 
   layers: Record<LayerId, boolean>;
   toggleLayer: (layer: LayerId) => void;
+
+  treeViewActive: boolean;
+  toggleTreeView: () => void;
 
   zoom: number;
   setZoom: (updater: number | ((zoom: number) => number)) => void;
@@ -223,6 +326,41 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   smartHomeDevices: [],
   smartHomePlacementModelId: LOXONE_CATALOG[0].id,
   backgroundImage: null,
+  treeBranches: [],
+
+  createTreeBranch: (label) => {
+    const state = get();
+    const branch: TreeBranch = {
+      id: generateId("tree"),
+      floorId: state.floorId ?? "",
+      label: label ?? `Tree ${state.treeBranches.length + 1}`,
+      colorHex: nextTreeBranchColor(state.treeBranches),
+    };
+    set((s) => ({ treeBranches: [...s.treeBranches, branch] }));
+    return branch.id;
+  },
+
+  deleteTreeBranch: (id) =>
+    set((state) => ({
+      treeBranches: state.treeBranches.filter((b) => b.id !== id),
+      devices: state.devices.map((d) =>
+        d.treeBranchId === id ? { ...d, treeBranchId: undefined } : d,
+      ),
+      smartHomeDevices: state.smartHomeDevices.map((d) =>
+        d.treeBranchId === id ? { ...d, treeBranchId: undefined } : d,
+      ),
+    })),
+
+  assignDeviceToTreeBranch: (deviceId, branchId) =>
+    set((state) => ({
+      devices: state.devices.map((d) =>
+        d.id === deviceId ? { ...d, treeBranchId: branchId ?? undefined } : d,
+      ),
+      smartHomeDevices: state.smartHomeDevices.map((d) =>
+        d.id === deviceId ? { ...d, treeBranchId: branchId ?? undefined } : d,
+      ),
+    })),
+
   hydrate: (geometries) => {
     // Re-hydrate whenever a different project's floors are passed in (e.g.
     // navigating from one project's editor to another's without a full
@@ -254,6 +392,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       cables: state.cables,
       smartHomeDevices: state.smartHomeDevices,
       backgroundImage: state.backgroundImage,
+      treeBranches: state.treeBranches,
     };
     const newCache = currentFloorId
       ? { ...state.floorCache, [currentFloorId]: currentSlice }
@@ -281,6 +420,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   layers: { grundriss: true, elektro: true, kabelwege: true, beschriftung: true, hintergrund: true },
   toggleLayer: (layer) =>
     set((state) => ({ layers: { ...state.layers, [layer]: !state.layers[layer] } })),
+
+  treeViewActive: false,
+  toggleTreeView: () => set((state) => ({ treeViewActive: !state.treeViewActive })),
 
   zoom: 1,
   setZoom: (updater) =>
@@ -353,6 +495,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const state = get();
     const mountKind = DEVICE_MOUNT_KIND[type];
     const height = DEVICE_DEFAULT_HEIGHT[type];
+    const number = nextNumberForPrefix(state, numberingPrefixFor({ type }));
 
     if (mountKind === "wall") {
       const wall = findNearestWall(state.walls, point);
@@ -378,6 +521,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         type,
         mount: { kind: "wall", wallId: wall.id, offset, height },
         roomId: room?.id ?? null,
+        number,
       };
       set((s) => ({ devices: [...s.devices, device] }));
       return true;
@@ -391,6 +535,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       type,
       mount: { kind: "point", position: point, height },
       roomId: room.id,
+      number,
     };
     set((s) => ({ devices: [...s.devices, device] }));
     return true;
@@ -454,14 +599,26 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       roomCircuits: { ...state.roomCircuits, [roomId]: circuitId },
     })),
 
-  assignDeviceSmartHomeModel: (deviceId, modelId) =>
-    set((state) => ({
-      devices: state.devices.map((device) =>
-        device.id === deviceId
-          ? { ...device, smartHomeModelId: modelId ?? undefined }
-          : device,
+  assignDeviceSmartHomeModel: (deviceId, modelId) => {
+    // Assigning a genuine Tree model suggests a branch right away (§76) —
+    // the user is never left to work out the Tree assignment themselves.
+    const state = get();
+    const model = modelId ? findSmartHomeModel(modelId) : undefined;
+    const device = state.devices.find((d) => d.id === deviceId);
+    const { treeBranchId, treeBranches } = resolveTreeBranchAssignment(
+      state,
+      model,
+      device?.treeBranchId,
+    );
+    set({
+      treeBranches,
+      devices: state.devices.map((d) =>
+        d.id === deviceId
+          ? { ...d, smartHomeModelId: modelId ?? undefined, treeBranchId }
+          : d,
       ),
-    })),
+    });
+  },
 
   assignBoardSmartHomeModel: (modelId) =>
     set((state) =>
@@ -480,6 +637,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   addSmartHomeDeviceAtPoint: (point) => {
     const state = get();
     const room = state.rooms.find((r) => isPointInPolygon(point, r.polygon));
+    const model = findSmartHomeModel(state.smartHomePlacementModelId);
+    const number = nextNumberForPrefix(
+      state,
+      numberingPrefixFor({ category: model?.category, technology: model?.technology }),
+    );
+    const { treeBranchId, treeBranches: newBranches } = resolveTreeBranchAssignment(
+      state,
+      model,
+      undefined,
+    );
+
     const device: SmartHomeDevice = {
       id: generateId("smarthome"),
       floorId: state.floorId ?? "",
@@ -487,8 +655,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       modelId: state.smartHomePlacementModelId,
       position: point,
       roomId: room?.id ?? null,
+      treeBranchId,
+      number,
     };
-    set((s) => ({ smartHomeDevices: [...s.smartHomeDevices, device] }));
+    set((s) => ({ smartHomeDevices: [...s.smartHomeDevices, device], treeBranches: newBranches }));
     return true;
   },
 
@@ -512,12 +682,22 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         : state.selected,
     })),
 
-  setSmartHomeDeviceModel: (deviceId, modelId) =>
-    set((state) => ({
-      smartHomeDevices: state.smartHomeDevices.map((device) =>
-        device.id === deviceId ? { ...device, modelId } : device,
+  setSmartHomeDeviceModel: (deviceId, modelId) => {
+    const state = get();
+    const model = findSmartHomeModel(modelId);
+    const device = state.smartHomeDevices.find((d) => d.id === deviceId);
+    const { treeBranchId, treeBranches } = resolveTreeBranchAssignment(
+      state,
+      model,
+      device?.treeBranchId,
+    );
+    set({
+      treeBranches,
+      smartHomeDevices: state.smartHomeDevices.map((d) =>
+        d.id === deviceId ? { ...d, modelId, treeBranchId } : d,
       ),
-    })),
+    });
+  },
 
   setTechnikraum: (roomId) => set({ technikraumRoomId: roomId }),
 
@@ -599,14 +779,22 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   calculateRouting: () => {
     const state = get();
     if (!state.distributionBoard) return false;
-    const cables = computeCables(
+    const starCables = computeCables(
       state.devices,
       state.distributionBoard,
       state.walls,
       state.rooms,
       state.routingMode,
     );
-    set({ cables });
+    const treeCables = computeTreeBranchCables(
+      state.treeBranches,
+      state.devices,
+      state.smartHomeDevices,
+      state.distributionBoard,
+      state.walls,
+      state.routingMode,
+    );
+    set({ cables: [...starCables, ...treeCables] });
     return true;
   },
 

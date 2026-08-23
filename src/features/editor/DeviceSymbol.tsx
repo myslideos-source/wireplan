@@ -66,6 +66,7 @@ export function DeviceSymbol({
   clickable,
   onSelect,
   onDragStart,
+  dimmed,
 }: {
   device: ElectricalDevice;
   position: Point;
@@ -73,12 +74,16 @@ export function DeviceSymbol({
   clickable: boolean;
   onSelect: () => void;
   onDragStart?: (event: ReactMouseEvent) => void;
+  /** §67 Tree View — fades out devices that aren't Tree hardware while
+   * the user focuses on Tree cabling, without hiding them entirely. */
+  dimmed?: boolean;
 }) {
   const color = DEVICE_COLORS[device.type];
 
   return (
     <g
       transform={`translate(${position.x} ${position.y})`}
+      opacity={dimmed ? 0.25 : 1}
       className={clickable ? "cursor-grab" : undefined}
       onClick={(event) => {
         if (!clickable) return;

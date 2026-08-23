@@ -1,7 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
-import type { ElectricalDevice } from "@/domain";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type DragEvent as ReactDragEvent,
+} from "react";
+import type { ElectricalDevice, Point } from "@/domain";
+import { findSmartHomeModel } from "@/domain";
+import { DRAG_TOOL_MIME } from "./drag-tool";
+import { orderTreeBusPoints, type TreeBusPoint } from "@/features/routing/compute-tree-cables";
 import { useEditorStore, type EditorTool } from "./store";
 import {
   wallOrientation,
@@ -41,6 +51,8 @@ export function EditorCanvas() {
   const resizeBackgroundImageToPoint = useEditorStore(
     (state) => state.resizeBackgroundImageToPoint,
   );
+  const treeBranches = useEditorStore((state) => state.treeBranches);
+  const treeViewActive = useEditorStore((state) => state.treeViewActive);
 
   const svgRef = useRef<SVGSVGElement>(null);
   const [dragging, setDragging] = useState<
@@ -76,6 +88,39 @@ export function EditorCanvas() {
   const centerX = box.minX + box.width / 2;
   const centerY = box.minY + box.height / 2;
   const viewBox = `${centerX - vbWidth / 2} ${centerY - vbHeight / 2} ${vbWidth} ${vbHeight}`;
+
+  const boardWall = distributionBoard ? walls.find((w) => w.id === distributionBoard.wallId) : undefined;
+  const boardPosition =
+    boardWall && distributionBoard ? pointAtOffset(boardWall, distributionBoard.offset) : null;
+
+  /** One polyline per Tree branch with at least one device — reuses the
+   * same nearest-neighbor bus ordering as the actual length calculation
+   * (compute-tree-cables.ts) so what's drawn matches what's counted. */
+  const treeBusPaths = useMemo(() => {
+    if (!boardPosition) return [];
+    const paths: { branchId: string; colorHex: string; ordered: TreeBusPoint[] }[] = [];
+    for (const branch of treeBranches) {
+      const points: TreeBusPoint[] = [];
+      for (const device of devices) {
+        if (device.treeBranchId !== branch.id) continue;
+        if (!device.smartHomeModelId || !findSmartHomeModel(device.smartHomeModelId)?.countsAsTreeDevice) continue;
+        const position = devicePosition(device, walls);
+        if (position) points.push({ id: device.id, position });
+      }
+      for (const device of smartHomeDevices) {
+        if (device.treeBranchId !== branch.id) continue;
+        if (!findSmartHomeModel(device.modelId)?.countsAsTreeDevice) continue;
+        points.push({ id: device.id, position: device.position });
+      }
+      if (points.length === 0) continue;
+      paths.push({ branchId: branch.id, colorHex: branch.colorHex, ordered: orderTreeBusPoints(boardPosition, points) });
+    }
+    return paths;
+  }, [treeBranches, devices, smartHomeDevices, walls, boardPosition]);
+
+  function isTreeDevice(device: ElectricalDevice): boolean {
+    return !!device.smartHomeModelId && !!findSmartHomeModel(device.smartHomeModelId)?.countsAsTreeDevice;
+  }
 
   const canSelect = activeTool === "select";
   const placingDeviceType = PLACEABLE_DEVICE_TOOLS.includes(activeTool)
@@ -123,20 +168,27 @@ export function EditorCanvas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dragging]);
 
+  /** Places whatever a device/smart-home tool id refers to at a point —
+   * shared by click-to-place (armed via the toolbar) and drag-and-drop
+   * (armed implicitly by what was dragged), so there's exactly one place
+   * that turns a tool id into a device. */
+  function placeByToolId(toolId: string, point: Point) {
+    if (PLACEABLE_DEVICE_TOOLS.includes(toolId as EditorTool)) {
+      addDeviceAtPoint(toolId as ElectricalDevice["type"], point);
+      return;
+    }
+    if (toolId === "smarthome") addSmartHomeDeviceAtPoint(point);
+  }
+
   function handleBackgroundClick(event: ReactMouseEvent) {
-    if (placingDeviceType) {
+    if (placingDeviceType || placingSmartHome) {
       const point = toSvgPoint(event);
-      if (point) addDeviceAtPoint(placingDeviceType, point);
+      if (point) placeByToolId(activeTool, point);
       return;
     }
     if (placingBoard) {
       const point = toSvgPoint(event);
       if (point) placeDistributionBoard(point);
-      return;
-    }
-    if (placingSmartHome) {
-      const point = toSvgPoint(event);
-      if (point) addSmartHomeDeviceAtPoint(point);
       return;
     }
     if (placingOpeningType) {
@@ -145,6 +197,18 @@ export function EditorCanvas() {
       return;
     }
     if (canSelect) select(null);
+  }
+
+  function handleCanvasDragOver(event: ReactDragEvent) {
+    if (event.dataTransfer.types.includes(DRAG_TOOL_MIME)) event.preventDefault();
+  }
+
+  function handleCanvasDrop(event: ReactDragEvent) {
+    const toolId = event.dataTransfer.getData(DRAG_TOOL_MIME);
+    if (!toolId) return;
+    event.preventDefault();
+    const point = toSvgPoint(event);
+    if (point) placeByToolId(toolId, point);
   }
 
   return (
@@ -157,7 +221,14 @@ export function EditorCanvas() {
             : undefined,
       }}
     >
-      <svg ref={svgRef} viewBox={viewBox} className="h-full w-full" onClick={handleBackgroundClick}>
+      <svg
+        ref={svgRef}
+        viewBox={viewBox}
+        className="h-full w-full"
+        onClick={handleBackgroundClick}
+        onDragOver={handleCanvasDragOver}
+        onDrop={handleCanvasDrop}
+      >
         <defs>
           <pattern id="editor-grid" width={300} height={300} patternUnits="userSpaceOnUse">
             <path d="M 300 0 L 0 0 0 300" fill="none" stroke="#1a2833" strokeWidth={8} />
@@ -172,7 +243,7 @@ export function EditorCanvas() {
         />
 
         {layers.grundriss && (
-          <g>
+          <g opacity={treeViewActive ? 0.25 : 1}>
             {rooms.map((room) => {
               const isSelected = selected?.type === "room" && selected.id === room.id;
               return (
@@ -340,6 +411,7 @@ export function EditorCanvas() {
                 clickable={canSelect}
                 onSelect={() => select({ type: "device", id: device.id })}
                 onDragStart={() => setDragging({ kind: "device", id: device.id })}
+                dimmed={treeViewActive && !isTreeDevice(device)}
               />
             );
           })}
@@ -347,9 +419,11 @@ export function EditorCanvas() {
         {layers.elektro &&
           smartHomeDevices.map((device) => {
             const isSelected = selected?.type === "smarthome" && selected.id === device.id;
+            const isTree = !!findSmartHomeModel(device.modelId)?.countsAsTreeDevice;
             return (
               <g
                 key={device.id}
+                opacity={treeViewActive && !isTree ? 0.25 : 1}
                 className={canSelect ? "cursor-grab" : undefined}
                 onClick={(event) => {
                   if (!canSelect) return;
@@ -375,6 +449,23 @@ export function EditorCanvas() {
             );
           })}
 
+        {layers.kabelwege &&
+          treeBusPaths.map(({ branchId, colorHex, ordered }) => {
+            const start = boardPosition!;
+            const pathD = [`M ${start.x} ${start.y}`, ...ordered.map((p) => `L ${p.position.x} ${p.position.y}`)].join(" ");
+            return (
+              <path
+                key={branchId}
+                d={pathD}
+                fill="none"
+                stroke={colorHex}
+                strokeWidth={30}
+                strokeLinejoin="round"
+                opacity={0.85}
+              />
+            );
+          })}
+
         {layers.beschriftung &&
           rooms.map((room) => {
             const centroid = polygonCentroid(room.polygon);
@@ -385,6 +476,7 @@ export function EditorCanvas() {
                 y={centroid.y}
                 textAnchor="middle"
                 pointerEvents="none"
+                opacity={treeViewActive ? 0.25 : 1}
               >
                 <tspan x={centroid.x} dy={-90} fontSize={340} fontWeight={600} fill="#f5f7f9">
                   {room.name}

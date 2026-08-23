@@ -18,12 +18,18 @@ import {
   Image as ImageIcon,
   Eye,
   EyeOff,
+  GitBranch,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isFeatureEnabled, type FeatureFlag } from "@/lib/feature-flags";
 import { LOXONE_CATALOG, SMART_HOME_CATEGORY_LABELS } from "@/domain";
 import { useEditorStore, type EditorTool, type LayerId } from "./store";
+import { DRAG_TOOL_MIME } from "./drag-tool";
+
+/** Tools that can be dragged straight onto the plan (§3) in addition to
+ * the existing click-to-arm-then-click-to-place flow — both keep working. */
+const DRAGGABLE_TOOLS: EditorTool[] = ["outlet", "light", "switch", "sensor", "network", "smarthome"];
 
 interface ToolDef {
   id: EditorTool;
@@ -79,6 +85,8 @@ export function EditorToolbar() {
   const backgroundImage = useEditorStore((state) => state.backgroundImage);
   const setBackgroundImage = useEditorStore((state) => state.setBackgroundImage);
   const clearBackgroundImage = useEditorStore((state) => state.clearBackgroundImage);
+  const treeViewActive = useEditorStore((state) => state.treeViewActive);
+  const toggleTreeView = useEditorStore((state) => state.toggleTreeView);
   const loxoneEnabled = isFeatureEnabled("LOXONE");
   const backgroundInputRef = useRef<HTMLInputElement>(null);
 
@@ -115,16 +123,25 @@ export function EditorToolbar() {
                 <button
                   type="button"
                   disabled={disabled}
+                  draggable={enabled && DRAGGABLE_TOOLS.includes(tool.id)}
+                  onDragStart={(event) => {
+                    if (!enabled || !DRAGGABLE_TOOLS.includes(tool.id)) return;
+                    event.dataTransfer.setData(DRAG_TOOL_MIME, tool.id);
+                    event.dataTransfer.effectAllowed = "copy";
+                  }}
                   title={
                     !flagEnabled
                       ? `${tool.note ?? "Folgt in einer späteren Phase"} — Demnächst`
                       : missingTechnikraum
                         ? tool.note
-                        : undefined
+                        : enabled && DRAGGABLE_TOOLS.includes(tool.id)
+                          ? "Klicken zum Aktivieren oder direkt in den Plan ziehen"
+                          : undefined
                   }
                   onClick={() => setTool(tool.id)}
                   className={cn(
                     "flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40",
+                    enabled && DRAGGABLE_TOOLS.includes(tool.id) && "cursor-grab active:cursor-grabbing",
                     activeTool === tool.id && enabled
                       ? "bg-primary/10 text-primary"
                       : "text-text-secondary hover:bg-panel-elevated hover:text-text disabled:hover:bg-transparent",
@@ -183,6 +200,26 @@ export function EditorToolbar() {
             );
           })}
         </div>
+      </div>
+
+      <div>
+        <button
+          type="button"
+          onClick={toggleTreeView}
+          title="Blendet alles außer Tree-Geräten und Tree-Verkabelung ab"
+          className={cn(
+            "flex w-full items-center justify-between gap-3 rounded-[var(--radius-sm)] border px-3 py-2 text-sm font-medium transition-colors",
+            treeViewActive
+              ? "border-primary/60 bg-primary/10 text-primary"
+              : "border-border text-text-secondary hover:border-primary/40 hover:text-text",
+          )}
+        >
+          <span className="flex items-center gap-2">
+            <GitBranch className="h-4 w-4" />
+            Tree View
+          </span>
+          {treeViewActive && <span className="text-xs font-semibold">An</span>}
+        </button>
       </div>
 
       <div>

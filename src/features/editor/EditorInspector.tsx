@@ -13,6 +13,9 @@ import {
   DEVICE_TYPE_SMART_HOME_CATEGORIES,
   DISTRIBUTION_BOARD_SMART_HOME_CATEGORIES,
   ALL_SMART_HOME_CATEGORIES,
+  numberingPrefixFor,
+  formatDeviceNumber,
+  MAX_TREE_DEVICES_PER_BRANCH,
   type ElectricalDeviceType,
 } from "@/domain";
 import { isFeatureEnabled } from "@/lib/feature-flags";
@@ -119,6 +122,57 @@ function SmartHomeModelSelect({
   );
 }
 
+/** Tree-Ast picker (§27/§34) — only rendered once a genuine Tree model is
+ * assigned. Lets the user override the auto-suggested branch (§77) or
+ * start a new one, without ever requiring manual technical setup. */
+function TreeBranchSelect({
+  value,
+  onChange,
+}: {
+  value: string | undefined;
+  onChange: (branchId: string | null) => void;
+}) {
+  const treeBranches = useEditorStore((state) => state.treeBranches);
+  const devices = useEditorStore((state) => state.devices);
+  const smartHomeDevices = useEditorStore((state) => state.smartHomeDevices);
+  const createTreeBranch = useEditorStore((state) => state.createTreeBranch);
+
+  function countFor(branchId: string): number {
+    const inDevices = devices.filter(
+      (d) =>
+        d.treeBranchId === branchId &&
+        d.smartHomeModelId &&
+        findSmartHomeModel(d.smartHomeModelId)?.countsAsTreeDevice,
+    ).length;
+    const inSmartHome = smartHomeDevices.filter(
+      (d) => d.treeBranchId === branchId && findSmartHomeModel(d.modelId)?.countsAsTreeDevice,
+    ).length;
+    return inDevices + inSmartHome;
+  }
+
+  return (
+    <select
+      value={value ?? ""}
+      onChange={(event) => {
+        if (event.target.value === "__new__") {
+          onChange(createTreeBranch());
+          return;
+        }
+        onChange(event.target.value || null);
+      }}
+      className={inputClass}
+    >
+      <option value="">— kein Tree-Ast —</option>
+      {treeBranches.map((branch) => (
+        <option key={branch.id} value={branch.id}>
+          {branch.label} ({countFor(branch.id)}/{MAX_TREE_DEVICES_PER_BRANCH})
+        </option>
+      ))}
+      <option value="__new__">+ Neuer Tree-Ast</option>
+    </select>
+  );
+}
+
 export function EditorInspector() {
   const selected = useEditorStore((state) => state.selected);
   const rooms = useEditorStore((state) => state.rooms);
@@ -139,6 +193,7 @@ export function EditorInspector() {
   const smartHomeDevices = useEditorStore((state) => state.smartHomeDevices);
   const deleteSmartHomeDevice = useEditorStore((state) => state.deleteSmartHomeDevice);
   const setSmartHomeDeviceModel = useEditorStore((state) => state.setSmartHomeDeviceModel);
+  const assignDeviceToTreeBranch = useEditorStore((state) => state.assignDeviceToTreeBranch);
   const openings = useEditorStore((state) => state.openings);
   const deleteOpening = useEditorStore((state) => state.deleteOpening);
   const updateOpeningWidth = useEditorStore((state) => state.updateOpeningWidth);
@@ -164,6 +219,8 @@ export function EditorInspector() {
     if (!device) return null;
     const Icon = DEVICE_ICONS[device.type];
     const room = device.roomId ? rooms.find((r) => r.id === device.roomId) : undefined;
+    const assignedModel = device.smartHomeModelId ? findSmartHomeModel(device.smartHomeModelId) : undefined;
+    const deviceNumber = formatDeviceNumber(numberingPrefixFor({ type: device.type }), device.number);
     return (
       <aside className="w-80 shrink-0 overflow-y-auto border-l border-border bg-bg-secondary scrollbar-thin">
         <div className="flex items-center gap-2 border-b border-border px-5 py-4">
@@ -172,7 +229,7 @@ export function EditorInspector() {
           </span>
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
-              Gerät
+              Gerät · {deviceNumber}
             </p>
             <h2 className="text-sm font-semibold text-text">
               {DEVICE_TYPE_LABELS[device.type]}
@@ -180,6 +237,9 @@ export function EditorInspector() {
           </div>
         </div>
         <Section title="Gerät">
+          <FieldRow label="Nummer">
+            <span className="tabular-nums-font text-sm font-medium text-text">{deviceNumber}</span>
+          </FieldRow>
           <FieldRow label="Typ">
             <span className="text-sm text-text">{DEVICE_TYPE_LABELS[device.type]}</span>
           </FieldRow>
@@ -205,6 +265,14 @@ export function EditorInspector() {
               onChange={(modelId) => assignDeviceSmartHomeModel(device.id, modelId)}
             />
           </FieldRow>
+          {assignedModel?.countsAsTreeDevice && (
+            <FieldRow label="Tree-Ast">
+              <TreeBranchSelect
+                value={device.treeBranchId}
+                onChange={(branchId) => assignDeviceToTreeBranch(device.id, branchId)}
+              />
+            </FieldRow>
+          )}
         </Section>
         <div className="px-5 py-4">
           <Button
@@ -289,6 +357,10 @@ export function EditorInspector() {
     if (!device) return null;
     const room = device.roomId ? rooms.find((r) => r.id === device.roomId) : undefined;
     const model = findSmartHomeModel(device.modelId);
+    const deviceNumber = formatDeviceNumber(
+      numberingPrefixFor({ category: model?.category, technology: model?.technology }),
+      device.number,
+    );
     return (
       <aside className="w-80 shrink-0 overflow-y-auto border-l border-border bg-bg-secondary scrollbar-thin">
         <div className="flex items-center gap-2 border-b border-border px-5 py-4">
@@ -297,12 +369,15 @@ export function EditorInspector() {
           </span>
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
-              Smart-Home-Gerät
+              Smart-Home-Gerät · {deviceNumber}
             </p>
             <h2 className="text-sm font-semibold text-text">{model?.label ?? device.modelId}</h2>
           </div>
         </div>
         <Section title="Smart Home (Loxone)">
+          <FieldRow label="Nummer">
+            <span className="tabular-nums-font text-sm font-medium text-text">{deviceNumber}</span>
+          </FieldRow>
           <FieldRow label="Loxone-Gerät">
             <SmartHomeModelSelect
               categories={ALL_SMART_HOME_CATEGORIES}
@@ -310,6 +385,14 @@ export function EditorInspector() {
               onChange={(modelId) => modelId && setSmartHomeDeviceModel(device.id, modelId)}
             />
           </FieldRow>
+          {model?.countsAsTreeDevice && (
+            <FieldRow label="Tree-Ast">
+              <TreeBranchSelect
+                value={device.treeBranchId}
+                onChange={(branchId) => assignDeviceToTreeBranch(device.id, branchId)}
+              />
+            </FieldRow>
+          )}
           {model && (
             <FieldRow label="Beschreibung" as="div">
               <span className="text-right text-xs text-text-secondary">{model.description}</span>

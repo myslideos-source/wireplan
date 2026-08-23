@@ -10,10 +10,11 @@ import { RoutingCanvas } from "./RoutingCanvas";
 import { CableListTable } from "./CableListTable";
 import { MaterialListTab } from "./MaterialListTab";
 import { LoxoneListTab } from "./LoxoneListTab";
+import { TreeBranchesTab } from "./TreeBranchesTab";
 
 const ROUTING_MODES: RoutingMode[] = ["Boden", "Decke", "Wand", "Hybrid"];
 
-type Tab = "kabelliste" | "materialliste" | "loxone";
+type Tab = "kabelliste" | "materialliste" | "loxone" | "tree";
 
 export function RoutingWorkspace({ project }: { project: Project }) {
   const devices = useEditorStore((state) => state.devices);
@@ -27,6 +28,8 @@ export function RoutingWorkspace({ project }: { project: Project }) {
   const floors = useEditorStore((state) => state.floors);
   const floorId = useEditorStore((state) => state.floorId);
   const switchFloor = useEditorStore((state) => state.switchFloor);
+  const treeBranches = useEditorStore((state) => state.treeBranches);
+  const deleteTreeBranch = useEditorStore((state) => state.deleteTreeBranch);
 
   const [tab, setTab] = useState<Tab>("kabelliste");
   const [selectedCableId, setSelectedCableId] = useState<string | null>(null);
@@ -110,6 +113,7 @@ export function RoutingWorkspace({ project }: { project: Project }) {
                 ["kabelliste", "Kabelliste"],
                 ["materialliste", "Materialliste"],
                 ["loxone", "Loxone"],
+                ["tree", "Tree-Äste"],
               ] as const
             ).map(([id, label]) => (
               <button
@@ -157,6 +161,16 @@ export function RoutingWorkspace({ project }: { project: Project }) {
               devices={devices}
               distributionBoard={distributionBoard}
               smartHomeDevices={smartHomeDevices}
+            />
+          )}
+
+          {tab === "tree" && (
+            <TreeBranchesTab
+              treeBranches={treeBranches}
+              devices={devices}
+              smartHomeDevices={smartHomeDevices}
+              cables={cables}
+              onDeleteBranch={deleteTreeBranch}
             />
           )}
         </div>

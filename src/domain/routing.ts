@@ -1,9 +1,9 @@
 /**
- * Cable types used for the first routing pass (§49, §54). Loxone Tree /
- * Bus cabling is Phase 8 territory once real Loxone device assignment
- * exists — everything placeable today is either 230V power or data.
+ * Cable types used for routing (§49, §54, §28). "Tree Cable" is the
+ * shared bus for a Tree branch (§33/§60) — one cable per branch, not one
+ * per device, which is why `Cable.deviceId` below is optional.
  */
-export type CableType = "NYM-J 3x1,5" | "CAT7";
+export type CableType = "NYM-J 3x1,5" | "CAT7" | "Tree Cable";
 
 /** §48 — how the cable run is assumed to travel. Recorded per calculation
  * run; the length estimate itself doesn't yet vary by mode (see
@@ -13,7 +13,12 @@ export type RoutingMode = "Boden" | "Decke" | "Wand" | "Hybrid";
 
 export interface Cable {
   id: string;
-  deviceId: string;
+  /** Present for a classic star/home-run cable (one device, one cable).
+   * Absent for a Tree bus cable, which serves an entire branch instead —
+   * see `treeBranchId`. */
+  deviceId?: string;
+  /** Present for a Tree bus cable — which branch it carries. */
+  treeBranchId?: string;
   type: CableType;
   lengthMeters: number;
   mode: RoutingMode;

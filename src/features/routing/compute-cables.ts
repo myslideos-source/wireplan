@@ -8,7 +8,7 @@ import type {
   RoutingMode,
   Wall,
 } from "@/domain";
-import { DEVICE_TYPE_LABELS } from "@/domain";
+import { DEVICE_TYPE_LABELS, findSmartHomeModel } from "@/domain";
 import { devicePosition, pointAtOffset } from "@/features/editor/geometry-utils";
 
 const CABLE_TYPE_BY_DEVICE: Record<ElectricalDeviceType, CableType> = {
@@ -40,6 +40,11 @@ export function computeCables(
   const cables: Cable[] = [];
   let index = 0;
   for (const device of devices) {
+    // A Tree device shares its branch's bus cable instead of a home-run
+    // (§33) — computeTreeBranchCables accounts for it separately.
+    if (device.smartHomeModelId && findSmartHomeModel(device.smartHomeModelId)?.countsAsTreeDevice) {
+      continue;
+    }
     const position = devicePosition(device, walls);
     if (!position) continue;
     index += 1;
