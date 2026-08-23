@@ -1,23 +1,39 @@
 "use client";
 
 import { useState } from "react";
-import { FileDown } from "lucide-react";
+import { FileDown, Image as ImageIcon, FileCode } from "lucide-react";
 import type { Project } from "@/domain";
 import { Card, CardHeader, CardTitle, CardContent, Button, KpiCard } from "@/components/ui";
 import { useEditorStore } from "@/features/editor/store";
-import { findSmartHomeModel } from "@/domain";
+import { findSmartHomeModel, numberingPrefixFor, DEVICE_TYPE_LABELS } from "@/domain";
 import { formatNumber } from "@/lib/utils";
+import { buildFloorPlanSvg } from "./svg-export";
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 export function ExportsWorkspace({ project }: { project: Project }) {
   const floors = useEditorStore((state) => state.floors);
   const floorId = useEditorStore((state) => state.floorId);
+  const walls = useEditorStore((state) => state.walls);
   const rooms = useEditorStore((state) => state.rooms);
+  const openings = useEditorStore((state) => state.openings);
   const devices = useEditorStore((state) => state.devices);
   const smartHomeDevices = useEditorStore((state) => state.smartHomeDevices);
+  const fixedConsumers = useEditorStore((state) => state.fixedConsumers);
   const distributionBoard = useEditorStore((state) => state.distributionBoard);
   const cables = useEditorStore((state) => state.cables);
   const roomCircuits = useEditorStore((state) => state.roomCircuits);
   const [generating, setGenerating] = useState(false);
+  const [exportingImage, setExportingImage] = useState<"svg" | "png" | null>(null);
 
   const floorName = floors.find((f) => f.floor.id === floorId)?.floor.name ?? "";
   const totalCableLength = cables.reduce((sum, c) => sum + c.lengthMeters, 0);
@@ -100,10 +116,87 @@ export function ExportsWorkspace({ project }: { project: Project }) {
           line(`Eigenständig: ${findSmartHomeModel(device.modelId)?.label ?? device.modelId}`, 10, 6);
         }
       }
+      y += 4;
+
+      line("Legende", 14, 8);
+      const legend = new Map<string, string>();
+      for (const device of devices) {
+        legend.set(numberingPrefixFor({ type: device.type }), DEVICE_TYPE_LABELS[device.type]);
+      }
+      for (const device of smartHomeDevices) {
+        const model = findSmartHomeModel(device.modelId);
+        legend.set(
+          numberingPrefixFor({ category: model?.category, technology: model?.technology }),
+          model?.label ?? "Smart-Home-Gerät",
+        );
+      }
+      if (fixedConsumers.length > 0) legend.set("V", "Fester Verbraucher");
+      if (legend.size === 0) {
+        line("Noch keine Geräte platziert.");
+      } else {
+        for (const [prefix, label] of [...legend.entries()].sort()) {
+          line(`${prefix}xx = ${label}`, 10, 6);
+        }
+      }
 
       doc.save(`${project.name.replace(/\s+/g, "_")}_${floorName || "export"}.pdf`);
     } finally {
       setGenerating(false);
+    }
+  }
+
+  function buildSvgString(): string {
+    return buildFloorPlanSvg({
+      projectName: project.name,
+      floorName,
+      walls,
+      rooms,
+      openings,
+      devices,
+      smartHomeDevices,
+      fixedConsumers,
+      distributionBoard,
+    });
+  }
+
+  function handleSvgExport() {
+    setExportingImage("svg");
+    try {
+      const blob = new Blob([buildSvgString()], { type: "image/svg+xml" });
+      downloadBlob(blob, `${project.name.replace(/\s+/g, "_")}_${floorName || "export"}.svg`);
+    } finally {
+      setExportingImage(null);
+    }
+  }
+
+  async function handlePngExport() {
+    setExportingImage("png");
+    try {
+      const svgBlob = new Blob([buildSvgString()], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(svgBlob);
+      try {
+        const img = new window.Image();
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = () => reject(new Error("SVG konnte nicht geladen werden"));
+          img.src = url;
+        });
+        const canvas = document.createElement("canvas");
+        const scale = Math.min(3, 3000 / Math.max(img.naturalWidth, 1));
+        canvas.width = Math.round(img.naturalWidth * scale);
+        canvas.height = Math.round(img.naturalHeight * scale);
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.fillStyle = "#071019";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const pngBlob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+        if (pngBlob) downloadBlob(pngBlob, `${project.name.replace(/\s+/g, "_")}_${floorName || "export"}.png`);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    } finally {
+      setExportingImage(null);
     }
   }
 
@@ -114,10 +207,20 @@ export function ExportsWorkspace({ project }: { project: Project }) {
           <p className="text-sm text-text-secondary">{project.name}</p>
           <h1 className="text-2xl font-semibold text-text">Exporte</h1>
         </div>
-        <Button onClick={handleExport} disabled={generating}>
-          <FileDown className="h-4 w-4" />
-          {generating ? "Erstelle PDF…" : "Als PDF exportieren"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" onClick={handleSvgExport} disabled={exportingImage !== null}>
+            <FileCode className="h-4 w-4" />
+            SVG
+          </Button>
+          <Button variant="secondary" onClick={handlePngExport} disabled={exportingImage !== null}>
+            <ImageIcon className="h-4 w-4" />
+            {exportingImage === "png" ? "Erstelle PNG…" : "PNG"}
+          </Button>
+          <Button onClick={handleExport} disabled={generating}>
+            <FileDown className="h-4 w-4" />
+            {generating ? "Erstelle PDF…" : "Als PDF exportieren"}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -133,10 +236,15 @@ export function ExportsWorkspace({ project }: { project: Project }) {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-text-secondary">
-            Kennzahlen, Kabelliste, Materialliste und zugewiesene
-            Loxone-Hardware der aktuell im Editor geöffneten Etage (
-            {floorName || "—"}) — als echtes PDF, direkt im Browser erzeugt,
-            ohne Server-Anbindung.
+            <strong className="text-text">PDF:</strong> Kennzahlen, Kabelliste,
+            Materialliste, zugewiesene Loxone-Hardware und eine automatisch
+            erzeugte Legende der aktuell im Editor geöffneten Etage (
+            {floorName || "—"}).
+            <br />
+            <strong className="text-text">SVG/PNG:</strong> eine
+            vektorbasierte bzw. hochauflösende Rastergrafik des Grundrisses
+            mit allen platzierten Geräten und derselben Legende. Alles direkt
+            im Browser erzeugt, ohne Server-Anbindung.
           </p>
         </CardContent>
       </Card>
