@@ -4,13 +4,10 @@ import type {
   ElementTypeConfidence,
   RealAnalysisResult,
 } from "@/features/plan-analysis/types";
-import type { AiGeometryDraft } from "@/features/plan-analysis/ai-geometry";
 
 export const runtime = "nodejs";
-// The geometry draft makes the response noticeably larger to generate than
-// a plain count — this can take longer than Vercel's default function
-// timeout (10s on Hobby). 60s is the maximum allowed on Hobby; upgrade this
-// if the project moves to Pro and still needs more headroom.
+// 60s is the maximum allowed on Vercel Hobby; upgrade this if the project
+// moves to Pro and still needs more headroom.
 export const maxDuration = 60;
 
 const MODEL = "gemini-3.6-flash";
@@ -63,53 +60,6 @@ const RESPONSE_SCHEMA: Schema = {
       type: Type.STRING,
       description: "One or two German sentences summarizing the plan.",
     },
-    geometry: {
-      type: Type.OBJECT,
-      description:
-        "A rough 2D geometry estimate for further manual review — not a survey.",
-      properties: {
-        rooms: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              name: { type: Type.STRING },
-              roomType: { type: Type.STRING },
-              polygonMeters: {
-                type: Type.ARRAY,
-                description:
-                  "Closed polygon, clockwise, in meters, same shared coordinate system for the whole floor.",
-                items: {
-                  type: Type.OBJECT,
-                  properties: { x: { type: Type.NUMBER }, y: { type: Type.NUMBER } },
-                  required: ["x", "y"],
-                },
-              },
-              confidence: { type: Type.INTEGER },
-            },
-            required: ["name", "roomType", "polygonMeters", "confidence"],
-          },
-        },
-        openings: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              kind: { type: Type.STRING, enum: ["door", "window"] },
-              positionMeters: {
-                type: Type.OBJECT,
-                properties: { x: { type: Type.NUMBER }, y: { type: Type.NUMBER } },
-                required: ["x", "y"],
-              },
-              widthMeters: { type: Type.NUMBER },
-              confidence: { type: Type.INTEGER },
-            },
-            required: ["kind", "positionMeters", "widthMeters", "confidence"],
-          },
-        },
-      },
-      required: ["rooms", "openings"],
-    },
   },
   required: [
     "roomsDetected",
@@ -121,7 +71,6 @@ const RESPONSE_SCHEMA: Schema = {
     "elementConfidence",
     "observations",
     "summary",
-    "geometry",
   ],
 };
 
@@ -133,19 +82,7 @@ mehrdeutig oder schwer lesbar ist, trage das ehrlich als "observation" ein
 (z.B. unklare Raumaufteilung, unlesbare Bemaßung) statt es zu raten oder zu
 verschweigen. Antworte ausschließlich auf Deutsch. Erfinde keine Werte, die du
 auf dem Bild nicht erkennen kannst — schätze in diesem Fall konservativ und
-senke die Konfidenz entsprechend.
-
-Zusätzlich: Schätze eine grobe 2D-Geometrie ("geometry") zur späteren
-manuellen Prüfung — keine Vermessung, nur ein Entwurf. Verwende EIN
-gemeinsames Koordinatensystem in Metern für den gesamten Grundriss (x nach
-rechts, y nach unten), das für alle Räume konsistent ist. Gib pro Raum ein
-geschlossenes Polygon im Uhrzeigersinn an ("polygonMeters"). WICHTIG: Wenn
-zwei Räume an derselben Wand aneinandergrenzen, verwende für diese
-gemeinsame Kante in beiden Polygonen exakt dieselben Koordinaten, damit die
-Wand erkennbar als eine einzige gemeinsame Wand behandelt werden kann. Gib
-für jede Tür/jedes Fenster eine ungefähre Position (im selben
-Koordinatensystem) und Breite in Metern an. Vergib auch hier ehrliche,
-konservative Konfidenzwerte statt zu raten.`;
+senke die Konfidenz entsprechend.`;
 
 export async function POST(request: Request) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -216,9 +153,7 @@ export async function POST(request: Request) {
     );
   }
 
-  let parsed: Omit<RealAnalysisResult, "fileName" | "model" | "analyzedAt"> & {
-    geometry: AiGeometryDraft;
-  };
+  let parsed: Omit<RealAnalysisResult, "fileName" | "model" | "analyzedAt">;
   try {
     parsed = JSON.parse(responseText);
   } catch {
@@ -228,7 +163,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const result: RealAnalysisResult & { geometryDraft: AiGeometryDraft } = {
+  const result: RealAnalysisResult = {
     fileName: file.name,
     model: MODEL,
     analyzedAt: new Date().toISOString(),
@@ -241,7 +176,6 @@ export async function POST(request: Request) {
     elementConfidence: parsed.elementConfidence as ElementTypeConfidence[],
     observations: parsed.observations,
     summary: parsed.summary,
-    geometryDraft: parsed.geometry,
   };
 
   return NextResponse.json(result);

@@ -10,9 +10,10 @@ export interface ElementTypeConfidence {
 export type FlaggedSeverity = "warning" | "critical";
 
 /** Which geometry element the Review Mode (Phase 4) should focus and let
- * the user act on — a room, a wall, or a door/window opening. */
+ * the user act on — a room zone. Wall/opening targets existed before
+ * Phase 11 removed those as modeled entities. */
 export interface FlaggedAreaTarget {
-  type: "room" | "wall" | "opening";
+  type: "room";
   id: string;
 }
 

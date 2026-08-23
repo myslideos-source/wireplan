@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { UploadCloud, ScanSearch, LayoutGrid } from "lucide-react";
+import { UploadCloud, ScanSearch } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, Button, Badge } from "@/components/ui";
 import { useRealAnalysisStore } from "@/features/plan-analysis/real-analysis-store";
-import { useAiDraftStore } from "@/features/plan-analysis/ai-draft-store";
 
 /**
  * A real cross-session upload history needs persistence (Supabase) that
@@ -15,7 +14,6 @@ import { useAiDraftStore } from "@/features/plan-analysis/ai-draft-store";
  */
 export function UploadsOverview() {
   const result = useRealAnalysisStore((state) => state.result);
-  const draft = useAiDraftStore((state) => state.draft);
 
   if (!result) {
     return (
@@ -64,14 +62,6 @@ export function UploadsOverview() {
                 KI-Analyse ansehen
               </Button>
             </Link>
-            {draft && (
-              <Link href="/editor/draft">
-                <Button variant="secondary" size="sm">
-                  <LayoutGrid className="h-4 w-4" />
-                  Im Editor prüfen
-                </Button>
-              </Link>
-            )}
           </div>
         </CardContent>
       </Card>

@@ -51,10 +51,9 @@ const MOCK_ANALYSES: Record<string, FloorAnalysisResult> = {
         id: "flag-3",
         title: "Maßabweichung Wand",
         description:
-          "Bemaßung im Originalplan: 3,40 m. Bitte mit der digitalen Wandlänge abgleichen.",
+          "Bemaßung im Originalplan: 3,40 m. Bitte mit dem Originalplan abgleichen.",
         confidence: 79,
         severity: "warning",
-        target: { type: "wall", id: "w8" },
       },
       {
         id: "flag-4",
@@ -63,7 +62,6 @@ const MOCK_ANALYSES: Record<string, FloorAnalysisResult> = {
           "Die Türposition zwischen Flur und Bad konnte nicht eindeutig zugeordnet werden.",
         confidence: 71,
         severity: "critical",
-        target: { type: "opening", id: "d4" },
       },
     ],
   },

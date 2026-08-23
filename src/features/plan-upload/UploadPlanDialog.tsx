@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import { UploadCloud, FileText, X, Sparkles, Loader2 } from "lucide-react";
 import { Button, Modal, Badge } from "@/components/ui";
 import { useRealAnalysisStore } from "@/features/plan-analysis/real-analysis-store";
-import { useAiDraftStore } from "@/features/plan-analysis/ai-draft-store";
-import { buildGeometryFromAiDraft, type AiGeometryDraft } from "@/features/plan-analysis/ai-geometry";
 import type { RealAnalysisResult } from "@/features/plan-analysis/types";
 import { cn } from "@/lib/utils";
 
@@ -27,7 +25,6 @@ function UploadPlanDialogContent({
 }) {
   const router = useRouter();
   const setResult = useRealAnalysisStore((state) => state.setResult);
-  const setDraft = useAiDraftStore((state) => state.setDraft);
   const [files, setFiles] = React.useState<StagedFile[]>([]);
   const [dragActive, setDragActive] = React.useState(false);
   const [analyzing, setAnalyzing] = React.useState(false);
@@ -67,16 +64,6 @@ function UploadPlanDialogContent({
         throw new Error(body.error ?? "Analyse fehlgeschlagen.");
       }
       setResult(body as RealAnalysisResult);
-
-      const geometryDraft = body.geometryDraft as AiGeometryDraft | undefined;
-      if (geometryDraft?.rooms?.length) {
-        const { project, geometry, flaggedAreas } = buildGeometryFromAiDraft(
-          geometryDraft,
-          (body as RealAnalysisResult).observations,
-          target.file.name,
-        );
-        setDraft({ project, geometry, flaggedAreas });
-      }
 
       onClose();
       router.push("/analysis/real");
@@ -165,9 +152,10 @@ function UploadPlanDialogContent({
         <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-secondary" />
         <span>
           Nach dem Hochladen wertet eine echte KI (Google Gemini) Ihren
-          Grundriss aus und schätzt zusätzlich einen groben Geometrie-Entwurf
-          (Räume, Wände, Türen, Fenster), den Sie danach im Editor prüfen und
-          korrigieren können. Bei größeren Plänen kann das bis zu einer
+          Grundriss aus (Räume, Wände, Türen, Fenster) und liefert eine
+          Einschätzung als Orientierung — nicht als bearbeitbare Geometrie.
+          Ihren Grundriss legen Sie separat als fixierten Originalplan im
+          Editor an. Bei größeren Plänen kann die Analyse bis zu einer
           Minute dauern.
         </span>
       </div>

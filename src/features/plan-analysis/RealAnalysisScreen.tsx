@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Sparkles, AlertTriangle, UploadCloud, ArrowUpRight } from "lucide-react";
+import { Sparkles, AlertTriangle, UploadCloud } from "lucide-react";
 import {
   Card,
   CardHeader,
@@ -12,7 +12,6 @@ import {
   Button,
 } from "@/components/ui";
 import { useRealAnalysisStore } from "./real-analysis-store";
-import { useAiDraftStore } from "./ai-draft-store";
 import { confidenceTone } from "./types";
 
 function toneClass(tone: "success" | "warning" | "error"): string {
@@ -34,7 +33,6 @@ function StatTile({ label, value }: { label: string; value: number }) {
 
 export function RealAnalysisScreen() {
   const result = useRealAnalysisStore((state) => state.result);
-  const draft = useAiDraftStore((state) => state.draft);
 
   if (!result) {
     return (
@@ -70,26 +68,15 @@ export function RealAnalysisScreen() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-[var(--radius-sm)] border border-secondary/30 bg-secondary/10 px-4 py-3 text-sm text-text-secondary sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-2">
-          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-secondary" />
-          <span>
-            Diese Auswertung stammt von einer echten KI ({result.model},
-            Google Gemini) und wurde soeben für diese Datei erstellt — keine
-            Demo-Daten.{" "}
-            {draft
-              ? "Aus demselben Plan wurde außerdem ein grober, bearbeitbarer Geometrie-Entwurf geschätzt."
-              : "Es wurde noch keine bearbeitbare Geometrie erzeugt."}
-          </span>
-        </div>
-        {draft && (
-          <Link href="/editor/draft" className="shrink-0">
-            <Button size="sm">
-              Im Editor prüfen
-              <ArrowUpRight className="h-4 w-4" />
-            </Button>
-          </Link>
-        )}
+      <div className="flex items-start gap-2 rounded-[var(--radius-sm)] border border-secondary/30 bg-secondary/10 px-4 py-3 text-sm text-text-secondary">
+        <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-secondary" />
+        <span>
+          Diese Auswertung stammt von einer echten KI ({result.model}, Google
+          Gemini) und wurde soeben für diese Datei erstellt — keine
+          Demo-Daten. Sie ist eine Orientierung, keine bearbeitbare Geometrie;
+          Ihren Grundriss legen Sie separat als fixierten Originalplan im
+          Editor an.
+        </span>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">

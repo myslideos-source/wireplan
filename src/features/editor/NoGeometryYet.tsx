@@ -1,9 +1,34 @@
+"use client";
+
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Building2 } from "lucide-react";
 import { Card } from "@/components/ui";
 import type { Project } from "@/domain";
+import { StartFloorDialog, type StartFloorInput } from "./StartFloorDialog";
+import { useNewFloorDraftStore } from "./new-floor-draft-store";
+import type { FloorGeometry } from "./mock-geometry";
+
+let nextDraftFloorId = 1;
 
 export function NoGeometryYet({ project }: { project: Project }) {
+  const router = useRouter();
+  const setDraft = useNewFloorDraftStore((state) => state.setDraft);
+
+  function handleCreate(input: StartFloorInput) {
+    const geometry: FloorGeometry = {
+      floor: {
+        id: `floor-draft-${nextDraftFloorId++}`,
+        projectId: project.id,
+        name: input.name,
+        level: input.level,
+      },
+      rooms: [],
+    };
+    setDraft({ project, geometry, backgroundImage: input.backgroundImage });
+    router.push("/editor/draft");
+  }
+
   return (
     <div className="flex h-full items-center justify-center p-8">
       <Card className="flex max-w-md flex-col items-center gap-4 px-8 py-10 text-center">
@@ -12,13 +37,20 @@ export function NoGeometryYet({ project }: { project: Project }) {
         </span>
         <div>
           <h2 className="text-base font-semibold text-text">
-            Noch kein digitaler Grundriss für {project.name}
+            Noch keine Etage für {project.name}
           </h2>
           <p className="mt-2 text-sm text-text-secondary">
-            Laden Sie einen Grundriss hoch und bestätigen Sie die KI-Analyse,
-            bevor der Editor geöffnet werden kann.
+            Legen Sie eine Etage an und laden Sie optional Ihren Originalplan
+            als fixierten Hintergrund hoch — er wird nie automatisch neu
+            gezeichnet oder interpretiert.
           </p>
         </div>
+        <StartFloorDialog
+          suggestedName="Erdgeschoss"
+          suggestedLevel={0}
+          triggerLabel="Etage anlegen"
+          onCreate={handleCreate}
+        />
         <Link
           href="/dashboard"
           className="text-sm font-medium text-primary hover:underline"

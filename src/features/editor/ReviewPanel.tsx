@@ -6,12 +6,9 @@ import {
   Check,
   Scissors,
   Combine,
-  Trash2,
   SkipForward,
   ChevronLeft,
   ChevronRight,
-  Wand2,
-  AlertCircle,
 } from "lucide-react";
 import { Button, Badge } from "@/components/ui";
 import type { FlaggedArea } from "@/features/plan-analysis/types";
@@ -106,11 +103,8 @@ function ReviewProblemBody({
   targetRoom: Room | undefined;
   onAdvance: () => void;
 }) {
-  const deleteOpening = useEditorStore((state) => state.deleteOpening);
   const [splitOpen, setSplitOpen] = React.useState(false);
   const [mergeOpen, setMergeOpen] = React.useState(false);
-  const [confirmingDelete, setConfirmingDelete] = React.useState(false);
-  const [showWallHint, setShowWallHint] = React.useState(false);
 
   const target = problem.target;
 
@@ -121,39 +115,6 @@ function ReviewProblemBody({
           <h3 className="text-sm font-semibold text-text">{problem.title}</h3>
           <p className="mt-1 text-xs text-text-secondary">{problem.description}</p>
         </div>
-
-        {showWallHint && (
-          <p className="flex items-start gap-1.5 rounded-[var(--radius-sm)] border border-secondary/30 bg-secondary/10 px-2.5 py-2 text-xs text-text-secondary">
-            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-secondary" />
-            Passen Sie Länge und Wandstärke rechts im Inspector an, dann
-            weiter mit „Korrekt“.
-          </p>
-        )}
-
-        {confirmingDelete && (
-          <div className="flex items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-error/30 bg-error/10 px-2.5 py-2 text-xs text-text">
-            Element wirklich löschen?
-            <div className="flex gap-1.5">
-              <button
-                type="button"
-                onClick={() => {
-                  if (target?.type === "opening") deleteOpening(target.id);
-                  onAdvance();
-                }}
-                className="rounded-[var(--radius-sm)] bg-error px-2 py-1 font-medium text-white"
-              >
-                Ja, löschen
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirmingDelete(false)}
-                className="rounded-[var(--radius-sm)] border border-border px-2 py-1 text-text-secondary"
-              >
-                Abbrechen
-              </button>
-            </div>
-          </div>
-        )}
 
         <div className="grid grid-cols-2 gap-2">
           <Button size="sm" onClick={onAdvance}>
@@ -172,20 +133,6 @@ function ReviewProblemBody({
                 Räume verbinden
               </Button>
             </>
-          )}
-
-          {target?.type === "wall" && (
-            <Button size="sm" variant="secondary" onClick={() => setShowWallHint(true)}>
-              <Wand2 className="h-3.5 w-3.5" />
-              Wand korrigieren
-            </Button>
-          )}
-
-          {target?.type === "opening" && (
-            <Button size="sm" variant="secondary" onClick={() => setConfirmingDelete(true)}>
-              <Trash2 className="h-3.5 w-3.5" />
-              Löschen
-            </Button>
           )}
 
           <Button size="sm" variant="ghost" onClick={onAdvance}>
