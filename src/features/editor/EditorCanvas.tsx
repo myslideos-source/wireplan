@@ -22,6 +22,7 @@ import {
 } from "./geometry-utils";
 import { formatArea } from "@/lib/utils";
 import { DeviceSymbol } from "./DeviceSymbol";
+import { SMART_HOME_ICONS } from "./smart-home-icons";
 
 const PLACEABLE_DEVICE_TOOLS: EditorTool[] = ["outlet", "light", "switch", "sensor", "network"];
 
@@ -629,6 +630,9 @@ export function EditorCanvas() {
         {layers.elektro &&
           smartHomeDevices.map((device) => {
             const isSelected = selected?.type === "smarthome" && selected.id === device.id;
+            const model = findSmartHomeModel(device.modelId);
+            const color = model?.color ?? "#4A8FA8";
+            const Icon = model ? SMART_HOME_ICONS[model.icon] : null;
             return (
               <g
                 key={device.id}
@@ -665,11 +669,22 @@ export function EditorCanvas() {
                   cx={device.position.x}
                   cy={device.position.y}
                   r={160}
-                  fill="rgba(74,143,168,0.18)"
-                  stroke={isSelected ? "#C96F5B" : "#4A8FA8"}
+                  fill={color}
+                  fillOpacity={0.18}
+                  stroke={isSelected ? "#C96F5B" : color}
                   strokeWidth={isSelected ? 36 : 24}
                 />
-                <circle cx={device.position.x} cy={device.position.y} r={50} fill="#4A8FA8" />
+                {Icon ? (
+                  <Icon
+                    x={device.position.x - 70}
+                    y={device.position.y - 70}
+                    width={140}
+                    height={140}
+                    color={isSelected ? "#C96F5B" : color}
+                  />
+                ) : (
+                  <circle cx={device.position.x} cy={device.position.y} r={50} fill={color} />
+                )}
               </g>
             );
           })}

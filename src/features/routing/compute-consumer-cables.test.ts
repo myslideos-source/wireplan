@@ -10,6 +10,7 @@ const board: DistributionBoard = {
   position: { x: 0, y: 0 },
   width: 400,
   height: 250,
+  cabinetComponentModelIds: [],
 };
 
 function makeConsumer(overrides: Partial<FixedConsumer> = {}): FixedConsumer {

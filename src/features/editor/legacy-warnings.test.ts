@@ -55,7 +55,7 @@ test("computeLegacyWarnings flags the distribution board when it uses a legacy m
     position: { x: 0, y: 0 },
     width: 400,
     height: 250,
-    smartHomeModelId: "loxone-miniserver-gen1",
+    cabinetComponentModelIds: ["loxone-miniserver-gen1"],
   };
   const warnings = computeLegacyWarnings([], [], board);
   assert.equal(warnings.length, 1);

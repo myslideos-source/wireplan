@@ -28,7 +28,15 @@ test("treeBusLengthMeters sums consecutive hops as one shared bus, not a star", 
   assert.equal(treeBusLengthMeters(start, ordered), 3);
 });
 
-const board: DistributionBoard = { id: "board1", floorId: "f1", roomId: "r1", position: { x: 0, y: 0 }, width: 400, height: 250 };
+const board: DistributionBoard = {
+  id: "board1",
+  floorId: "f1",
+  roomId: "r1",
+  position: { x: 0, y: 0 },
+  width: 400,
+  height: 250,
+  cabinetComponentModelIds: [],
+};
 const branch: TreeBranch = { id: "b1", floorId: "f1", label: "Tree 1", colorHex: "#68d56b" };
 
 function makeDevice(id: string, position: { x: number; y: number }): ElectricalDevice {
@@ -38,7 +46,7 @@ function makeDevice(id: string, position: { x: number; y: number }): ElectricalD
     type: "switch",
     mount: { position, height: 1050 },
     roomId: "r1",
-    smartHomeModelId: "loxone-relay-tree",
+    smartHomeModelId: "loxone-nano-2-relay-tree",
     treeBranchId: branch.id,
     number: 1,
   };

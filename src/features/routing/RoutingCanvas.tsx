@@ -7,14 +7,17 @@ import { floorExtentBox, devicePosition } from "@/features/editor/geometry-utils
 const CABLE_COLORS: Record<CableType, string> = {
   "NYM-J 3x1,5": "#D9A441",
   "NYM-J 3x2,5": "#C4534A",
+  "NYM-J 5x1,5": "#D9A441",
   "NYM-J 5x2,5": "#C4534A",
   "NYM-J 5x6": "#C4534A",
   CAT7: "#4A8FA8",
   "CAT7 Duplex": "#4A8FA8",
   "Tree Cable": "#7A9D6E",
+  "24V-Leitung": "#8F6FB8",
   "Lautsprecherkabel 2x1,5": "#B8698A",
   "Lautsprecherkabel 2x2,5": "#B8698A",
   "Leerrohr M25": "#8A8272",
+  "Außenkabel (NYY)": "#8B5E3C",
 };
 
 export function RoutingCanvas({

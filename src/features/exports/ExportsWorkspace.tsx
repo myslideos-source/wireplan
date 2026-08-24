@@ -97,12 +97,12 @@ export function ExportsWorkspace({ project }: { project: Project }) {
 
       line("Loxone-Geräte", 14, 8);
       const assignedDevices = devices.filter((d) => d.smartHomeModelId);
-      const boardModelId = distributionBoard?.smartHomeModelId;
-      if (assignedDevices.length === 0 && !boardModelId && smartHomeDevices.length === 0) {
+      const cabinetModelIds = distributionBoard?.cabinetComponentModelIds ?? [];
+      if (assignedDevices.length === 0 && cabinetModelIds.length === 0 && smartHomeDevices.length === 0) {
         line("Noch keine Loxone-Hardware zugewiesen.");
       } else {
-        if (boardModelId) {
-          line(`Schaltschrank: ${findSmartHomeModel(boardModelId)?.label ?? boardModelId}`, 10, 6);
+        for (const modelId of cabinetModelIds) {
+          line(`Schaltschrank: ${findSmartHomeModel(modelId)?.label ?? modelId}`, 10, 6);
         }
         for (const device of assignedDevices) {
           line(

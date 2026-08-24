@@ -649,7 +649,11 @@ interface EditorState {
   deleteDevice: (id: string) => void;
   duplicateDevice: (id: string) => void;
   assignDeviceSmartHomeModel: (deviceId: string, modelId: string | null) => void;
-  assignBoardSmartHomeModel: (modelId: string | null) => void;
+  /** Adds/removes one cabinet-hardware model from the Schaltschrank's
+   * component list (§9/§22) — a cabinet holds a Miniserver *and* a Tree
+   * Extension *and* a Netzteil at once, not just one assignment. */
+  addCabinetComponent: (modelId: string) => void;
+  removeCabinetComponent: (modelId: string) => void;
   setSmartHomePlacementModelId: (modelId: string) => void;
   addSmartHomeDeviceAtPoint: (point: Point) => boolean;
   moveSmartHomeDeviceToPoint: (deviceId: string, point: Point) => void;
@@ -695,7 +699,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   cables: [],
   routingMode: "Decke",
   smartHomeDevices: [],
-  smartHomePlacementModelId: LOXONE_CATALOG[0].id,
+  smartHomePlacementModelId:
+    LOXONE_CATALOG.find((model) => model.isPlanableOnFloorplan)?.id ?? LOXONE_CATALOG[0].id,
   backgroundImage: null,
   treeBranches: [],
   treeJunctions: [],
@@ -1419,13 +1424,27 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
   },
 
-  assignBoardSmartHomeModel: (modelId) =>
+  addCabinetComponent: (modelId) =>
+    set((state) =>
+      state.distributionBoard && !state.distributionBoard.cabinetComponentModelIds.includes(modelId)
+        ? {
+            distributionBoard: {
+              ...state.distributionBoard,
+              cabinetComponentModelIds: [...state.distributionBoard.cabinetComponentModelIds, modelId],
+            },
+          }
+        : {},
+    ),
+
+  removeCabinetComponent: (modelId) =>
     set((state) =>
       state.distributionBoard
         ? {
             distributionBoard: {
               ...state.distributionBoard,
-              smartHomeModelId: modelId ?? undefined,
+              cabinetComponentModelIds: state.distributionBoard.cabinetComponentModelIds.filter(
+                (id) => id !== modelId,
+              ),
             },
           }
         : {},
@@ -1540,6 +1559,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       position: point,
       width: 600,
       height: 800,
+      cabinetComponentModelIds: state.distributionBoard?.cabinetComponentModelIds ?? [],
     };
     set({ distributionBoard: board, cables: [] });
     return true;

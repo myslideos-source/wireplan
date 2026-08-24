@@ -178,7 +178,9 @@ export interface DistributionBoard {
   position: Point;
   width: number;
   height: number;
-  /** Which Loxone (or other smart-home system) controller hardware sits
-   * in this enclosure, if assigned — references a SmartHomeDeviceModel id. */
-  smartHomeModelId?: string;
+  /** Which Loxone (or other smart-home system) cabinet hardware sits in
+   * this enclosure — a Miniserver, one or more Extensions, a power
+   * supply, energy meters, etc. all at once (§9/§22/§25), not just a
+   * single controller. References SmartHomeDeviceModel ids. */
+  cabinetComponentModelIds: string[];
 }

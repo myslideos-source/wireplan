@@ -10,8 +10,9 @@ import {
   findSmartHomeModel,
   LOXONE_SYSTEM,
   DEVICE_TYPE_SMART_HOME_CATEGORIES,
-  DISTRIBUTION_BOARD_SMART_HOME_CATEGORIES,
   ALL_SMART_HOME_CATEGORIES,
+  PLANNING_CATEGORY_LABELS,
+  PLANNING_CATEGORY_ORDER,
   numberingPrefixFor,
   formatDeviceNumber,
   MAX_TREE_DEVICES_PER_BRANCH,
@@ -20,6 +21,8 @@ import {
   type ElectricalDeviceType,
   type CableType,
   type NetworkDeviceSubtype,
+  type SmartHomeDeviceModel,
+  type PlanningCategory,
 } from "@/domain";
 import { isFeatureEnabled } from "@/lib/feature-flags";
 import { formatArea, formatNumber } from "@/lib/utils";
@@ -98,9 +101,28 @@ function DemoField({ value }: { value: string }) {
   );
 }
 
+/** Groups a filtered model list into `<optgroup>`s by planning category, in
+ * the spec's own section order — shared by the floorplan device picker and
+ * the cabinet component picker below, since the catalog is ~110 entries
+ * and a flat list would be unreadable. */
+function groupByPlanningCategory(models: SmartHomeDeviceModel[]): [string, SmartHomeDeviceModel[]][] {
+  const byCategory = new Map<PlanningCategory, SmartHomeDeviceModel[]>();
+  for (const model of models) {
+    const list = byCategory.get(model.planningCategory) ?? [];
+    list.push(model);
+    byCategory.set(model.planningCategory, list);
+  }
+  return PLANNING_CATEGORY_ORDER.filter((category) => byCategory.has(category)).map((category) => [
+    PLANNING_CATEGORY_LABELS[category],
+    byCategory.get(category)!,
+  ]);
+}
+
 /** Loxone (or future system) hardware picker, narrowed to the categories
  * relevant for the given context (a device type or the distribution
- * board) rather than showing the entire catalog everywhere. */
+ * board) rather than showing the entire catalog everywhere. Only ever
+ * offers floorplan-placeable devices — cabinet-only hardware (Miniserver,
+ * Extensions, ...) has its own picker below (`CabinetComponentSelect`). */
 function SmartHomeModelSelect({
   categories,
   value,
@@ -113,7 +135,9 @@ function SmartHomeModelSelect({
   const showLegacyDevices = useEditorStore((state) => state.showLegacySmartHomeDevices);
   const options = getSmartHomeCatalog(LOXONE_SYSTEM.id).filter(
     (model) =>
-      categories.includes(model.category) && (showLegacyDevices || !model.legacy || model.id === value),
+      categories.includes(model.category) &&
+      model.isPlanableOnFloorplan &&
+      (showLegacyDevices || !model.legacy || model.id === value),
   );
   if (options.length === 0) {
     return <DemoField value="—" />;
@@ -125,11 +149,47 @@ function SmartHomeModelSelect({
       className={inputClass}
     >
       <option value="">— keins —</option>
-      {options.map((model) => (
-        <option key={model.id} value={model.id}>
-          {model.label}
-          {model.legacy ? " (Legacy)" : ""}
-        </option>
+      {groupByPlanningCategory(options).map(([groupLabel, models]) => (
+        <optgroup key={groupLabel} label={groupLabel}>
+          {models.map((model) => (
+            <option key={model.id} value={model.id}>
+              {model.label}
+              {model.legacy ? " (Legacy)" : ""}
+            </option>
+          ))}
+        </optgroup>
+      ))}
+    </select>
+  );
+}
+
+/** Cabinet-hardware picker for the Schaltschrank panel — the mirror image
+ * of `SmartHomeModelSelect`: only `isCabinetComponent` entries, and picking
+ * one adds it to the board's component list rather than replacing a
+ * single assignment. */
+function CabinetComponentSelect({ onAdd }: { onAdd: (modelId: string) => void }) {
+  const showLegacyDevices = useEditorStore((state) => state.showLegacySmartHomeDevices);
+  const options = getSmartHomeCatalog(LOXONE_SYSTEM.id).filter(
+    (model) => model.isCabinetComponent && (showLegacyDevices || !model.legacy),
+  );
+  return (
+    <select
+      value=""
+      onChange={(event) => {
+        if (event.target.value) onAdd(event.target.value);
+      }}
+      className={inputClass}
+    >
+      <option value="">+ Komponente hinzufügen</option>
+      {groupByPlanningCategory(options).map(([groupLabel, models]) => (
+        <optgroup key={groupLabel} label={groupLabel}>
+          {models.map((model) => (
+            <option key={model.id} value={model.id}>
+              {model.label}
+              {model.legacy ? " (Legacy)" : ""}
+            </option>
+          ))}
+        </optgroup>
       ))}
     </select>
   );
@@ -236,7 +296,8 @@ export function EditorInspector() {
   const distributionBoard = useEditorStore((state) => state.distributionBoard);
   const deleteDistributionBoard = useEditorStore((state) => state.deleteDistributionBoard);
   const assignDeviceSmartHomeModel = useEditorStore((state) => state.assignDeviceSmartHomeModel);
-  const assignBoardSmartHomeModel = useEditorStore((state) => state.assignBoardSmartHomeModel);
+  const addCabinetComponent = useEditorStore((state) => state.addCabinetComponent);
+  const removeCabinetComponent = useEditorStore((state) => state.removeCabinetComponent);
   const smartHomeDevices = useEditorStore((state) => state.smartHomeDevices);
   const deleteSmartHomeDevice = useEditorStore((state) => state.deleteSmartHomeDevice);
   const setSmartHomeDeviceModel = useEditorStore((state) => state.setSmartHomeDeviceModel);
@@ -435,14 +496,35 @@ export function EditorInspector() {
             </span>
           </FieldRow>
         </Section>
-        <Section title="Smart Home (Loxone)">
-          <FieldRow label="Loxone-Gerät">
-            <SmartHomeModelSelect
-              categories={DISTRIBUTION_BOARD_SMART_HOME_CATEGORIES}
-              value={distributionBoard.smartHomeModelId}
-              onChange={(modelId) => assignBoardSmartHomeModel(modelId)}
-            />
-          </FieldRow>
+        <Section title="Schaltschrank-Komponenten">
+          {distributionBoard.cabinetComponentModelIds.length === 0 ? (
+            <p className="text-xs text-text-muted">
+              Noch keine Komponenten hinzugefügt.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {distributionBoard.cabinetComponentModelIds.map((modelId) => {
+                const model = findSmartHomeModel(modelId);
+                return (
+                  <div
+                    key={modelId}
+                    className="flex items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-border bg-panel px-2.5 py-1.5"
+                  >
+                    <span className="text-sm text-text">{model?.label ?? modelId}</span>
+                    <button
+                      type="button"
+                      aria-label={`${model?.label ?? modelId} entfernen`}
+                      onClick={() => removeCabinetComponent(modelId)}
+                      className="text-text-muted hover:text-error"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <CabinetComponentSelect onAdd={addCabinetComponent} />
         </Section>
         <div className="px-5 py-4">
           <Button
@@ -519,6 +601,24 @@ export function EditorInspector() {
             <span className="text-sm text-text">{room?.name ?? "— (außerhalb eines Raums)"}</span>
           </FieldRow>
         </Section>
+        {model && (
+          <Section title="Anschluss">
+            <FieldRow label="System">
+              <span className="text-sm text-text">{model.connectionType}</span>
+            </FieldRow>
+            <FieldRow label="Versorgung">
+              <span className="text-sm text-text">{model.powerSupply}</span>
+            </FieldRow>
+            <FieldRow label="Montage">
+              <span className="text-sm text-text">{model.mountingType}</span>
+            </FieldRow>
+            {model.cableType && (
+              <FieldRow label="Kabeltyp">
+                <span className="text-sm text-text">{model.cableType}</span>
+              </FieldRow>
+            )}
+          </Section>
+        )}
         <div className="px-5 py-4">
           <Button
             variant="secondary"

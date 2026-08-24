@@ -29,7 +29,8 @@ import { cn } from "@/lib/utils";
 import { isFeatureEnabled, type FeatureFlag } from "@/lib/feature-flags";
 import {
   LOXONE_CATALOG,
-  SMART_HOME_CATEGORY_LABELS,
+  PLANNING_CATEGORY_LABELS,
+  PLANNING_CATEGORY_ORDER,
   FIXED_CONSUMER_LABELS,
   NETWORK_DEVICE_LABELS,
   type FixedConsumerType,
@@ -333,14 +334,25 @@ export function EditorToolbar() {
                       onChange={(event) => setSmartHomePlacementModelId(event.target.value)}
                       className="rounded-[var(--radius-sm)] border border-border bg-bg px-2 py-1.5 text-xs text-text outline-none focus:border-primary/60"
                     >
-                      {LOXONE_CATALOG.filter((model) => showLegacySmartHomeDevices || !model.legacy).map(
-                        (model) => (
-                          <option key={model.id} value={model.id}>
-                            {SMART_HOME_CATEGORY_LABELS[model.category]} · {model.label}
-                            {model.legacy ? " (Legacy)" : ""}
-                          </option>
-                        ),
-                      )}
+                      {PLANNING_CATEGORY_ORDER.map((category) => {
+                        const models = LOXONE_CATALOG.filter(
+                          (model) =>
+                            model.planningCategory === category &&
+                            model.isPlanableOnFloorplan &&
+                            (showLegacySmartHomeDevices || !model.legacy),
+                        );
+                        if (models.length === 0) return null;
+                        return (
+                          <optgroup key={category} label={PLANNING_CATEGORY_LABELS[category]}>
+                            {models.map((model) => (
+                              <option key={model.id} value={model.id}>
+                                {model.label}
+                                {model.legacy ? " (Legacy)" : ""}
+                              </option>
+                            ))}
+                          </optgroup>
+                        );
+                      })}
                     </select>
                     <label className="flex items-center gap-1.5 px-1 text-[11px] text-text-muted">
                       <input

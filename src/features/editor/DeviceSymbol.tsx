@@ -1,5 +1,7 @@
 import type { MouseEvent as ReactMouseEvent } from "react";
 import type { ElectricalDevice, Point } from "@/domain";
+import { findSmartHomeModel } from "@/domain";
+import { SMART_HOME_ICONS } from "./smart-home-icons";
 
 const RADIUS = 130;
 
@@ -81,7 +83,14 @@ export function DeviceSymbol({
   /** §49 — part of the current multi-selection (Shift+Click). */
   multiSelected?: boolean;
 }) {
-  const color = DEVICE_COLORS[device.type];
+  // A device with a Loxone (or other smart-home system) hardware model
+  // assigned renders that model's own color/icon (§28) — falling back to
+  // the plain per-ElectricalDeviceType glyph exactly as before when no
+  // model is assigned, so an ordinary "Steckdose" with no Loxone hardware
+  // chosen looks unchanged.
+  const model = device.smartHomeModelId ? findSmartHomeModel(device.smartHomeModelId) : undefined;
+  const color = model?.color ?? DEVICE_COLORS[device.type];
+  const Icon = model ? SMART_HOME_ICONS[model.icon] : null;
 
   return (
     <g
@@ -108,7 +117,11 @@ export function DeviceSymbol({
         stroke={selected ? "#C96F5B" : color}
         strokeWidth={selected ? 26 : 16}
       />
-      <Glyph type={device.type} color={selected ? "#C96F5B" : color} />
+      {Icon ? (
+        <Icon x={-70} y={-70} width={140} height={140} color={selected ? "#C96F5B" : color} />
+      ) : (
+        <Glyph type={device.type} color={selected ? "#C96F5B" : color} />
+      )}
     </g>
   );
 }

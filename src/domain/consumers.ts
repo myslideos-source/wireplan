@@ -31,6 +31,10 @@ export type FixedConsumerType =
   | "raffstore"
   | "markise"
   | "torantrieb"
+  | "dunstabzug"
+  | "mikrowelle"
+  | "aussenbeleuchtung"
+  | "zisterne-pumpe"
   | "custom";
 
 export const FIXED_CONSUMER_LABELS: Record<FixedConsumerType, string> = {
@@ -58,6 +62,10 @@ export const FIXED_CONSUMER_LABELS: Record<FixedConsumerType, string> = {
   raffstore: "Raffstore",
   markise: "Markise",
   torantrieb: "Torantrieb",
+  dunstabzug: "Dunstabzug",
+  mikrowelle: "Mikrowelle",
+  aussenbeleuchtung: "Außenbeleuchtung",
+  "zisterne-pumpe": "Zisterne / Pumpe",
   custom: "Eigener Verbraucher",
 };
 
@@ -88,6 +96,10 @@ export const FIXED_CONSUMER_DEFAULT_CABLE: Record<FixedConsumerType, CableType> 
   raffstore: "NYM-J 3x1,5",
   markise: "NYM-J 3x1,5",
   torantrieb: "NYM-J 5x2,5",
+  dunstabzug: "NYM-J 3x1,5",
+  mikrowelle: "NYM-J 3x1,5",
+  aussenbeleuchtung: "Außenkabel (NYY)",
+  "zisterne-pumpe": "Außenkabel (NYY)",
   custom: "NYM-J 3x2,5",
 };
 

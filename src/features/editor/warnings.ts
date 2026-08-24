@@ -131,11 +131,11 @@ export function computeLegacyWarnings(
     warnings.push({ id: `legacy-device-${device.id}`, message: `${number} verwendet ein Legacy-Produkt (${model.label}).` });
   }
 
-  if (distributionBoard?.smartHomeModelId) {
-    const model = findSmartHomeModel(distributionBoard.smartHomeModelId);
+  for (const modelId of distributionBoard?.cabinetComponentModelIds ?? []) {
+    const model = findSmartHomeModel(modelId);
     if (model?.legacy) {
       warnings.push({
-        id: `legacy-board-${distributionBoard.id}`,
+        id: `legacy-board-${distributionBoard!.id}-${modelId}`,
         message: `Der Schaltschrank verwendet ein Legacy-Produkt (${model.label}).`,
       });
     }

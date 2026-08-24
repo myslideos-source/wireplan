@@ -13,14 +13,17 @@
 export type CableType =
   | "NYM-J 3x1,5"
   | "NYM-J 3x2,5"
+  | "NYM-J 5x1,5"
   | "NYM-J 5x2,5"
   | "NYM-J 5x6"
   | "CAT7"
   | "CAT7 Duplex"
   | "Tree Cable"
+  | "24V-Leitung"
   | "Lautsprecherkabel 2x1,5"
   | "Lautsprecherkabel 2x2,5"
-  | "Leerrohr M25";
+  | "Leerrohr M25"
+  | "Außenkabel (NYY)";
 
 /** The two speaker-cable cross-sections a planner would actually pick
  * from (§12 — "Der Kabeltyp muss konfigurierbar sein"). */
