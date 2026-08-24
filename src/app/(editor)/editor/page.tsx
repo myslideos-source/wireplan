@@ -16,20 +16,15 @@ export default async function EditorPage({
   const project = projectId ? await getProject(projectId) : undefined;
 
   if (!project) {
-    const availability = await Promise.all(
-      projects.map(async (p) => ({
-        id: p.id,
-        available: Boolean(await getGeometriesForProject(p.id)),
-      })),
-    );
+    // Every project is offered here — a project with no floors yet is not
+    // "unavailable", it just opens into NoGeometryYet below instead of
+    // straight into the workspace.
     return (
       <EntityProjectPicker
         title="Editor"
         subtitle="Wählen Sie ein Projekt, um den Grundriss- und Elektroeditor zu öffnen."
         projects={projects}
-        availableProjectIds={availability
-          .filter((entry) => entry.available)
-          .map((entry) => entry.id)}
+        availableProjectIds={projects.map((p) => p.id)}
         basePath="/editor"
         icon={LayoutGrid}
         availableLabel="Editor öffnen"

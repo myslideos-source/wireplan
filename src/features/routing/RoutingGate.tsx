@@ -5,16 +5,11 @@ import { useEditorStore } from "@/features/editor/store";
 import { RoutingWorkspace } from "./RoutingWorkspace";
 import { RoutingNotReady } from "./RoutingNotReady";
 
-export function RoutingGate({
-  project,
-  expectedFloorIds,
-}: {
-  project: Project;
-  expectedFloorIds: string[];
-}) {
+export function RoutingGate({ project }: { project: Project }) {
   const floorId = useEditorStore((state) => state.floorId);
+  const firstFloorProjectId = useEditorStore((state) => state.floors[0]?.floor.projectId);
 
-  if (!floorId || !expectedFloorIds.includes(floorId)) {
+  if (!floorId || firstFloorProjectId !== project.id) {
     return <RoutingNotReady project={project} />;
   }
 
