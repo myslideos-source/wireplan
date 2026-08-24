@@ -53,6 +53,11 @@ export function EditorCanvas() {
   const resizeBackgroundImageToPoint = useEditorStore(
     (state) => state.resizeBackgroundImageToPoint,
   );
+  const cropRect = useEditorStore((state) => state.cropRect);
+  const updateCropTopLeft = useEditorStore((state) => state.updateCropTopLeft);
+  const updateCropBottomRight = useEditorStore((state) => state.updateCropBottomRight);
+  const applyCrop = useEditorStore((state) => state.applyCrop);
+  const cancelCrop = useEditorStore((state) => state.cancelCrop);
   const leftPanelTab = useEditorStore((state) => state.leftPanelTab);
   const planViewMode = useEditorStore((state) => state.planViewMode);
   const treeBranches = useEditorStore((state) => state.treeBranches);
@@ -89,8 +94,11 @@ export function EditorCanvas() {
     | { kind: "junction"; id: string }
     | { kind: "background" }
     | { kind: "background-resize" }
+    | { kind: "crop-tl" }
+    | { kind: "crop-br" }
     | null
   >(null);
+  const [croppingInFlight, setCroppingInFlight] = useState(false);
 
   const box = useMemo(() => {
     if (focusTarget?.type === "room") {
@@ -209,6 +217,7 @@ export function EditorCanvas() {
   const placingJunction = activeTool === "junction";
   const placingRoom = activeTool === "room";
   const placingBackground = activeTool === "background";
+  const placingCrop = activeTool === "crop";
   const connectingTree = activeTool === "treeConnect";
 
   function toSvgPoint(event: { clientX: number; clientY: number }) {
@@ -235,7 +244,9 @@ export function EditorCanvas() {
       else if (current.kind === "consumer") moveFixedConsumerToPoint(current.id, point);
       else if (current.kind === "junction") moveTreeJunctionToPoint(current.id, point);
       else if (current.kind === "background") moveBackgroundImageToPoint(point);
-      else resizeBackgroundImageToPoint(point);
+      else if (current.kind === "background-resize") resizeBackgroundImageToPoint(point);
+      else if (current.kind === "crop-tl") updateCropTopLeft(point);
+      else updateCropBottomRight(point);
     }
     function handleUp() {
       setDragging(null);
@@ -372,7 +383,9 @@ export function EditorCanvas() {
           placingRoom ||
           connectingTree
             ? "crosshair"
-            : undefined,
+            : placingCrop
+              ? "default"
+              : undefined,
       }}
     >
       <svg
@@ -395,6 +408,100 @@ export function EditorCanvas() {
           height={box.height * 3}
           fill="url(#editor-grid)"
         />
+
+        {layers.hintergrund && backgroundImage && (
+          <g>
+            <image
+              href={backgroundImage.dataUrl}
+              x={backgroundImage.x}
+              y={backgroundImage.y}
+              width={backgroundImage.width}
+              height={backgroundImage.height}
+              opacity={backgroundImageOpacity}
+              preserveAspectRatio="none"
+              style={{ cursor: placingBackground ? "grab" : undefined }}
+              pointerEvents={placingBackground ? "auto" : "none"}
+              onMouseDown={(event) => {
+                if (!placingBackground) return;
+                event.stopPropagation();
+                setDragging({ kind: "background" });
+              }}
+            />
+            {placingBackground && (
+              <rect
+                x={backgroundImage.x + backgroundImage.width - 120}
+                y={backgroundImage.y + backgroundImage.height - 120}
+                width={240}
+                height={240}
+                fill="#C96F5B"
+                stroke="#FAF8F4"
+                strokeWidth={20}
+                style={{ cursor: "nwse-resize" }}
+                onMouseDown={(event) => {
+                  event.stopPropagation();
+                  setDragging({ kind: "background-resize" });
+                }}
+              />
+            )}
+          </g>
+        )}
+
+        {placingCrop && cropRect && backgroundImage && (
+          <g pointerEvents="none">
+            <path
+              fillRule="evenodd"
+              fill="rgba(20,16,10,0.55)"
+              d={[
+                `M ${backgroundImage.x} ${backgroundImage.y}`,
+                `H ${backgroundImage.x + backgroundImage.width}`,
+                `V ${backgroundImage.y + backgroundImage.height}`,
+                `H ${backgroundImage.x} Z`,
+                `M ${cropRect.x} ${cropRect.y}`,
+                `H ${cropRect.x + cropRect.width}`,
+                `V ${cropRect.y + cropRect.height}`,
+                `H ${cropRect.x} Z`,
+              ].join(" ")}
+            />
+            <rect
+              x={cropRect.x}
+              y={cropRect.y}
+              width={cropRect.width}
+              height={cropRect.height}
+              fill="none"
+              stroke="#C96F5B"
+              strokeWidth={20}
+              strokeDasharray="60 40"
+            />
+            <circle
+              cx={cropRect.x}
+              cy={cropRect.y}
+              r={70}
+              fill="#C96F5B"
+              stroke="#FAF8F4"
+              strokeWidth={16}
+              style={{ cursor: "nwse-resize" }}
+              pointerEvents="auto"
+              onMouseDown={(event) => {
+                event.stopPropagation();
+                setDragging({ kind: "crop-tl" });
+              }}
+            />
+            <circle
+              cx={cropRect.x + cropRect.width}
+              cy={cropRect.y + cropRect.height}
+              r={70}
+              fill="#C96F5B"
+              stroke="#FAF8F4"
+              strokeWidth={16}
+              style={{ cursor: "nwse-resize" }}
+              pointerEvents="auto"
+              onMouseDown={(event) => {
+                event.stopPropagation();
+                setDragging({ kind: "crop-br" });
+              }}
+            />
+          </g>
+        )}
 
         {layers.grundriss && (
           <g opacity={dimArchitecture ? 0.25 : 1}>
@@ -726,44 +833,24 @@ export function EditorCanvas() {
               </text>
             );
           })}
-
-        {layers.hintergrund && backgroundImage && (
-          <g>
-            <image
-              href={backgroundImage.dataUrl}
-              x={backgroundImage.x}
-              y={backgroundImage.y}
-              width={backgroundImage.width}
-              height={backgroundImage.height}
-              opacity={backgroundImageOpacity}
-              preserveAspectRatio="none"
-              style={{ cursor: placingBackground ? "grab" : undefined }}
-              pointerEvents={placingBackground ? "auto" : "none"}
-              onMouseDown={(event) => {
-                if (!placingBackground) return;
-                event.stopPropagation();
-                setDragging({ kind: "background" });
-              }}
-            />
-            {placingBackground && (
-              <rect
-                x={backgroundImage.x + backgroundImage.width - 120}
-                y={backgroundImage.y + backgroundImage.height - 120}
-                width={240}
-                height={240}
-                fill="#C96F5B"
-                stroke="#FAF8F4"
-                strokeWidth={20}
-                style={{ cursor: "nwse-resize" }}
-                onMouseDown={(event) => {
-                  event.stopPropagation();
-                  setDragging({ kind: "background-resize" });
-                }}
-              />
-            )}
-          </g>
-        )}
       </svg>
+
+      {placingCrop && cropRect && (
+        <div className="absolute left-1/2 top-4 flex -translate-x-1/2 items-center gap-2 rounded-[var(--radius-md)] border border-border bg-panel px-3 py-2 shadow-lg">
+          <span className="px-1 text-xs font-medium text-text-secondary">
+            Ecken ziehen, um den Plan zuzuschneiden
+          </span>
+          <MultiSelectButton label="Abbrechen" onClick={cancelCrop} />
+          <MultiSelectButton
+            label={croppingInFlight ? "Wird zugeschnitten…" : "Zuschneiden anwenden"}
+            onClick={() => {
+              if (croppingInFlight) return;
+              setCroppingInFlight(true);
+              applyCrop().finally(() => setCroppingInFlight(false));
+            }}
+          />
+        </div>
+      )}
 
       {multiSelection.length > 1 && (
         <div className="absolute left-1/2 top-4 flex -translate-x-1/2 items-center gap-1 rounded-[var(--radius-md)] border border-border bg-panel px-2 py-1.5 shadow-lg">

@@ -63,6 +63,7 @@ export type EditorTool =
   | "smarthome"
   | "consumer"
   | "background"
+  | "crop"
   | "cable"
   | "junction"
   | "treeConnect";
@@ -111,6 +112,49 @@ function fitBackgroundImage(
   const x = box.minX + (box.width - width) / 2;
   const y = box.minY + (box.height - height) / 2;
   return { dataUrl, x, y, width, height, aspectRatio };
+}
+
+/** An in-progress crop selection over the current background image, in
+ * the same world (mm) coordinates as `BackgroundImage` — always a
+ * sub-rectangle of it. Pure in-progress UI state, like
+ * `drawingRoomPoints`: reset once the crop is applied or cancelled. */
+export interface CropRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** Crops a plan image to the given fraction of its own natural pixel
+ * dimensions and returns the result as a new data URL — used so trimming
+ * away a title block or margin actually shrinks the image data itself
+ * (and every view, including "Original", reflects it), not just what's
+ * drawn on top of it. */
+function cropImageDataUrl(
+  dataUrl: string,
+  fraction: { x: number; y: number; width: number; height: number },
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const srcX = fraction.x * img.naturalWidth;
+      const srcY = fraction.y * img.naturalHeight;
+      const srcW = fraction.width * img.naturalWidth;
+      const srcH = fraction.height * img.naturalHeight;
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(srcW));
+      canvas.height = Math.max(1, Math.round(srcH));
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("Canvas-Kontext nicht verfügbar"));
+        return;
+      }
+      ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = () => reject(new Error("Bild konnte nicht geladen werden"));
+    img.src = dataUrl;
+  });
 }
 
 export type Selection =
@@ -514,6 +558,19 @@ interface EditorState {
   resizeBackgroundImageToPoint: (point: Point) => void;
   clearBackgroundImage: () => void;
 
+  // Crop the locked background image down to just what's needed (§ "der
+  // Plan muss sauber zugeschnitten werden") — a title block or wide
+  // margin around the actual drawing can be trimmed away entirely rather
+  // than just scaled smaller. Pure in-progress UI state while dragging,
+  // like drawingRoomPoints; `applyCrop` is the only step that mutates the
+  // real image data.
+  cropRect: CropRect | null;
+  startCrop: () => void;
+  updateCropTopLeft: (point: Point) => void;
+  updateCropBottomRight: (point: Point) => void;
+  applyCrop: () => Promise<void>;
+  cancelCrop: () => void;
+
   selected: Selection;
   select: (selection: Selection) => void;
 
@@ -645,6 +702,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   treeEdges: [],
   treeConnectPendingNodeRef: null,
   drawingRoomPoints: null,
+  cropRect: null,
   audioZones: [],
   speakerCableType: SPEAKER_CABLE_TYPES[0],
   setSpeakerCableType: (type) => set({ speakerCableType: type }),
@@ -1260,14 +1318,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const number = nextNumberForPrefix(state, numberingPrefixFor({ type, networkDeviceSubtype }));
     const point = applySnap(state, rawPoint);
 
+    // No room requirement here (unlike placeDistributionBoard, which
+    // genuinely needs a designated Technikraum) — a fresh plan usually has
+    // no room zones drawn yet, and a device dropped before that point
+    // should still land on the canvas rather than silently doing nothing;
+    // roomId just stays null until a room is drawn over it, same as
+    // addFixedConsumerAtPoint/addSmartHomeDeviceAtPoint already do.
     const room = state.rooms.find((r) => isPointInPolygon(point, r.polygon));
-    if (!room) return false;
     const device: ElectricalDevice = {
       id: generateId("device"),
       floorId: state.floorId ?? "",
       type,
       mount: { position: point, height },
-      roomId: room.id,
+      roomId: room?.id ?? null,
       networkDeviceSubtype,
       number,
     };
@@ -1516,7 +1579,66 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return { backgroundImage: { ...image, width, height } };
     }),
 
-  clearBackgroundImage: () => set({ backgroundImage: null }),
+  clearBackgroundImage: () => set({ backgroundImage: null, cropRect: null }),
+
+  startCrop: () => {
+    const state = get();
+    if (!state.backgroundImage) return;
+    const { x, y, width, height } = state.backgroundImage;
+    set({ activeTool: "crop", cropRect: { x, y, width, height } });
+  },
+
+  updateCropTopLeft: (point) =>
+    set((state) => {
+      const rect = state.cropRect;
+      const bg = state.backgroundImage;
+      if (!rect || !bg) return {};
+      const maxX = rect.x + rect.width - MIN_BACKGROUND_SIZE_MM;
+      const maxY = rect.y + rect.height - MIN_BACKGROUND_SIZE_MM;
+      const x = Math.min(Math.max(point.x, bg.x), maxX);
+      const y = Math.min(Math.max(point.y, bg.y), maxY);
+      return { cropRect: { x, y, width: rect.x + rect.width - x, height: rect.y + rect.height - y } };
+    }),
+
+  updateCropBottomRight: (point) =>
+    set((state) => {
+      const rect = state.cropRect;
+      const bg = state.backgroundImage;
+      if (!rect || !bg) return {};
+      const minRight = rect.x + MIN_BACKGROUND_SIZE_MM;
+      const minBottom = rect.y + MIN_BACKGROUND_SIZE_MM;
+      const right = Math.max(Math.min(point.x, bg.x + bg.width), minRight);
+      const bottom = Math.max(Math.min(point.y, bg.y + bg.height), minBottom);
+      return { cropRect: { x: rect.x, y: rect.y, width: right - rect.x, height: bottom - rect.y } };
+    }),
+
+  cancelCrop: () => set({ cropRect: null, activeTool: "select" }),
+
+  applyCrop: async () => {
+    const state = get();
+    const bg = state.backgroundImage;
+    const rect = state.cropRect;
+    if (!bg || !rect) return;
+    const croppedDataUrl = await cropImageDataUrl(bg.dataUrl, {
+      x: (rect.x - bg.x) / bg.width,
+      y: (rect.y - bg.y) / bg.height,
+      width: rect.width / bg.width,
+      height: rect.height / bg.height,
+    });
+    set({
+      backgroundImage: {
+        ...bg,
+        dataUrl: croppedDataUrl,
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height,
+        aspectRatio: rect.width / rect.height,
+      },
+      cropRect: null,
+      activeTool: "select",
+    });
+  },
 
   setRoutingMode: (mode) => set({ routingMode: mode }),
 

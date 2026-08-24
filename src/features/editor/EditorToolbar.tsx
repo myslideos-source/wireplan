@@ -13,6 +13,7 @@ import {
   Home,
   Cable,
   Image as ImageIcon,
+  Crop,
   Eye,
   EyeOff,
   GitBranch,
@@ -82,6 +83,7 @@ interface ToolDef {
   flag?: FeatureFlag;
   note?: string;
   requiresTechnikraum?: boolean;
+  requiresBackground?: boolean;
 }
 
 const TOOLS: ToolDef[] = [
@@ -111,6 +113,13 @@ const TOOLS: ToolDef[] = [
     note: "Zwei Punkte nacheinander anklicken, um sie manuell zu verbinden",
   },
   { id: "background", label: "Hintergrundbild", icon: ImageIcon },
+  {
+    id: "crop",
+    label: "Zuschneiden",
+    icon: Crop,
+    requiresBackground: true,
+    note: "Zuerst einen Originalplan hochladen",
+  },
   { id: "cable", label: "Kabel / Leitung", icon: Cable, flag: "CABLE_ROUTING" },
 ];
 
@@ -133,6 +142,7 @@ export function EditorToolbar() {
     (state) => state.setSmartHomePlacementModelId,
   );
   const backgroundImage = useEditorStore((state) => state.backgroundImage);
+  const startCrop = useEditorStore((state) => state.startCrop);
   const setBackgroundImage = useEditorStore((state) => state.setBackgroundImage);
   const clearBackgroundImage = useEditorStore((state) => state.clearBackgroundImage);
   const backgroundImageOpacity = useEditorStore((state) => state.backgroundImageOpacity);
@@ -280,7 +290,8 @@ export function EditorToolbar() {
           {TOOLS.map((tool) => {
             const flagEnabled = !tool.flag || isFeatureEnabled(tool.flag);
             const missingTechnikraum = tool.requiresTechnikraum && technikraumRoomId === null;
-            const enabled = flagEnabled && !missingTechnikraum;
+            const missingBackground = tool.requiresBackground && !backgroundImage;
+            const enabled = flagEnabled && !missingTechnikraum && !missingBackground;
             const Icon = tool.icon;
             const disabled = !enabled;
             return (
@@ -297,13 +308,13 @@ export function EditorToolbar() {
                   title={
                     !flagEnabled
                       ? `${tool.note ?? "Folgt in einer späteren Phase"} — Demnächst`
-                      : missingTechnikraum
+                      : missingTechnikraum || missingBackground
                         ? tool.note
                         : enabled && DRAGGABLE_TOOLS.includes(tool.id)
                           ? "Klicken zum Aktivieren oder direkt in den Plan ziehen"
                           : undefined
                   }
-                  onClick={() => setTool(tool.id)}
+                  onClick={() => (tool.id === "crop" ? startCrop() : setTool(tool.id))}
                   className={cn(
                     "flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40",
                     enabled && DRAGGABLE_TOOLS.includes(tool.id) && "cursor-grab active:cursor-grabbing",
