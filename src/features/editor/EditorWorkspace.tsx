@@ -19,12 +19,20 @@ export function EditorWorkspace({
   project,
   geometries,
   reviewAreas,
+  backgroundImages,
 }: {
   project: Project;
   geometries: FloorGeometry[];
   reviewAreas?: FlaggedArea[];
+  /** Per-floor locked background image to seed on first hydration — used
+   * when a multi-page plan import (Phase 12) produces several floors that
+   * each already have their own page image before the user has ever
+   * visited most of them. Omit for the normal server-fetched-geometries
+   * path, which never has a background to seed up front. */
+  backgroundImages?: Record<string, { dataUrl: string; naturalWidth: number; naturalHeight: number }>;
 }) {
   const hydrate = useEditorStore((state) => state.hydrate);
+  const hydrateWithBackgrounds = useEditorStore((state) => state.hydrateWithBackgrounds);
   const switchFloor = useEditorStore((state) => state.switchFloor);
   const addFloor = useEditorStore((state) => state.addFloor);
   const floorId = useEditorStore((state) => state.floorId);
@@ -35,9 +43,10 @@ export function EditorWorkspace({
   const reviewStarted = useRef(false);
 
   useEffect(() => {
-    hydrate(geometries);
+    if (backgroundImages) hydrateWithBackgrounds(geometries, backgroundImages);
+    else hydrate(geometries);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrate, geometries[0]?.floor.projectId]);
+  }, [hydrate, hydrateWithBackgrounds, geometries[0]?.floor.projectId]);
 
   useEffect(() => {
     if (reviewStarted.current || !reviewAreas?.length) return;
@@ -51,8 +60,8 @@ export function EditorWorkspace({
   const sortedFloors = [...storeFloors].sort((a, b) => a.floor.level - b.floor.level);
   const activeFloor = sortedFloors.find((f) => f.floor.id === floorId) ?? sortedFloors[0];
 
-  function handleCreateFloor(input: StartFloorInput) {
-    addFloor(input);
+  function handleCreateFloor(inputs: StartFloorInput[]) {
+    for (const input of inputs) addFloor(input);
   }
 
   return (

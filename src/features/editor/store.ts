@@ -491,6 +491,14 @@ interface EditorState {
   redo: () => void;
 
   hydrate: (geometries: FloorGeometry[]) => void;
+  /** Like `hydrate`, but seeds one or more floors' locked background image
+   * up front — used by a multi-page plan import (Phase 12) where each
+   * detected page becomes its own floor with its own background, before
+   * the user has ever visited most of those floors. */
+  hydrateWithBackgrounds: (
+    geometries: FloorGeometry[],
+    backgroundImages: Record<string, { dataUrl: string; naturalWidth: number; naturalHeight: number }>,
+  ) => void;
   switchFloor: (floorId: string) => void;
   /** Adds a brand-new, empty floor to the current project and switches to
    * it — e.g. a second locked-raster floor added from the editor, rather
@@ -946,6 +954,40 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       // Undo history is per-floor content, but this phase keeps it simple
       // and doesn't cache history alongside the rest of the floor slice —
       // switching floors starts a fresh history rather than carrying it.
+      history: [],
+      future: [],
+    });
+    isRestoringHistory = false;
+  },
+
+  hydrateWithBackgrounds: (geometries, backgroundImages) => {
+    const first = geometries[0];
+    if (!first) return;
+    // Same dedup guard as `hydrate` — a revisit of an already-hydrated
+    // project (e.g. navigating away and back) must not wipe in-progress
+    // edits by re-seeding from scratch.
+    if (get().floors[0]?.floor.projectId === first.floor.projectId) return;
+    isRestoringHistory = true;
+    function backgroundFor(geometry: FloorGeometry): BackgroundImage | null {
+      const raw = backgroundImages[geometry.floor.id];
+      if (!raw) return null;
+      return fitBackgroundImage(geometry.rooms, raw.dataUrl, raw.naturalWidth, raw.naturalHeight);
+    }
+    const floorCache: Record<string, FloorMutableSlice> = {};
+    for (const geometry of geometries.slice(1)) {
+      const slice = freshSliceFromGeometry(geometry);
+      const background = backgroundFor(geometry);
+      floorCache[geometry.floor.id] = background ? { ...slice, backgroundImage: background } : slice;
+    }
+    const firstSlice = freshSliceFromGeometry(first);
+    const firstBackground = backgroundFor(first);
+    set({
+      floors: geometries,
+      floorCache,
+      floorId: first.floor.id,
+      ...firstSlice,
+      backgroundImage: firstBackground ?? firstSlice.backgroundImage,
+      selected: null,
       history: [],
       future: [],
     });

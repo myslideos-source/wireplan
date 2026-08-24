@@ -6,8 +6,7 @@ import { Building2 } from "lucide-react";
 import { Card } from "@/components/ui";
 import type { Project } from "@/domain";
 import { StartFloorDialog, type StartFloorInput } from "./StartFloorDialog";
-import { useNewFloorDraftStore } from "./new-floor-draft-store";
-import type { FloorGeometry } from "./mock-geometry";
+import { useNewFloorDraftStore, type NewFloorDraftEntry } from "./new-floor-draft-store";
 
 let nextDraftFloorId = 1;
 
@@ -15,17 +14,20 @@ export function NoGeometryYet({ project }: { project: Project }) {
   const router = useRouter();
   const setDraft = useNewFloorDraftStore((state) => state.setDraft);
 
-  function handleCreate(input: StartFloorInput) {
-    const geometry: FloorGeometry = {
-      floor: {
-        id: `floor-draft-${nextDraftFloorId++}`,
-        projectId: project.id,
-        name: input.name,
-        level: input.level,
+  function handleCreate(inputs: StartFloorInput[]) {
+    const floors: NewFloorDraftEntry[] = inputs.map((input) => ({
+      geometry: {
+        floor: {
+          id: `floor-draft-${nextDraftFloorId++}`,
+          projectId: project.id,
+          name: input.name,
+          level: input.level,
+        },
+        rooms: [],
       },
-      rooms: [],
-    };
-    setDraft({ project, geometry, backgroundImage: input.backgroundImage });
+      backgroundImage: input.backgroundImage,
+    }));
+    setDraft({ project, floors });
     router.push("/editor/draft");
   }
 

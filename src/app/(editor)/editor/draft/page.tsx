@@ -1,30 +1,13 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui";
 import { useNewFloorDraftStore } from "@/features/editor/new-floor-draft-store";
-import { useEditorStore } from "@/features/editor/store";
 import { EditorWorkspace } from "@/features/editor/EditorWorkspace";
 
 export default function NewFloorDraftEditorPage() {
   const draft = useNewFloorDraftStore((state) => state.draft);
-  const floorId = useEditorStore((state) => state.floorId);
-  const setBackgroundImage = useEditorStore((state) => state.setBackgroundImage);
-  const appliedBackgroundImage = useRef(false);
-
-  useEffect(() => {
-    if (!draft?.backgroundImage) return;
-    if (appliedBackgroundImage.current) return;
-    if (floorId !== draft.geometry.floor.id) return;
-    appliedBackgroundImage.current = true;
-    setBackgroundImage(
-      draft.backgroundImage.dataUrl,
-      draft.backgroundImage.naturalWidth,
-      draft.backgroundImage.naturalHeight,
-    );
-  }, [draft, floorId, setBackgroundImage]);
 
   if (!draft) {
     return (
@@ -45,5 +28,19 @@ export default function NewFloorDraftEditorPage() {
     );
   }
 
-  return <EditorWorkspace project={draft.project} geometries={[draft.geometry]} />;
+  const backgroundImages: Record<
+    string,
+    { dataUrl: string; naturalWidth: number; naturalHeight: number }
+  > = {};
+  for (const entry of draft.floors) {
+    if (entry.backgroundImage) backgroundImages[entry.geometry.floor.id] = entry.backgroundImage;
+  }
+
+  return (
+    <EditorWorkspace
+      project={draft.project}
+      geometries={draft.floors.map((entry) => entry.geometry)}
+      backgroundImages={backgroundImages}
+    />
+  );
 }
