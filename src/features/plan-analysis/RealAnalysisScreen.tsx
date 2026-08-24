@@ -76,12 +76,11 @@ export function RealAnalysisScreen() {
             Diese Auswertung stammt von einer echten KI ({result.model},
             Google Gemini) und wurde soeben für diese Datei erstellt — keine
             Demo-Daten. Sie ist eine Orientierung, keine bearbeitbare
-            Geometrie; Ihren Grundriss legen Sie separat als fixierten
-            Originalplan im Editor an.
+            Geometrie.
           </span>
         </div>
         {projectId && (
-          <Link href={`/editor?project=${projectId}`} className="shrink-0">
+          <Link href="/editor/draft" className="shrink-0">
             <Button size="sm">
               Weiter zum Editor
               <ArrowUpRight className="h-4 w-4" />

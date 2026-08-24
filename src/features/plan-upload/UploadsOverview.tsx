@@ -64,7 +64,7 @@ export function UploadsOverview() {
               </Button>
             </Link>
             {projectId && (
-              <Link href={`/editor?project=${projectId}`}>
+              <Link href="/editor/draft">
                 <Button size="sm">
                   <LayoutGrid className="h-4 w-4" />
                   Zum Editor

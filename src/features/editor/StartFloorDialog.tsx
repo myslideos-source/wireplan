@@ -3,8 +3,12 @@
 import * as React from "react";
 import { UploadCloud, FileText, X, Loader2, AlertTriangle } from "lucide-react";
 import { Button, Modal, Badge } from "@/components/ui";
-import { renderPdfPages, type PdfPageImage } from "@/features/plan-upload/pdf-pages";
-import type { FloorLabelDetection } from "@/app/api/detect-floor-label/route";
+import { renderPdfPages } from "@/features/plan-upload/pdf-pages";
+import {
+  detectFloorLabel,
+  sequentialFallbackName,
+  type PageDraft,
+} from "@/features/plan-upload/floor-detection";
 
 export interface StartFloorInput {
   name: string;
@@ -12,50 +16,7 @@ export interface StartFloorInput {
   backgroundImage?: { dataUrl: string; naturalWidth: number; naturalHeight: number };
 }
 
-interface PageDraft {
-  page: PdfPageImage;
-  name: string;
-  level: number;
-  include: boolean;
-  confidence: number | null;
-  detectionFailed: boolean;
-}
-
-function dataUrlToFile(dataUrl: string, filename: string): Promise<File> {
-  return fetch(dataUrl)
-    .then((res) => res.blob())
-    .then((blob) => new File([blob], filename, { type: blob.type || "image/png" }));
-}
-
-/** Falls back to a plain sequential label rather than guessing a real
- * floor name — used only when the AI detection call itself failed or
- * came back very unsure. */
-function sequentialFallbackName(index: number): string {
-  if (index === 0) return "Erdgeschoss";
-  if (index === 1) return "Obergeschoss";
-  return `Geschoss ${index}`;
-}
-
-async function detectFloorLabel(
-  page: PdfPageImage,
-  totalPages: number,
-): Promise<{ label: string; level: number; confidence: number } | null> {
-  try {
-    const file = await dataUrlToFile(page.dataUrl, `seite-${page.pageNumber}.png`);
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("pageNumber", String(page.pageNumber));
-    formData.append("totalPages", String(totalPages));
-    const response = await fetch("/api/detect-floor-label", { method: "POST", body: formData });
-    if (!response.ok) return null;
-    const parsed = (await response.json()) as FloorLabelDetection;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function SinglePlanForm({
+export function SinglePlanForm({
   suggestedName,
   suggestedLevel,
   backgroundImage,
@@ -119,7 +80,7 @@ function SinglePlanForm({
   );
 }
 
-function MultiPageReview({
+export function MultiPageReview({
   drafts,
   onChange,
   onCreate,
