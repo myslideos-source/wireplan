@@ -19,6 +19,8 @@ import type {
   FixedConsumer,
   FixedConsumerType,
   NetworkDeviceSubtype,
+  Project,
+  ProjectKpis,
 } from "@/domain";
 import {
   polygonAreaSqMeters,
@@ -251,6 +253,70 @@ function sliceOf(state: FloorMutableSlice): FloorMutableSlice {
 
 function sliceChanged(a: FloorMutableSlice, b: FloorMutableSlice): boolean {
   return SLICE_KEYS.some((key) => a[key] !== b[key]);
+}
+
+/**
+ * Live per-project totals, aggregated across every floor the user has
+ * touched this session (the active floor's top-level fields plus every
+ * other floor cached in `floorCache`, per `switchFloor`). The Dashboard/
+ * Projects pages otherwise only ever see the static `Project.kpis` they
+ * were served with (always zero — there's no persistence layer to update
+ * it from), which is exactly why cable lengths and room/device counts
+ * looked frozen there no matter how much routing work was actually done
+ * in the editor. `floorCache` can still hold a stale copy of the
+ * currently active floor (left behind by `switchFloor`, which never
+ * deletes the entry it just read from) — excluded here to avoid counting
+ * that floor twice.
+ */
+export function computeLiveProjectKpis(
+  state: Pick<EditorState, "floors" | "floorId" | "floorCache"> & FloorMutableSlice,
+): ProjectKpis {
+  const cachedSlices = Object.entries(state.floorCache)
+    .filter(([id]) => id !== state.floorId)
+    .map(([, slice]) => slice);
+  const slices = state.floorId ? [...cachedSlices, sliceOf(state)] : cachedSlices;
+
+  let rooms = 0;
+  let devices = 0;
+  let cableLengthMeters = 0;
+  const circuitIds = new Set<string>();
+  for (const slice of slices) {
+    rooms += slice.rooms.length;
+    devices += slice.devices.length + slice.smartHomeDevices.length;
+    cableLengthMeters += slice.cables.reduce((sum, cable) => sum + cable.lengthMeters, 0);
+    for (const value of Object.values(slice.roomCircuits)) {
+      if (value) circuitIds.add(value);
+    }
+  }
+
+  return {
+    floors: state.floors.length,
+    rooms,
+    devices,
+    cableLengthMeters,
+    circuits: circuitIds.size,
+  };
+}
+
+/**
+ * A project's KPIs, live from the editor store when it's the project
+ * currently open there this session, falling back to the static
+ * server-supplied `project.kpis` (honest zeros) otherwise — e.g. before
+ * the editor has ever been opened, or while looking at a different
+ * project than the one loaded in the store.
+ *
+ * Deliberately selects the whole state object (a stable reference that
+ * only changes on an actual `set()`) rather than computing the derived
+ * kpis object inside the selector itself — a selector that returns a
+ * freshly-built object every call defeats `useSyncExternalStore`'s
+ * reference-equality check and can loop ("Maximum update depth exceeded")
+ * instead of just re-rendering once.
+ */
+export function useLiveProjectKpis(project: Project): ProjectKpis {
+  const state = useEditorStore((s) => s);
+  return state.floors[0]?.floor.projectId === project.id
+    ? computeLiveProjectKpis(state)
+    : project.kpis;
 }
 
 const MAX_HISTORY = 100;

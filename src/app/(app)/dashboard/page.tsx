@@ -3,14 +3,13 @@ import {
   CardHeader,
   CardTitle,
   CardContent,
-  KpiCard,
   Stepper,
 } from "@/components/ui";
 import { getPrimaryProject, getProjects } from "@/lib/mock-data";
-import { formatLength } from "@/lib/utils";
 import { ProjectHeroCard } from "@/features/projects/ProjectCard";
 import { NewProjectDialog } from "@/features/projects/NewProjectDialog";
 import { ProjectsHydrator } from "@/features/projects/ProjectsHydrator";
+import { DashboardKpis } from "@/features/projects/DashboardKpis";
 import { UploadPlanDialog } from "@/features/plan-upload/UploadPlanDialog";
 
 export default async function DashboardPage() {
@@ -40,16 +39,7 @@ export default async function DashboardPage() {
 
       <ProjectHeroCard project={project} />
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        <KpiCard label="Stockwerke" value={String(project.kpis.floors)} />
-        <KpiCard label="Räume" value={String(project.kpis.rooms)} />
-        <KpiCard label="Geräte" value={String(project.kpis.devices)} />
-        <KpiCard
-          label="Kabellänge"
-          value={formatLength(project.kpis.cableLengthMeters)}
-        />
-        <KpiCard label="Stromkreise" value={String(project.kpis.circuits)} />
-      </div>
+      <DashboardKpis project={project} />
 
       <Card>
         <CardHeader>

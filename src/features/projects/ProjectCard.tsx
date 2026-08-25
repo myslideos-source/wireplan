@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import { MapPin, ArrowUpRight, Building2, ScanSearch, Cable } from "lucide-react";
 import { Card, CardContent, GeometryStatusBadge } from "@/components/ui";
 import type { Project } from "@/domain";
 import { formatLength } from "@/lib/utils";
+import { useLiveProjectKpis } from "@/features/editor/store";
 
 export function ProjectHeroCard({ project }: { project: Project }) {
   return (
@@ -55,6 +58,7 @@ export function ProjectHeroCard({ project }: { project: Project }) {
 }
 
 export function ProjectGridCard({ project }: { project: Project }) {
+  const kpis = useLiveProjectKpis(project);
   return (
     <Link href={`/editor?project=${project.id}`}>
       <Card className="flex h-full flex-col gap-3 px-4 py-4 transition-colors hover:border-primary/40">
@@ -70,19 +74,19 @@ export function ProjectGridCard({ project }: { project: Project }) {
           <div>
             <p className="text-text-muted">Räume</p>
             <p className="tabular-nums-font font-medium text-text">
-              {project.kpis.rooms}
+              {kpis.rooms}
             </p>
           </div>
           <div>
             <p className="text-text-muted">Geräte</p>
             <p className="tabular-nums-font font-medium text-text">
-              {project.kpis.devices}
+              {kpis.devices}
             </p>
           </div>
           <div>
             <p className="text-text-muted">Kabel</p>
             <p className="tabular-nums-font font-medium text-text">
-              {formatLength(project.kpis.cableLengthMeters)}
+              {formatLength(kpis.cableLengthMeters)}
             </p>
           </div>
         </div>
