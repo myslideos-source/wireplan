@@ -434,7 +434,7 @@ export function EditorCanvas() {
                 y={backgroundImage.y + backgroundImage.height - 120}
                 width={240}
                 height={240}
-                fill="#1B7A4A"
+                fill="#27AE60"
                 stroke="#F5F8F6"
                 strokeWidth={20}
                 style={{ cursor: "nwse-resize" }}
@@ -469,7 +469,7 @@ export function EditorCanvas() {
               width={cropRect.width}
               height={cropRect.height}
               fill="none"
-              stroke="#1B7A4A"
+              stroke="#27AE60"
               strokeWidth={20}
               strokeDasharray="60 40"
             />
@@ -477,7 +477,7 @@ export function EditorCanvas() {
               cx={cropRect.x}
               cy={cropRect.y}
               r={70}
-              fill="#1B7A4A"
+              fill="#27AE60"
               stroke="#F5F8F6"
               strokeWidth={16}
               style={{ cursor: "nwse-resize" }}
@@ -491,7 +491,7 @@ export function EditorCanvas() {
               cx={cropRect.x + cropRect.width}
               cy={cropRect.y + cropRect.height}
               r={70}
-              fill="#1B7A4A"
+              fill="#27AE60"
               stroke="#F5F8F6"
               strokeWidth={16}
               style={{ cursor: "nwse-resize" }}
@@ -517,9 +517,9 @@ export function EditorCanvas() {
                 <polygon
                   key={room.id}
                   points={room.polygon.map((p) => `${p.x},${p.y}`).join(" ")}
-                  fill={inRoomsTab ? roomZoneColor(index) : isSelected ? "#1B7A4A" : "#E3EDE6"}
+                  fill={inRoomsTab ? roomZoneColor(index) : isSelected ? "#27AE60" : "#E3EDE6"}
                   fillOpacity={inRoomsTab ? (isSelected ? 0.32 : 0.2) : isSelected ? 0.14 : 1}
-                  stroke={isSelected ? "#1B7A4A" : "transparent"}
+                  stroke={isSelected ? "#27AE60" : "transparent"}
                   strokeWidth={isSelected ? 40 : 0}
                   className={canSelect ? "cursor-pointer" : undefined}
                   onClick={(event) => {
@@ -539,7 +539,7 @@ export function EditorCanvas() {
             <polyline
               points={drawingRoomPoints.map((p) => `${p.x},${p.y}`).join(" ")}
               fill="none"
-              stroke="#1B7A4A"
+              stroke="#27AE60"
               strokeWidth={30}
               strokeDasharray="60 40"
             />
@@ -549,8 +549,8 @@ export function EditorCanvas() {
                 cx={p.x}
                 cy={p.y}
                 r={index === 0 && drawingRoomPoints.length >= 3 ? 90 : 50}
-                fill={index === 0 && drawingRoomPoints.length >= 3 ? "#F5F8F6" : "#1B7A4A"}
-                stroke="#1B7A4A"
+                fill={index === 0 && drawingRoomPoints.length >= 3 ? "#F5F8F6" : "#27AE60"}
+                stroke="#27AE60"
                 strokeWidth={index === 0 && drawingRoomPoints.length >= 3 ? 24 : 0}
               />
             ))}
@@ -585,15 +585,15 @@ export function EditorCanvas() {
                 y={center.y - height / 2}
                 width={width}
                 height={height}
-                fill="rgba(122,157,110,0.12)"
-                stroke={isSelected ? "#1B7A4A" : "#7A9D6E"}
+                fill="rgba(39,174,96,0.12)"
+                stroke="#27AE60"
                 strokeWidth={isSelected ? 36 : 24}
               />
               <text x={center.x} y={center.y} textAnchor="middle" pointerEvents="none">
-                <tspan x={center.x} dy={-60} fontSize={230} fontWeight={600} fill="#7A9D6E">
+                <tspan x={center.x} dy={-60} fontSize={230} fontWeight={600} fill="#27AE60">
                   Verteiler / Schaltschrank
                 </tspan>
-                <tspan x={center.x} dy={280} fontSize={200} fill="#6B6459">
+                <tspan x={center.x} dy={280} fontSize={200} fill="#7F8C8D">
                   Loxone Miniserver
                 </tspan>
               </text>
@@ -631,7 +631,7 @@ export function EditorCanvas() {
           smartHomeDevices.map((device) => {
             const isSelected = selected?.type === "smarthome" && selected.id === device.id;
             const model = findSmartHomeModel(device.modelId);
-            const color = model?.color ?? "#4A8FA8";
+            const color = model?.color ?? "#2D9CDB";
             const Icon = model ? SMART_HOME_ICONS[model.icon] : null;
             return (
               <g
@@ -660,7 +660,7 @@ export function EditorCanvas() {
                     cy={device.position.y}
                     r={137}
                     fill="none"
-                    stroke="#1B7A4A"
+                    stroke="#27AE60"
                     strokeWidth={9}
                     strokeDasharray="20 13"
                   />
@@ -671,7 +671,7 @@ export function EditorCanvas() {
                   r={105}
                   fill={color}
                   fillOpacity={0.18}
-                  stroke={isSelected ? "#1B7A4A" : color}
+                  stroke={isSelected ? "#27AE60" : color}
                   strokeWidth={isSelected ? 23 : 16}
                 />
                 {Icon ? (
@@ -680,7 +680,7 @@ export function EditorCanvas() {
                     y={device.position.y - 46}
                     width={92}
                     height={92}
-                    color={isSelected ? "#1B7A4A" : color}
+                    color={isSelected ? "#27AE60" : color}
                   />
                 ) : (
                   <circle cx={device.position.x} cy={device.position.y} r={33} fill={color} />
@@ -716,7 +716,7 @@ export function EditorCanvas() {
                     width={400}
                     height={400}
                     fill="none"
-                    stroke="#1B7A4A"
+                    stroke="#27AE60"
                     strokeWidth={14}
                     strokeDasharray="30 20"
                   />
@@ -726,8 +726,8 @@ export function EditorCanvas() {
                   y={consumer.position.y - 150}
                   width={300}
                   height={300}
-                  fill="rgba(196,83,74,0.15)"
-                  stroke={isSelected ? "#1B7A4A" : "#C4534A"}
+                  fill="rgba(192,57,43,0.15)"
+                  stroke={isSelected ? "#27AE60" : "#C0392B"}
                   strokeWidth={isSelected ? 30 : 20}
                 />
                 <text
@@ -737,7 +737,7 @@ export function EditorCanvas() {
                   dominantBaseline="central"
                   fontSize={180}
                   fontWeight={700}
-                  fill={isSelected ? "#1B7A4A" : "#C4534A"}
+                  fill={isSelected ? "#27AE60" : "#C0392B"}
                   pointerEvents="none"
                 >
                   V
@@ -819,7 +819,7 @@ export function EditorCanvas() {
                   height={110}
                   transform={`rotate(45 ${junction.position.x} ${junction.position.y})`}
                   fill="#FFFFFF"
-                  stroke={isPending ? "#1B7A4A" : (branch?.colorHex ?? "#7A9D6E")}
+                  stroke={isPending ? "#27AE60" : (branch?.colorHex ?? "#27AE60")}
                   strokeWidth={isSelected || isPending ? 26 : 16}
                   strokeDasharray={isPending ? "20 12" : undefined}
                 />
@@ -842,7 +842,7 @@ export function EditorCanvas() {
                 <tspan x={centroid.x} dy={-90} fontSize={340} fontWeight={600} fill="#303030">
                   {room.name}
                 </tspan>
-                <tspan x={centroid.x} dy={380} fontSize={300} fill="#6B6459">
+                <tspan x={centroid.x} dy={380} fontSize={300} fill="#7F8C8D">
                   {formatArea(room.area)}
                 </tspan>
               </text>

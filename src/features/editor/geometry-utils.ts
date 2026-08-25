@@ -279,7 +279,7 @@ export function computeSpotArrayPositions(
  * from position in the current `rooms` array so it stays stable as long
  * as rooms aren't reordered, without needing a stored color field. */
 export const ROOM_ZONE_COLORS = [
-  "#1B7A4A", // Loxone green
+  "#27AE60", // Loxone green
   "#2F6FD6", // blue
   "#D97A06", // amber
   "#7C3AED", // violet

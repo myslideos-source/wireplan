@@ -9,12 +9,17 @@ import { SMART_HOME_ICONS } from "./smart-home-icons";
 // proportionate rather than just shrinking the outer circle.
 const RADIUS = 85;
 
+// §12 (mockup) — the technical color code: Steckdose/Licht get their own
+// colors, Netzwerk its own; a generic Schalter/Sensor symbol isn't one of
+// §12's explicit categories (those cover specific device families, not
+// plain electrical fixtures), so both fall back to Neutral rather than
+// claiming a category they aren't.
 const DEVICE_COLORS: Record<ElectricalDevice["type"], string> = {
-  outlet: "#D9A441",
-  light: "#D9A441",
-  switch: "#6B6459",
-  sensor: "#7A9D6E",
-  network: "#4A8FA8",
+  outlet: "#EB5757",
+  light: "#F2C94C",
+  switch: "#7F8C8D",
+  sensor: "#7F8C8D",
+  network: "#9B51E0",
 };
 
 function Glyph({ type, color }: { type: ElectricalDevice["type"]; color: string }) {
@@ -120,18 +125,18 @@ export function DeviceSymbol({
       }}
     >
       {multiSelected && (
-        <circle r={RADIUS + 33} fill="none" stroke="#1B7A4A" strokeWidth={9} strokeDasharray="20 13" />
+        <circle r={RADIUS + 33} fill="none" stroke="#27AE60" strokeWidth={9} strokeDasharray="20 13" />
       )}
       <circle
         r={RADIUS}
         fill="#FFFFFF"
-        stroke={selected ? "#1B7A4A" : color}
+        stroke={selected ? "#27AE60" : color}
         strokeWidth={selected ? 17 : 10}
       />
       {Icon ? (
-        <Icon x={-46} y={-46} width={92} height={92} color={selected ? "#1B7A4A" : color} />
+        <Icon x={-46} y={-46} width={92} height={92} color={selected ? "#27AE60" : color} />
       ) : (
-        <Glyph type={device.type} color={selected ? "#1B7A4A" : color} />
+        <Glyph type={device.type} color={selected ? "#27AE60" : color} />
       )}
       {/* Counter-rotate so the ID label always reads upright regardless
        * of the device's own rotation. */}

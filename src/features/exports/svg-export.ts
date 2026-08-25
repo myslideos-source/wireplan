@@ -13,11 +13,11 @@ import {
 } from "@/features/editor/geometry-utils";
 
 const DEVICE_COLORS: Record<ElectricalDevice["type"], string> = {
-  outlet: "#D9A441",
-  light: "#D9A441",
-  switch: "#6B6459",
-  sensor: "#7A9D6E",
-  network: "#4A8FA8",
+  outlet: "#EB5757",
+  light: "#F2C94C",
+  switch: "#7F8C8D",
+  sensor: "#7F8C8D",
+  network: "#9B51E0",
 };
 
 interface LegendEntry {
@@ -84,9 +84,9 @@ export function buildFloorPlanSvg(params: {
     const prefix = numberingPrefixFor({ category: model?.category, technology: model?.technology });
     const number = formatDeviceNumber(prefix, device.number);
     legend.set(prefix, { prefix, label: model?.label ?? "Smart-Home-Gerät" });
-    parts.push(`<circle cx="${device.position.x}" cy="${device.position.y}" r="160" fill="rgba(74,143,168,0.18)" stroke="#4A8FA8" stroke-width="24" />`);
+    parts.push(`<circle cx="${device.position.x}" cy="${device.position.y}" r="160" fill="rgba(45,156,219,0.18)" stroke="#2D9CDB" stroke-width="24" />`);
     parts.push(
-      `<text x="${device.position.x}" y="${device.position.y + 260}" text-anchor="middle" font-size="150" fill="#4A8FA8">${number}</text>`,
+      `<text x="${device.position.x}" y="${device.position.y + 260}" text-anchor="middle" font-size="150" fill="#2D9CDB">${number}</text>`,
     );
   }
 
@@ -94,20 +94,20 @@ export function buildFloorPlanSvg(params: {
     const number = formatDeviceNumber("V", consumer.number);
     legend.set("V", { prefix: "V", label: "Fester Verbraucher" });
     parts.push(
-      `<rect x="${consumer.position.x - 150}" y="${consumer.position.y - 150}" width="300" height="300" fill="rgba(196,83,74,0.15)" stroke="#C4534A" stroke-width="20" />`,
+      `<rect x="${consumer.position.x - 150}" y="${consumer.position.y - 150}" width="300" height="300" fill="rgba(192,57,43,0.15)" stroke="#C0392B" stroke-width="20" />`,
     );
     parts.push(
-      `<text x="${consumer.position.x}" y="${consumer.position.y + 350}" text-anchor="middle" font-size="150" fill="#C4534A">${number} · ${escapeXml(fixedConsumerLabel(consumer))}</text>`,
+      `<text x="${consumer.position.x}" y="${consumer.position.y + 350}" text-anchor="middle" font-size="150" fill="#C0392B">${number} · ${escapeXml(fixedConsumerLabel(consumer))}</text>`,
     );
   }
 
   if (distributionBoard) {
     const center = distributionBoard.position;
     parts.push(
-      `<rect x="${center.x - 200}" y="${center.y - 125}" width="400" height="250" fill="rgba(122,157,110,0.15)" stroke="#7A9D6E" stroke-width="24" />`,
+      `<rect x="${center.x - 200}" y="${center.y - 125}" width="400" height="250" fill="rgba(39,174,96,0.15)" stroke="#27AE60" stroke-width="24" />`,
     );
     parts.push(
-      `<text x="${center.x}" y="${center.y}" text-anchor="middle" font-size="180" fill="#7A9D6E">HV</text>`,
+      `<text x="${center.x}" y="${center.y}" text-anchor="middle" font-size="180" fill="#27AE60">HV</text>`,
     );
   }
 
@@ -117,7 +117,7 @@ export function buildFloorPlanSvg(params: {
     `<text x="${box.minX}" y="${legendY}" font-size="320" font-weight="700" fill="#303030">${escapeXml(projectName)}</text>`,
   );
   parts.push(
-    `<text x="${box.minX}" y="${legendY + 300}" font-size="200" fill="#6B6459">${escapeXml(floorName)} · Legende</text>`,
+    `<text x="${box.minX}" y="${legendY + 300}" font-size="200" fill="#7F8C8D">${escapeXml(floorName)} · Legende</text>`,
   );
   let legendCursor = legendY + 550;
   for (const entry of [...legend.values()].sort((a, b) => a.prefix.localeCompare(b.prefix))) {

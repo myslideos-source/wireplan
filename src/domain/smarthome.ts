@@ -241,19 +241,25 @@ export interface SmartHomeDeviceModel {
   legacy?: boolean;
 }
 
-const TREE = "#7A9D6E";
-const AIR = "#4A8FA8";
-const LIGHT = "#D9A441";
-const RGBW = "#8F6FB8";
-const CONTACT = "#8FB8D9";
-const OUTLET = "#B23A3A";
-const NETWORK = "#C9822E";
-const AUDIO = "#B8698A";
-const SHADING = "#8B5E3C";
-const HEATING = "#B8542E";
-const SECURITY = "#8C2F2F";
-const ACCESS = "#6B4E8F";
-const CABINET = "#6B6459";
+// §12 (mockup) — the technical color code. RGBW and CONTACT aren't
+// their own §12 category (RGBW is a Licht sub-family, contact sensors
+// are Sicherheit/Fenster-Tür-adjacent) but keep distinct hues from their
+// parent category so a plan still visually separates them; ACCESS
+// (Zutritt) shares its color with SECURITY since both map to the same
+// "sicherheit-zutritt" planning category.
+const TREE = "#27AE60";
+const AIR = "#2D9CDB";
+const LIGHT = "#F2C94C";
+const RGBW = "#BB6BD9";
+const CONTACT = "#84D2F6";
+const OUTLET = "#EB5757";
+const NETWORK = "#9B51E0";
+const AUDIO = "#EB6F92";
+const SHADING = "#F2994A";
+const HEATING = "#56CCF2";
+const SECURITY = "#6C63FF";
+const ACCESS = "#6C63FF";
+const CABINET = "#7F8C8D";
 
 /**
  * Loxone's Tree/Air product line, mapped from the user-supplied device

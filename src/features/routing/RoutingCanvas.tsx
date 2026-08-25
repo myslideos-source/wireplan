@@ -5,20 +5,26 @@ import { findSmartHomeModel } from "@/domain";
 import { useEditorStore } from "@/features/editor/store";
 import { floorExtentBox, devicePosition } from "@/features/editor/geometry-utils";
 
+// §12 (mockup) — the technical color code, applied to cable types by what
+// they actually carry: lighting circuits get the Licht color, outlet/
+// higher-current circuits get Steckdose/230V, network/Tree/Audio keep
+// their own category colors, and anything §12 doesn't explicitly cover
+// (empty conduit, generic 24V wiring, outdoor cable) falls back to
+// Neutral rather than overclaiming a category it isn't.
 const CABLE_COLORS: Record<CableType, string> = {
-  "NYM-J 3x1,5": "#D9A441",
-  "NYM-J 3x2,5": "#C4534A",
-  "NYM-J 5x1,5": "#D9A441",
-  "NYM-J 5x2,5": "#C4534A",
-  "NYM-J 5x6": "#C4534A",
-  CAT7: "#4A8FA8",
-  "CAT7 Duplex": "#4A8FA8",
-  "Tree Cable": "#7A9D6E",
-  "24V-Leitung": "#8F6FB8",
-  "Lautsprecherkabel 2x1,5": "#B8698A",
-  "Lautsprecherkabel 2x2,5": "#B8698A",
-  "Leerrohr M25": "#8A8272",
-  "Außenkabel (NYY)": "#8B5E3C",
+  "NYM-J 3x1,5": "#F2C94C",
+  "NYM-J 3x2,5": "#EB5757",
+  "NYM-J 5x1,5": "#F2C94C",
+  "NYM-J 5x2,5": "#C0392B",
+  "NYM-J 5x6": "#C0392B",
+  CAT7: "#9B51E0",
+  "CAT7 Duplex": "#9B51E0",
+  "Tree Cable": "#27AE60",
+  "24V-Leitung": "#7F8C8D",
+  "Lautsprecherkabel 2x1,5": "#EB6F92",
+  "Lautsprecherkabel 2x2,5": "#EB6F92",
+  "Leerrohr M25": "#7F8C8D",
+  "Außenkabel (NYY)": "#7F8C8D",
 };
 
 export function RoutingCanvas({
@@ -159,7 +165,7 @@ export function RoutingCanvas({
             cy={position.y}
             r={110}
             fill="#FFFFFF"
-            stroke="#6B6459"
+            stroke="#7F8C8D"
             strokeWidth={16}
             opacity={dimmed ? 0.3 : 1}
           />
@@ -172,7 +178,7 @@ export function RoutingCanvas({
        * canvas even though it's part of what was actually planned. */}
       {smartHomeDevices.map((device) => {
         const model = findSmartHomeModel(device.modelId);
-        const color = model?.color ?? "#4A8FA8";
+        const color = model?.color ?? "#2D9CDB";
         const cable = cablesByDeviceId.get(device.id);
         const dimmed = selectedCableId !== null && cable?.id !== selectedCableId;
         return (
@@ -201,7 +207,7 @@ export function RoutingCanvas({
             width={200}
             height={200}
             fill="#FFFFFF"
-            stroke="#C4534A"
+            stroke="#C0392B"
             strokeWidth={16}
             opacity={dimmed ? 0.3 : 1}
           />
@@ -214,8 +220,8 @@ export function RoutingCanvas({
           y={boardPosition.y - 125}
           width={400}
           height={250}
-          fill="rgba(122,157,110,0.15)"
-          stroke="#7A9D6E"
+          fill="rgba(39,174,96,0.15)"
+          stroke="#27AE60"
           strokeWidth={24}
         />
       )}
