@@ -126,17 +126,29 @@ export function RoutingWorkspace({ project }: { project: Project }) {
       )}
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <KpiCard label="Leitungen" value={String(cables.length)} icon={<CableIcon className="h-4 w-4" />} />
+        <KpiCard
+          label="Leitungen"
+          value={String(cables.length)}
+          icon={<CableIcon className="h-4 w-4" />}
+          color="var(--color-secondary)"
+        />
         <KpiCard
           label="Gesamtkabellänge"
           value={`${formatNumber(totalLength, 0)} m`}
           icon={<GitBranch className="h-4 w-4" />}
+          color="var(--color-warning)"
         />
-        <KpiCard label="Stromkreise" value={String(circuitCount)} icon={<Zap className="h-4 w-4" />} />
+        <KpiCard
+          label="Stromkreise"
+          value={String(circuitCount)}
+          icon={<Zap className="h-4 w-4" />}
+          color="var(--color-success)"
+        />
         <KpiCard
           label="Smart-Home-Verbindungen"
           value={String(smartHomeConnections)}
           icon={<Network className="h-4 w-4" />}
+          color="var(--color-accent-violet)"
         />
       </div>
 

@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { FileDown, Image as ImageIcon, FileCode } from "lucide-react";
+import {
+  FileDown,
+  Image as ImageIcon,
+  FileCode,
+  DoorOpen,
+  Plug,
+  Cable as CableIcon,
+  Zap,
+} from "lucide-react";
 import type { Project } from "@/domain";
 import { Card, CardHeader, CardTitle, CardContent, Button, KpiCard } from "@/components/ui";
 import { useEditorStore } from "@/features/editor/store";
@@ -226,10 +234,30 @@ export function ExportsWorkspace({ project }: { project: Project }) {
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <KpiCard label="Räume" value={String(rooms.length)} />
-        <KpiCard label="Geräte" value={String(devices.length + smartHomeDevices.length)} />
-        <KpiCard label="Kabellänge" value={`${formatNumber(totalCableLength, 0)} m`} />
-        <KpiCard label="Stromkreise" value={String(circuitCount)} />
+        <KpiCard
+          label="Räume"
+          value={String(rooms.length)}
+          icon={<DoorOpen className="h-4 w-4" />}
+          color="var(--color-primary)"
+        />
+        <KpiCard
+          label="Geräte"
+          value={String(devices.length + smartHomeDevices.length)}
+          icon={<Plug className="h-4 w-4" />}
+          color="var(--color-accent-violet)"
+        />
+        <KpiCard
+          label="Kabellänge"
+          value={`${formatNumber(totalCableLength, 0)} m`}
+          icon={<CableIcon className="h-4 w-4" />}
+          color="var(--color-warning)"
+        />
+        <KpiCard
+          label="Stromkreise"
+          value={String(circuitCount)}
+          icon={<Zap className="h-4 w-4" />}
+          color="var(--color-success)"
+        />
       </div>
 
       <Card>

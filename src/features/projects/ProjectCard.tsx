@@ -9,15 +9,18 @@ import { useLiveProjectKpis } from "@/features/editor/store";
 
 export function ProjectHeroCard({ project }: { project: Project }) {
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden shadow-[var(--shadow-md)]">
       <div className="grid gap-0 md:grid-cols-[280px_1fr]">
-        <div className="bg-grid relative flex min-h-[180px] items-center justify-center border-b border-border bg-bg md:border-b-0 md:border-r">
-          <Building2 className="h-10 w-10 text-text-muted/60" />
+        <div className="relative flex min-h-[200px] items-center justify-center overflow-hidden border-b border-border bg-gradient-to-br from-primary-soft to-panel md:border-b-0 md:border-r">
+          <div className="bg-grid absolute inset-0 opacity-70" aria-hidden />
+          <span className="relative flex h-16 w-16 items-center justify-center rounded-full bg-primary/15 text-primary ring-8 ring-primary/5">
+            <Building2 className="h-7 w-7" strokeWidth={1.75} />
+          </span>
         </div>
         <CardContent className="flex flex-col justify-center gap-5 px-6 py-5">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-lg font-semibold text-text">
+              <h2 className="text-xl font-bold tracking-tight text-text">
                 {project.name}
               </h2>
               <p className="mt-1 flex items-center gap-1.5 text-sm text-text-secondary">
@@ -28,24 +31,24 @@ export function ProjectHeroCard({ project }: { project: Project }) {
             <GeometryStatusBadge status={project.geometryStatus} />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Link
               href={`/editor?project=${project.id}`}
-              className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90"
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-[0_0_0_1px_rgba(27,122,74,0.25),0_2px_6px_rgba(27,122,74,0.25)] transition-colors hover:bg-primary/90"
             >
               Im Editor öffnen
               <ArrowUpRight className="h-4 w-4" />
             </Link>
             <Link
               href={`/analysis?project=${project.id}`}
-              className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-border px-4 py-2 text-sm font-medium text-text transition-colors hover:border-primary/60 hover:text-primary"
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-border bg-panel px-4 py-2.5 text-sm font-medium text-text transition-colors hover:border-primary/60 hover:text-primary"
             >
               <ScanSearch className="h-4 w-4" />
               KI-Analyse ansehen
             </Link>
             <Link
               href={`/routing?project=${project.id}`}
-              className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-border px-4 py-2 text-sm font-medium text-text transition-colors hover:border-primary/60 hover:text-primary"
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-border bg-panel px-4 py-2.5 text-sm font-medium text-text transition-colors hover:border-primary/60 hover:text-primary"
             >
               <Cable className="h-4 w-4" />
               Kabelrouting

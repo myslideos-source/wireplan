@@ -96,13 +96,25 @@ export function Rail() {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2 text-sm font-medium transition-colors",
+                      "group relative flex items-center gap-2.5 rounded-[var(--radius-sm)] px-3 py-2 text-sm font-medium transition-colors",
                       isActive
-                        ? "bg-shell-accent/15 text-shell-accent"
+                        ? "bg-shell-accent/10 text-shell-text"
                         : "text-shell-text-muted hover:bg-shell-bg-elevated hover:text-shell-text",
                     )}
                   >
-                    <Icon className="h-4 w-4 shrink-0" strokeWidth={2} />
+                    {isActive && (
+                      <span className="absolute -left-3 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-shell-accent" />
+                    )}
+                    <span
+                      className={cn(
+                        "flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] transition-colors",
+                        isActive
+                          ? "bg-shell-accent text-shell-bg"
+                          : "text-shell-text-muted group-hover:text-shell-text",
+                      )}
+                    >
+                      <Icon className="h-3.5 w-3.5" strokeWidth={2.25} />
+                    </span>
                     {item.label}
                   </Link>
                 );
