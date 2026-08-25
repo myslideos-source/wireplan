@@ -10,7 +10,13 @@ import {
 } from "react";
 import { Server } from "lucide-react";
 import type { ElectricalDevice, Point } from "@/domain";
-import { findSmartHomeModel } from "@/domain";
+import {
+  findSmartHomeModel,
+  numberingPrefixFor,
+  formatDeviceNumber,
+  DEVICE_TYPE_LABELS,
+  fixedConsumerLabel,
+} from "@/domain";
 import { DRAG_TOOL_MIME } from "./drag-tool";
 import { orderTreeBusPoints, type TreeBusPoint } from "@/features/routing/compute-tree-cables";
 import { useEditorStore, type EditorTool } from "./store";
@@ -86,6 +92,76 @@ export function EditorCanvas() {
 
   function isMultiSelected(type: "device" | "smarthome" | "consumer", id: string) {
     return multiSelection.some((s) => s.type === type && s.id === id);
+  }
+
+  // §108 — several devices placed at (or very near) the same spot used to
+  // be unselectable individually: a click always hit whichever one sat on
+  // top. Any click that lands within OVERLAP_EPS_MM of more than one
+  // item's position now opens a small picker instead of guessing.
+  const OVERLAP_EPS_MM = 40;
+
+  function overlapLabel(item: { kind: "device" | "smarthome" | "consumer"; id: string }): string {
+    if (item.kind === "device") {
+      const device = devices.find((d) => d.id === item.id);
+      if (!device) return "";
+      const number = formatDeviceNumber(
+        numberingPrefixFor({ type: device.type, networkDeviceSubtype: device.networkDeviceSubtype }),
+        device.number,
+      );
+      return `${DEVICE_TYPE_LABELS[device.type]} ${number}`;
+    }
+    if (item.kind === "smarthome") {
+      const device = smartHomeDevices.find((d) => d.id === item.id);
+      const model = device ? findSmartHomeModel(device.modelId) : undefined;
+      return model?.label ?? "Smart-Home-Gerät";
+    }
+    const consumer = fixedConsumers.find((c) => c.id === item.id);
+    return consumer ? fixedConsumerLabel(consumer) : "";
+  }
+
+  function findOverlapAt(point: Point) {
+    const items: { kind: "device" | "smarthome" | "consumer"; id: string; position: Point }[] = [];
+    for (const device of devices) {
+      const position = devicePosition(device);
+      if (Math.hypot(position.x - point.x, position.y - point.y) <= OVERLAP_EPS_MM) {
+        items.push({ kind: "device", id: device.id, position });
+      }
+    }
+    for (const device of smartHomeDevices) {
+      if (Math.hypot(device.position.x - point.x, device.position.y - point.y) <= OVERLAP_EPS_MM) {
+        items.push({ kind: "smarthome", id: device.id, position: device.position });
+      }
+    }
+    for (const consumer of fixedConsumers) {
+      if (Math.hypot(consumer.position.x - point.x, consumer.position.y - point.y) <= OVERLAP_EPS_MM) {
+        items.push({ kind: "consumer", id: consumer.id, position: consumer.position });
+      }
+    }
+    return items;
+  }
+
+  const [overlapPicker, setOverlapPicker] = useState<
+    { point: Point; items: { kind: "device" | "smarthome" | "consumer"; id: string; position: Point }[] } | null
+  >(null);
+
+  function handleItemClick(
+    kind: "device" | "smarthome" | "consumer",
+    id: string,
+    position: Point,
+    event: ReactMouseEvent,
+  ) {
+    if (event.shiftKey) {
+      setOverlapPicker(null);
+      toggleMultiSelect({ type: kind, id });
+      return;
+    }
+    const overlap = findOverlapAt(position);
+    if (overlap.length > 1) {
+      setOverlapPicker({ point: position, items: overlap });
+      return;
+    }
+    setOverlapPicker(null);
+    select({ type: kind, id });
   }
 
   const svgRef = useRef<SVGSVGElement>(null);
@@ -345,6 +421,7 @@ export function EditorCanvas() {
       justPannedRef.current = false;
       return;
     }
+    setOverlapPicker(null);
     if (placingDeviceType || placingSmartHome || placingConsumer || placingJunction) {
       const point = toSvgPoint(event);
       if (point) placeByToolId(activeTool, point);
@@ -381,6 +458,15 @@ export function EditorCanvas() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [placingRoom, cancelRoomDraw, closeRoomDraw]);
+
+  useEffect(() => {
+    if (!overlapPicker) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOverlapPicker(null);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [overlapPicker]);
 
   function handleCanvasDragOver(event: ReactDragEvent) {
     if (event.dataTransfer.types.includes(DRAG_TOOL_MIME)) event.preventDefault();
@@ -607,18 +693,18 @@ export function EditorCanvas() {
               points={drawingRoomPoints.map((p) => `${p.x},${p.y}`).join(" ")}
               fill="none"
               stroke="#27AE60"
-              strokeWidth={16}
-              strokeDasharray="32 20"
+              strokeWidth={7}
+              strokeDasharray="16 10"
             />
             {drawingRoomPoints.map((p, index) => (
               <circle
                 key={index}
                 cx={p.x}
                 cy={p.y}
-                r={index === 0 && drawingRoomPoints.length >= 3 ? 48 : 26}
+                r={index === 0 && drawingRoomPoints.length >= 3 ? 22 : 12}
                 fill={index === 0 && drawingRoomPoints.length >= 3 ? "#F5F8F6" : "#27AE60"}
                 stroke="#27AE60"
-                strokeWidth={index === 0 && drawingRoomPoints.length >= 3 ? 12 : 0}
+                strokeWidth={index === 0 && drawingRoomPoints.length >= 3 ? 5 : 0}
               />
             ))}
           </g>
@@ -626,10 +712,17 @@ export function EditorCanvas() {
 
         {layers.elektro && distributionBoard && (() => {
           const center = distributionBoard.position;
-          const width = distributionBoard.width;
-          const height = distributionBoard.height;
+          // Rendered as a small fixed-size icon, like every other device
+          // symbol — not scaled to the board's real physical footprint
+          // (distributionBoard.width/height, a real 60x80cm cabinet). A
+          // to-scale rect made this dwarf small rooms regardless of how
+          // small its stroke/font got; the real footprint still drives the
+          // Technikraum's own cabinet-layout view (CabinetView), which
+          // genuinely needs true proportions — this is just the floorplan
+          // marker.
+          const boxSize = 90;
+          const iconSize = 46;
           const isSelected = selected?.type === "board";
-          const iconSize = Math.min(width, height) * 0.28;
           const componentCount = distributionBoard.cabinetComponentModelIds.length;
           return (
             <g
@@ -650,13 +743,14 @@ export function EditorCanvas() {
               }}
             >
               <rect
-                x={center.x - width / 2}
-                y={center.y - height / 2}
-                width={width}
-                height={height}
+                x={center.x - boxSize / 2}
+                y={center.y - boxSize / 2}
+                width={boxSize}
+                height={boxSize}
+                rx={10}
                 fill="rgba(39,174,96,0.12)"
                 stroke="#27AE60"
-                strokeWidth={isSelected ? 14 : 10}
+                strokeWidth={isSelected ? 7 : 5}
               />
               <Server
                 x={center.x - iconSize / 2}
@@ -667,9 +761,9 @@ export function EditorCanvas() {
               />
               <text
                 x={center.x}
-                y={center.y + height / 2 + 34}
+                y={center.y + boxSize / 2 + 22}
                 textAnchor="middle"
-                fontSize={38}
+                fontSize={26}
                 fontWeight={600}
                 fill="#27AE60"
                 pointerEvents="none"
@@ -696,8 +790,7 @@ export function EditorCanvas() {
                     handleTreeConnectClick(`device:${device.id}`);
                     return;
                   }
-                  if (event.shiftKey) toggleMultiSelect({ type: "device", id: device.id });
-                  else select({ type: "device", id: device.id });
+                  handleItemClick("device", device.id, position, event);
                 }}
                 onDragStart={connectingTree ? undefined : () => setDragging({ kind: "device", id: device.id })}
                 dimmed={!isDeviceHighlighted(device)}
@@ -724,8 +817,7 @@ export function EditorCanvas() {
                     handleTreeConnectClick(`smarthome:${device.id}`);
                     return;
                   }
-                  if (event.shiftKey) toggleMultiSelect({ type: "smarthome", id: device.id });
-                  else select({ type: "smarthome", id: device.id });
+                  handleItemClick("smarthome", device.id, device.position, event);
                 }}
                 onMouseDown={(event) => {
                   if (!canSelect) return;
@@ -779,8 +871,7 @@ export function EditorCanvas() {
                 onClick={(event) => {
                   if (!canSelect) return;
                   event.stopPropagation();
-                  if (event.shiftKey) toggleMultiSelect({ type: "consumer", id: consumer.id });
-                  else select({ type: "consumer", id: consumer.id });
+                  handleItemClick("consumer", consumer.id, consumer.position, event);
                 }}
                 onMouseDown={(event) => {
                   if (!canSelect) return;
@@ -927,6 +1018,56 @@ export function EditorCanvas() {
               </text>
             );
           })}
+
+        {overlapPicker && (() => {
+          const rowHeight = 50;
+          const pickerWidth = 300;
+          const padding = 10;
+          const height = overlapPicker.items.length * rowHeight + padding * 2;
+          const x = overlapPicker.point.x + 40;
+          const y = overlapPicker.point.y - height / 2;
+          return (
+            <g>
+              <rect
+                x={x}
+                y={y}
+                width={pickerWidth}
+                height={height}
+                rx={10}
+                fill="#1C2620"
+                stroke="#27AE60"
+                strokeWidth={3}
+              />
+              {overlapPicker.items.map((item, index) => {
+                const isCurrent = selected?.type === item.kind && selected.id === item.id;
+                const rowY = y + padding + index * rowHeight;
+                return (
+                  <g
+                    key={`${item.kind}:${item.id}`}
+                    className="cursor-pointer"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      select({ type: item.kind, id: item.id });
+                      setOverlapPicker(null);
+                    }}
+                  >
+                    <rect
+                      x={x + 4}
+                      y={rowY + 2}
+                      width={pickerWidth - 8}
+                      height={rowHeight - 4}
+                      rx={6}
+                      fill={isCurrent ? "rgba(39,174,96,0.3)" : "transparent"}
+                    />
+                    <text x={x + padding + 8} y={rowY + rowHeight / 2 + 10} fontSize={28} fill="#F5F8F6">
+                      {overlapLabel(item)}
+                    </text>
+                  </g>
+                );
+              })}
+            </g>
+          );
+        })()}
       </svg>
 
       {placingCrop && cropRect && (
