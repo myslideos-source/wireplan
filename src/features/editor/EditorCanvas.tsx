@@ -8,6 +8,7 @@ import {
   type MouseEvent as ReactMouseEvent,
   type DragEvent as ReactDragEvent,
 } from "react";
+import { Server } from "lucide-react";
 import type { ElectricalDevice, Point } from "@/domain";
 import { findSmartHomeModel } from "@/domain";
 import { DRAG_TOOL_MIME } from "./drag-tool";
@@ -81,6 +82,7 @@ export function EditorCanvas() {
   const duplicateMultiSelection = useEditorStore((state) => state.duplicateMultiSelection);
   const alignMultiSelection = useEditorStore((state) => state.alignMultiSelection);
   const distributeMultiSelection = useEditorStore((state) => state.distributeMultiSelection);
+  const floorId = useEditorStore((state) => state.floorId);
 
   function isMultiSelected(type: "device" | "smarthome" | "consumer", id: string) {
     return multiSelection.some((s) => s.type === type && s.id === id);
@@ -97,9 +99,52 @@ export function EditorCanvas() {
     | { kind: "background-resize" }
     | { kind: "crop-tl" }
     | { kind: "crop-br" }
+    | {
+        kind: "pan";
+        startClientX: number;
+        startClientY: number;
+        startOffsetX: number;
+        startOffsetY: number;
+        scaleX: number;
+        scaleY: number;
+      }
     | null
   >(null);
   const [croppingInFlight, setCroppingInFlight] = useState(false);
+
+  // §103 — plain click-drag panning: there was no way to move the view
+  // besides zooming, which forced users to zoom in a lot just to get a
+  // different part of the plan into view (and made every symbol/label
+  // look correspondingly oversized). Offset is component-local view
+  // state, not floor data, so it resets on floor switch / focus jumps —
+  // adjusted directly during render (React's documented pattern for
+  // resetting state on a prop/store change) rather than in an effect,
+  // which would cost an extra unnecessary render of the stale offset.
+  const [panOffset, setPanOffset] = useState<Point>({ x: 0, y: 0 });
+  const justPannedRef = useRef(false);
+  const panResetKey = `${floorId ?? ""}|${focusTarget ? `${focusTarget.type}:${focusTarget.id}` : ""}`;
+  const [prevPanResetKey, setPrevPanResetKey] = useState(panResetKey);
+  if (prevPanResetKey !== panResetKey) {
+    setPrevPanResetKey(panResetKey);
+    if (panOffset.x !== 0 || panOffset.y !== 0) setPanOffset({ x: 0, y: 0 });
+  }
+
+  function handlePanMouseDown(event: ReactMouseEvent) {
+    if (!canSelect || dragging) return;
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    setDragging({
+      kind: "pan",
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startOffsetX: panOffset.x,
+      startOffsetY: panOffset.y,
+      scaleX: vbWidth / rect.width,
+      scaleY: vbHeight / rect.height,
+    });
+  }
 
   const box = useMemo(() => {
     if (focusTarget?.type === "room") {
@@ -110,8 +155,8 @@ export function EditorCanvas() {
   }, [focusTarget, rooms, backgroundImage]);
   const vbWidth = box.width / zoom;
   const vbHeight = box.height / zoom;
-  const centerX = box.minX + box.width / 2;
-  const centerY = box.minY + box.height / 2;
+  const centerX = box.minX + box.width / 2 + panOffset.x;
+  const centerY = box.minY + box.height / 2 + panOffset.y;
   const viewBox = `${centerX - vbWidth / 2} ${centerY - vbHeight / 2} ${vbWidth} ${vbHeight}`;
 
   const boardPosition = distributionBoard ? distributionBoard.position : null;
@@ -237,6 +282,19 @@ export function EditorCanvas() {
     if (!dragging) return;
     const current = dragging;
     function handleMove(event: MouseEvent) {
+      // Pan uses a fixed mm-per-client-px scale sampled at drag start
+      // instead of toSvgPoint's live CTM — the CTM itself shifts as
+      // panOffset updates, which would otherwise distort the drag speed
+      // (or feed back on itself) as the gesture progresses.
+      if (current.kind === "pan") {
+        const dx = (event.clientX - current.startClientX) * current.scaleX;
+        const dy = (event.clientY - current.startClientY) * current.scaleY;
+        if (Math.abs(event.clientX - current.startClientX) > 3 || Math.abs(event.clientY - current.startClientY) > 3) {
+          justPannedRef.current = true;
+        }
+        setPanOffset({ x: current.startOffsetX - dx, y: current.startOffsetY - dy });
+        return;
+      }
       const point = toSvgPoint(event);
       if (!point) return;
       if (current.kind === "board") placeDistributionBoard(point);
@@ -283,6 +341,10 @@ export function EditorCanvas() {
   }
 
   function handleBackgroundClick(event: ReactMouseEvent) {
+    if (justPannedRef.current) {
+      justPannedRef.current = false;
+      return;
+    }
     if (placingDeviceType || placingSmartHome || placingConsumer || placingJunction) {
       const point = toSvgPoint(event);
       if (point) placeByToolId(activeTool, point);
@@ -386,7 +448,11 @@ export function EditorCanvas() {
             ? "crosshair"
             : placingCrop
               ? "default"
-              : undefined,
+              : canSelect
+                ? dragging?.kind === "pan"
+                  ? "grabbing"
+                  : "grab"
+                : undefined,
       }}
     >
       <svg
@@ -394,6 +460,7 @@ export function EditorCanvas() {
         viewBox={viewBox}
         className="h-full w-full"
         onClick={handleBackgroundClick}
+        onMouseDown={handlePanMouseDown}
         onDragOver={handleCanvasDragOver}
         onDrop={handleCanvasDrop}
       >
@@ -562,6 +629,8 @@ export function EditorCanvas() {
           const width = distributionBoard.width;
           const height = distributionBoard.height;
           const isSelected = selected?.type === "board";
+          const iconSize = Math.min(width, height) * 0.5;
+          const componentCount = distributionBoard.cabinetComponentModelIds.length;
           return (
             <g
               className={canSelect || connectingTree ? "cursor-pointer" : undefined}
@@ -587,15 +656,25 @@ export function EditorCanvas() {
                 height={height}
                 fill="rgba(39,174,96,0.12)"
                 stroke="#27AE60"
-                strokeWidth={isSelected ? 36 : 24}
+                strokeWidth={isSelected ? 20 : 14}
               />
-              <text x={center.x} y={center.y} textAnchor="middle" pointerEvents="none">
-                <tspan x={center.x} dy={-60} fontSize={230} fontWeight={600} fill="#27AE60">
-                  Verteiler / Schaltschrank
-                </tspan>
-                <tspan x={center.x} dy={280} fontSize={200} fill="#7F8C8D">
-                  Loxone Miniserver
-                </tspan>
+              <Server
+                x={center.x - iconSize / 2}
+                y={center.y - iconSize / 2}
+                width={iconSize}
+                height={iconSize}
+                color="#27AE60"
+              />
+              <text
+                x={center.x}
+                y={center.y + height / 2 + 55}
+                textAnchor="middle"
+                fontSize={80}
+                fontWeight={600}
+                fill="#27AE60"
+                pointerEvents="none"
+              >
+                {componentCount > 0 ? `Schaltschrank (${componentCount})` : "Schaltschrank"}
               </text>
             </g>
           );
@@ -658,32 +737,32 @@ export function EditorCanvas() {
                   <circle
                     cx={device.position.x}
                     cy={device.position.y}
-                    r={137}
+                    r={89}
                     fill="none"
                     stroke="#27AE60"
-                    strokeWidth={9}
-                    strokeDasharray="20 13"
+                    strokeWidth={6}
+                    strokeDasharray="13 8"
                   />
                 )}
                 <circle
                   cx={device.position.x}
                   cy={device.position.y}
-                  r={105}
+                  r={68}
                   fill={color}
                   fillOpacity={0.18}
                   stroke={isSelected ? "#27AE60" : color}
-                  strokeWidth={isSelected ? 23 : 16}
+                  strokeWidth={isSelected ? 15 : 10}
                 />
                 {Icon ? (
                   <Icon
-                    x={device.position.x - 46}
-                    y={device.position.y - 46}
-                    width={92}
-                    height={92}
+                    x={device.position.x - 30}
+                    y={device.position.y - 30}
+                    width={60}
+                    height={60}
                     color={isSelected ? "#27AE60" : color}
                   />
                 ) : (
-                  <circle cx={device.position.x} cy={device.position.y} r={33} fill={color} />
+                  <circle cx={device.position.x} cy={device.position.y} r={21} fill={color} />
                 )}
               </g>
             );
@@ -711,31 +790,31 @@ export function EditorCanvas() {
               >
                 {isMultiSelected("consumer", consumer.id) && (
                   <rect
-                    x={consumer.position.x - 200}
-                    y={consumer.position.y - 200}
-                    width={400}
-                    height={400}
+                    x={consumer.position.x - 130}
+                    y={consumer.position.y - 130}
+                    width={260}
+                    height={260}
                     fill="none"
                     stroke="#27AE60"
-                    strokeWidth={14}
-                    strokeDasharray="30 20"
+                    strokeWidth={9}
+                    strokeDasharray="20 13"
                   />
                 )}
                 <rect
-                  x={consumer.position.x - 150}
-                  y={consumer.position.y - 150}
-                  width={300}
-                  height={300}
+                  x={consumer.position.x - 95}
+                  y={consumer.position.y - 95}
+                  width={190}
+                  height={190}
                   fill="rgba(192,57,43,0.15)"
                   stroke={isSelected ? "#27AE60" : "#C0392B"}
-                  strokeWidth={isSelected ? 30 : 20}
+                  strokeWidth={isSelected ? 18 : 12}
                 />
                 <text
                   x={consumer.position.x}
                   y={consumer.position.y}
                   textAnchor="middle"
                   dominantBaseline="central"
-                  fontSize={180}
+                  fontSize={115}
                   fontWeight={700}
                   fill={isSelected ? "#27AE60" : "#C0392B"}
                   pointerEvents="none"
@@ -813,15 +892,15 @@ export function EditorCanvas() {
                 }}
               >
                 <rect
-                  x={junction.position.x - 55}
-                  y={junction.position.y - 55}
-                  width={110}
-                  height={110}
+                  x={junction.position.x - 36}
+                  y={junction.position.y - 36}
+                  width={72}
+                  height={72}
                   transform={`rotate(45 ${junction.position.x} ${junction.position.y})`}
                   fill="#FFFFFF"
                   stroke={isPending ? "#27AE60" : (branch?.colorHex ?? "#27AE60")}
-                  strokeWidth={isSelected || isPending ? 26 : 16}
-                  strokeDasharray={isPending ? "20 12" : undefined}
+                  strokeWidth={isSelected || isPending ? 17 : 10}
+                  strokeDasharray={isPending ? "13 8" : undefined}
                 />
               </g>
             );
@@ -839,10 +918,10 @@ export function EditorCanvas() {
                 pointerEvents="none"
                 opacity={dimArchitecture ? 0.25 : 1}
               >
-                <tspan x={centroid.x} dy={-90} fontSize={340} fontWeight={600} fill="#303030">
+                <tspan x={centroid.x} dy={-32} fontSize={130} fontWeight={600} fill="#303030">
                   {room.name}
                 </tspan>
-                <tspan x={centroid.x} dy={380} fontSize={300} fill="#7F8C8D">
+                <tspan x={centroid.x} dy={145} fontSize={110} fill="#7F8C8D">
                   {formatArea(room.area)}
                 </tspan>
               </text>

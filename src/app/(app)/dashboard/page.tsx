@@ -10,6 +10,7 @@ import { ProjectHeroCard } from "@/features/projects/ProjectCard";
 import { NewProjectDialog } from "@/features/projects/NewProjectDialog";
 import { ProjectsHydrator } from "@/features/projects/ProjectsHydrator";
 import { DashboardKpis } from "@/features/projects/DashboardKpis";
+import { DashboardHeaderBanner } from "@/features/projects/DashboardHeaderBanner";
 import { UploadPlanDialog } from "@/features/plan-upload/UploadPlanDialog";
 
 export default async function DashboardPage() {
@@ -21,6 +22,8 @@ export default async function DashboardPage() {
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-8 py-8">
       <ProjectsHydrator projects={projects} />
+
+      <DashboardHeaderBanner />
 
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
