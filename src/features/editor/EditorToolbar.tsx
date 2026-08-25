@@ -24,6 +24,7 @@ import {
   Search,
   ChevronDown,
   Star,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -149,7 +150,18 @@ const CATEGORIES: { label: string; toolIds: EditorTool[]; catalogHint?: boolean 
   },
 ];
 
-export function EditorToolbar() {
+export function EditorToolbar({
+  mobileOpen,
+  onMobileClose,
+}: {
+  /** §32 (mockup) — on a narrow viewport this panel is hidden by default
+   * and only shown as a full-screen overlay when explicitly opened, since
+   * a fixed 3-column layout has nowhere to put a 256px sidebar on a
+   * phone. Absent/false on desktop, where lg: breakpoints keep it as the
+   * normal always-visible sidebar. */
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
+} = {}) {
   const activeTool = useEditorStore((state) => state.activeTool);
   const setTool = useEditorStore((state) => state.setTool);
   const technikraumRoomId = useEditorStore((state) => state.technikraumRoomId);
@@ -455,7 +467,25 @@ export function EditorToolbar() {
   const favoriteTools = TOOLS.filter((tool) => favorites.has(tool.id));
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-panel">
+    <aside
+      className={cn(
+        "w-64 shrink-0 flex-col border-r border-border bg-panel",
+        mobileOpen ? "fixed inset-0 z-40 flex" : "hidden lg:flex",
+      )}
+    >
+      {mobileOpen && (
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+          <span className="text-sm font-semibold text-text">Komponenten</span>
+          <button
+            type="button"
+            onClick={onMobileClose}
+            aria-label="Schließen"
+            className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] text-text-secondary hover:bg-panel-elevated hover:text-text"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
       <div className="flex border-b border-border p-2">
         <button
           type="button"

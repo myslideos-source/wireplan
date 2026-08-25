@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Zap, Settings, Bell, ChevronDown, User, MoreHorizontal } from "lucide-react";
+import { Zap, Settings, Bell, ChevronDown, User, MoreHorizontal, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Dropdown,
@@ -43,7 +43,11 @@ export function TopNavigation({ extra }: { extra?: ReactNode }) {
         </span>
       </Link>
 
-      <nav className="flex h-full items-stretch gap-1">
+      {/* §30 (mockup) — the full tab row doesn't fit a phone-width
+       * header; below the md breakpoint it collapses into a single ☰
+       * menu listing every destination instead of wrapping or
+       * overflowing. */}
+      <nav className="hidden h-full items-stretch gap-1 md:flex">
         {TOP_NAV_ITEMS.map((item) => {
           const isActive = pathname?.startsWith(item.href);
           return (
@@ -81,6 +85,31 @@ export function TopNavigation({ extra }: { extra?: ReactNode }) {
           ))}
         </Dropdown>
       </nav>
+
+      <Dropdown
+        align="start"
+        trigger={
+          <span className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-sm)] text-text-secondary hover:bg-panel-elevated hover:text-text md:hidden">
+            <Menu className="h-5 w-5" />
+          </span>
+        }
+      >
+        <DropdownLabel>Arbeitsbereich</DropdownLabel>
+        {TOP_NAV_ITEMS.map((item) => (
+          <Link key={item.href} href={item.href}>
+            <DropdownItem className={cn(pathname?.startsWith(item.href) && "text-primary")}>
+              {item.label}
+            </DropdownItem>
+          </Link>
+        ))}
+        <DropdownSeparator />
+        <DropdownLabel>Mehr</DropdownLabel>
+        {MORE_NAV_ITEMS.map((item) => (
+          <Link key={item.href} href={item.href}>
+            <DropdownItem>{item.label}</DropdownItem>
+          </Link>
+        ))}
+      </Dropdown>
 
       <div className="ml-auto flex items-center gap-1">
         {extra}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { MousePointer2, Plug, Lightbulb, ToggleLeft, Radar, Wifi, Trash2, Copy, Server, Home, Zap, GitFork, ChevronDown, type LucideIcon } from "lucide-react";
+import { MousePointer2, Plug, Lightbulb, ToggleLeft, Radar, Wifi, Trash2, Copy, Server, Home, Zap, GitFork, ChevronDown, X, type LucideIcon } from "lucide-react";
 import { Badge, Button, KpiCard } from "@/components/ui";
 import {
   DEVICE_TYPE_LABELS,
@@ -312,7 +312,16 @@ function AudioZoneSelect({
   );
 }
 
-export function EditorInspector() {
+export function EditorInspector({
+  mobileOpen,
+  onMobileClose,
+}: {
+  /** §32 (mockup) — same pattern as EditorToolbar's mobileOpen: hidden by
+   * default on a narrow viewport, shown as a full-screen overlay only
+   * when explicitly opened. */
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
+} = {}) {
   const selected = useEditorStore((state) => state.selected);
   const rooms = useEditorStore((state) => state.rooms);
   const devices = useEditorStore((state) => state.devices);
@@ -349,7 +358,20 @@ export function EditorInspector() {
 
   if (!selected) {
     return (
-      <aside className="flex w-80 shrink-0 flex-col items-center justify-center gap-3 border-l border-shell-border bg-shell-bg px-6 text-center">
+      <aside className={cn("w-80 shrink-0 flex-col items-center justify-center gap-3 border-l border-shell-border bg-shell-bg px-6 text-center", mobileOpen ? "fixed inset-0 z-40 flex" : "hidden lg:flex")}>
+        {mobileOpen && (
+          <div className="flex items-center justify-between border-b border-shell-border px-5 py-3">
+            <span className="text-sm font-semibold text-shell-text">Eigenschaften</span>
+            <button
+              type="button"
+              onClick={onMobileClose}
+              aria-label="Schließen"
+              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] text-shell-text-muted hover:bg-shell-bg-elevated hover:text-shell-text"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-shell-bg-elevated text-shell-text-muted">
           <MousePointer2 className="h-4 w-4" />
         </span>
@@ -374,7 +396,20 @@ export function EditorInspector() {
       device.number,
     );
     return (
-      <aside className="w-80 shrink-0 overflow-y-auto border-l border-shell-border bg-shell-bg scrollbar-thin-shell">
+      <aside className={cn("w-80 shrink-0 border-l border-shell-border bg-shell-bg", mobileOpen ? "fixed inset-0 z-40 flex flex-col overflow-y-auto" : "hidden overflow-y-auto scrollbar-thin-shell lg:block")}>
+        {mobileOpen && (
+          <div className="flex items-center justify-between border-b border-shell-border px-5 py-3">
+            <span className="text-sm font-semibold text-shell-text">Eigenschaften</span>
+            <button
+              type="button"
+              onClick={onMobileClose}
+              aria-label="Schließen"
+              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] text-shell-text-muted hover:bg-shell-bg-elevated hover:text-shell-text"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
         <div className="flex items-center gap-2 border-b border-shell-border px-5 py-4">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-shell-bg-elevated text-shell-text-muted">
             <Icon className="h-4 w-4" />
@@ -502,7 +537,20 @@ export function EditorInspector() {
     if (!distributionBoard) return null;
     const room = rooms.find((r) => r.id === distributionBoard.roomId);
     return (
-      <aside className="w-80 shrink-0 overflow-y-auto border-l border-shell-border bg-shell-bg scrollbar-thin-shell">
+      <aside className={cn("w-80 shrink-0 border-l border-shell-border bg-shell-bg", mobileOpen ? "fixed inset-0 z-40 flex flex-col overflow-y-auto" : "hidden overflow-y-auto scrollbar-thin-shell lg:block")}>
+        {mobileOpen && (
+          <div className="flex items-center justify-between border-b border-shell-border px-5 py-3">
+            <span className="text-sm font-semibold text-shell-text">Eigenschaften</span>
+            <button
+              type="button"
+              onClick={onMobileClose}
+              aria-label="Schließen"
+              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] text-shell-text-muted hover:bg-shell-bg-elevated hover:text-shell-text"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
         <div className="flex items-center gap-2 border-b border-shell-border px-5 py-4">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-success/10 text-success">
             <Server className="h-4 w-4" />
@@ -587,7 +635,20 @@ export function EditorInspector() {
       device.number,
     );
     return (
-      <aside className="w-80 shrink-0 overflow-y-auto border-l border-shell-border bg-shell-bg scrollbar-thin-shell">
+      <aside className={cn("w-80 shrink-0 border-l border-shell-border bg-shell-bg", mobileOpen ? "fixed inset-0 z-40 flex flex-col overflow-y-auto" : "hidden overflow-y-auto scrollbar-thin-shell lg:block")}>
+        {mobileOpen && (
+          <div className="flex items-center justify-between border-b border-shell-border px-5 py-3">
+            <span className="text-sm font-semibold text-shell-text">Eigenschaften</span>
+            <button
+              type="button"
+              onClick={onMobileClose}
+              aria-label="Schließen"
+              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] text-shell-text-muted hover:bg-shell-bg-elevated hover:text-shell-text"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
         <div className="flex items-center gap-2 border-b border-shell-border px-5 py-4">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary/10 text-secondary">
             <Home className="h-4 w-4" />
@@ -677,7 +738,20 @@ export function EditorInspector() {
     const room = consumer.roomId ? rooms.find((r) => r.id === consumer.roomId) : undefined;
     const number = formatDeviceNumber("V", consumer.number);
     return (
-      <aside className="w-80 shrink-0 overflow-y-auto border-l border-shell-border bg-shell-bg scrollbar-thin-shell">
+      <aside className={cn("w-80 shrink-0 border-l border-shell-border bg-shell-bg", mobileOpen ? "fixed inset-0 z-40 flex flex-col overflow-y-auto" : "hidden overflow-y-auto scrollbar-thin-shell lg:block")}>
+        {mobileOpen && (
+          <div className="flex items-center justify-between border-b border-shell-border px-5 py-3">
+            <span className="text-sm font-semibold text-shell-text">Eigenschaften</span>
+            <button
+              type="button"
+              onClick={onMobileClose}
+              aria-label="Schließen"
+              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] text-shell-text-muted hover:bg-shell-bg-elevated hover:text-shell-text"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
         <div className="flex items-center gap-2 border-b border-shell-border px-5 py-4">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-error/10 text-error">
             <Zap className="h-4 w-4" />
@@ -746,7 +820,20 @@ export function EditorInspector() {
       (e) => e.fromRef === `junction:${junction.id}` || e.toRef === `junction:${junction.id}`,
     ).length;
     return (
-      <aside className="w-80 shrink-0 overflow-y-auto border-l border-shell-border bg-shell-bg scrollbar-thin-shell">
+      <aside className={cn("w-80 shrink-0 border-l border-shell-border bg-shell-bg", mobileOpen ? "fixed inset-0 z-40 flex flex-col overflow-y-auto" : "hidden overflow-y-auto scrollbar-thin-shell lg:block")}>
+        {mobileOpen && (
+          <div className="flex items-center justify-between border-b border-shell-border px-5 py-3">
+            <span className="text-sm font-semibold text-shell-text">Eigenschaften</span>
+            <button
+              type="button"
+              onClick={onMobileClose}
+              aria-label="Schließen"
+              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] text-shell-text-muted hover:bg-shell-bg-elevated hover:text-shell-text"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
         <div className="flex items-center gap-2 border-b border-shell-border px-5 py-4">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-success/10 text-success">
             <GitFork className="h-4 w-4" />
@@ -807,7 +894,20 @@ export function EditorInspector() {
   const loxoneDeviceCount = roomDevices.filter((d) => d.smartHomeModelId).length + roomSmartHomeDevices.length;
 
   return (
-    <aside className="w-80 shrink-0 overflow-y-auto border-l border-shell-border bg-shell-bg scrollbar-thin-shell">
+    <aside className={cn("w-80 shrink-0 border-l border-shell-border bg-shell-bg", mobileOpen ? "fixed inset-0 z-40 flex flex-col overflow-y-auto" : "hidden overflow-y-auto scrollbar-thin-shell lg:block")}>
+        {mobileOpen && (
+          <div className="flex items-center justify-between border-b border-shell-border px-5 py-3">
+            <span className="text-sm font-semibold text-shell-text">Eigenschaften</span>
+            <button
+              type="button"
+              onClick={onMobileClose}
+              aria-label="Schließen"
+              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] text-shell-text-muted hover:bg-shell-bg-elevated hover:text-shell-text"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       <div className="border-b border-shell-border px-5 py-4">
         <p className="text-xs font-medium uppercase tracking-wide text-shell-text-muted">
           Raum

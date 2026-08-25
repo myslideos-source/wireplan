@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, PanelLeft, PanelRight } from "lucide-react";
 import type { Project } from "@/domain";
 import type { FlaggedArea } from "@/features/plan-analysis/types";
 import type { FloorGeometry } from "./mock-geometry";
@@ -44,6 +44,7 @@ export function EditorWorkspace({
   const planViewMode = useEditorStore((state) => state.planViewMode);
   const setPlanViewMode = useEditorStore((state) => state.setPlanViewMode);
   const reviewStarted = useRef(false);
+  const [mobilePanel, setMobilePanel] = useState<"components" | "properties" | null>(null);
 
   useEffect(() => {
     if (backgroundImages) hydrateWithBackgrounds(geometries, backgroundImages);
@@ -76,7 +77,30 @@ export function EditorWorkspace({
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
-        <span className="font-medium text-text">{project.name}</span>
+        <span className="min-w-0 flex-1 truncate font-medium text-text sm:flex-none">
+          {project.name}
+        </span>
+
+        {/* §32 (mockup) — on a narrow viewport the sidebar/properties
+         * panel aren't visible side-by-side, so these open them as
+         * full-screen overlays instead. Hidden at the lg breakpoint,
+         * where both panels are always visible anyway. */}
+        <button
+          type="button"
+          onClick={() => setMobilePanel("components")}
+          aria-label="Komponenten öffnen"
+          className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] text-text-secondary hover:bg-panel-elevated hover:text-text lg:hidden"
+        >
+          <PanelLeft className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobilePanel("properties")}
+          aria-label="Eigenschaften öffnen"
+          className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] text-text-secondary hover:bg-panel-elevated hover:text-text lg:hidden"
+        >
+          <PanelRight className="h-4 w-4" />
+        </button>
 
         <div className="ml-auto flex items-center gap-0.5 rounded-[var(--radius-sm)] border border-border bg-panel-elevated p-0.5">
           {(["original", "planer"] as const).map((mode) => (
@@ -103,7 +127,10 @@ export function EditorWorkspace({
         onCreate={handleCreateFloor}
       />
       <div className="flex min-h-0 flex-1">
-        <EditorToolbar />
+        <EditorToolbar
+          mobileOpen={mobilePanel === "components"}
+          onMobileClose={() => setMobilePanel(null)}
+        />
         <div className="relative flex min-w-0 flex-1 flex-col">
           <SmartHomeDevicePicker />
           <div className="relative min-h-0 flex-1 bg-canvas-bg">
@@ -112,7 +139,10 @@ export function EditorWorkspace({
             <ReviewPanel />
           </div>
         </div>
-        <EditorInspector />
+        <EditorInspector
+          mobileOpen={mobilePanel === "properties"}
+          onMobileClose={() => setMobilePanel(null)}
+        />
       </div>
       <EditorStatusBar />
     </div>
