@@ -1,17 +1,18 @@
 import type { ReactNode } from "react";
-import { Rail } from "@/components/shell/Rail";
+import { TopNavigation } from "@/components/shell/TopNavigation";
 
 /**
- * §Phase19 — the editor gets its own full-bleed content area (tool
- * palette + canvas + inspector, built by EditorWorkspace) sitting next to
- * the same global Rail every other page uses, instead of stacking a
- * second global nav bar on top of the editor's own project/floor bar.
+ * §Phase20 — the editor gets its own full-bleed content area (floor tabs
+ * + tool sidebar + canvas + properties panel, built by EditorWorkspace)
+ * sitting under the same global TopNavigation every other page uses,
+ * instead of stacking a second nav bar on top of the editor's own
+ * project/floor bar.
  */
 export default function EditorGroupLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex h-screen bg-bg">
-      <Rail />
-      <div className="min-w-0 flex-1">{children}</div>
+    <div className="flex h-screen flex-col bg-bg">
+      <TopNavigation />
+      <div className="min-h-0 flex-1">{children}</div>
     </div>
   );
 }

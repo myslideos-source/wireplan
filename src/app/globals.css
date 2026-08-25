@@ -1,56 +1,74 @@
 @import "tailwindcss";
 
 :root {
-  /* Light content surfaces — the canvas/workspace, cool neutral with a
-   * faint green undertone that ties to the Loxone-green brand accent
-   * without competing with floor-plan drawings or device-color coding. */
-  --color-bg: #f5f8f6;
-  --color-bg-secondary: #edf2ef;
+  /* §11 — UI base palette from the reference mockup. The whole app is
+   * light-mode-first (no more dark chrome); --color-shell-* below is kept
+   * as a distinct namespace for "frame" surfaces (nav, side panels) but
+   * now points at these same light values so every already-shell-styled
+   * component (EditorToolbar, EditorInspector, EditorStatusBar) renders
+   * light without needing its own class rewrite in this pass. */
+  --color-bg: #f7f8f6;
+  --color-bg-secondary: #eef0ee;
   --color-panel: #ffffff;
-  --color-panel-elevated: #f0f4f1;
-  --color-border: #dbe4de;
-  --color-border-subtle: #e6ede9;
+  --color-panel-elevated: #f2f3f1;
+  --color-border: #e5e8e5;
+  --color-border-subtle: #edefed;
 
-  /* Loxone-green primary — this is a Loxone electrical/smart-home
-   * planner, so the brand accent runs through every primary action
-   * instead of a generic color. Kept distinct from the domain-semantic
-   * greens used elsewhere (Tree bus, "success") so none of them collide
-   * pixel-for-pixel with the UI's own primary accent. */
-  --color-primary: #1b7a4a;
-  --color-primary-soft: #e5f3ea;
-  --color-secondary: #2f6fd6;
-  --color-success: #279a5b;
-  --color-warning: #d97a06;
-  --color-error: #dc3b3b;
+  /* The plan canvas itself gets a slightly different, warmer near-white
+   * (§7) so the drawing surface reads as distinct from the surrounding
+   * panel chrome. */
+  --color-canvas-bg: #fafaf8;
 
-  --color-text: #16211b;
-  --color-text-secondary: #56655c;
-  --color-text-muted: #8a978e;
+  --color-primary: #27ae60;
+  --color-primary-soft: #e8f6ee;
+  --color-secondary: #2d9cdb;
+  --color-success: #27ae60;
+  --color-warning: #f2994a;
+  --color-error: #eb5757;
 
-  /* A single extra UI-chrome accent (KPI icons, small stat highlights)
-   * beyond the semantic set above — kept apart from the Loxone catalog's
-   * own category-color palette (geometry-utils.ts) so the two never
-   * appear together implying a meaning neither has. */
+  --color-text: #23272d;
+  --color-text-secondary: #687078;
+  --color-text-muted: #97a0a6;
+
+  /* §12 — technical/domain color codes. Used only for small technical
+   * elements (icons, thin lines, status dots, badges) — never to tint
+   * whole panels. */
+  --color-tech-tree: #27ae60;
+  --color-tech-air: #2d9cdb;
+  --color-tech-light: #f2c94c;
+  --color-tech-outlet: #eb5757;
+  --color-tech-shading: #f2994a;
+  --color-tech-network: #9b51e0;
+  --color-tech-audio: #eb6f92;
+  --color-tech-heating: #56ccf2;
+  --color-tech-security: #6c63ff;
+  --color-tech-power: #c0392b;
+  --color-tech-neutral: #7f8c8d;
+
+  /* An extra UI-chrome accent (KPI icons) distinct from the technical
+   * palette above, so generic UI stats never borrow a wire/device color
+   * that implies a meaning they don't have. */
   --color-accent-violet: #7c4fd6;
 
-  /* Dark "shell chrome" — top nav, side rails, status bars, everywhere
-   * that frames the light workspace rather than being the workspace
-   * itself. A deliberate two-tone system (dark chrome / light canvas)
-   * instead of one flat palette everywhere. */
-  --color-shell-bg: #101d16;
-  --color-shell-bg-elevated: #17281e;
-  --color-shell-border: #24392c;
-  --color-shell-text: #f2f7f4;
-  --color-shell-text-muted: #93a89b;
-  --color-shell-accent: #4ade80;
+  /* "Shell chrome" — top nav, tool sidebar, properties panel, status
+   * bar: everywhere that frames the plan canvas. Same light values as
+   * the base palette above (kept as its own namespace rather than
+   * merged, since the frame/canvas distinction is still a real one). */
+  --color-shell-bg: #ffffff;
+  --color-shell-bg-elevated: #f7f8f6;
+  --color-shell-border: #e5e8e5;
+  --color-shell-text: #23272d;
+  --color-shell-text-muted: #687078;
+  --color-shell-accent: #27ae60;
 
   --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 18px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
 
-  --shadow-sm: 0 1px 2px rgba(16, 33, 27, 0.06);
-  --shadow-md: 0 4px 16px rgba(16, 33, 27, 0.08);
-  --shadow-lg: 0 16px 40px rgba(16, 33, 27, 0.14);
+  /* §36 — only very light shadows. */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 2px 4px rgba(0, 0, 0, 0.04), 0 12px 28px rgba(0, 0, 0, 0.08);
 }
 
 @theme inline {
@@ -60,6 +78,7 @@
   --color-panel-elevated: var(--color-panel-elevated);
   --color-border: var(--color-border);
   --color-border-subtle: var(--color-border-subtle);
+  --color-canvas-bg: var(--color-canvas-bg);
 
   --color-primary: var(--color-primary);
   --color-primary-soft: var(--color-primary-soft);
@@ -72,6 +91,18 @@
   --color-text-secondary: var(--color-text-secondary);
   --color-text-muted: var(--color-text-muted);
   --color-accent-violet: var(--color-accent-violet);
+
+  --color-tech-tree: var(--color-tech-tree);
+  --color-tech-air: var(--color-tech-air);
+  --color-tech-light: var(--color-tech-light);
+  --color-tech-outlet: var(--color-tech-outlet);
+  --color-tech-shading: var(--color-tech-shading);
+  --color-tech-network: var(--color-tech-network);
+  --color-tech-audio: var(--color-tech-audio);
+  --color-tech-heating: var(--color-tech-heating);
+  --color-tech-security: var(--color-tech-security);
+  --color-tech-power: var(--color-tech-power);
+  --color-tech-neutral: var(--color-tech-neutral);
 
   --color-shell-bg: var(--color-shell-bg);
   --color-shell-bg-elevated: var(--color-shell-bg-elevated);
@@ -94,12 +125,6 @@ html {
 
 body {
   background-color: var(--color-bg);
-  background-image: radial-gradient(
-    circle,
-    rgba(22, 33, 27, 0.06) 1px,
-    transparent 1px
-  );
-  background-size: 22px 22px;
   color: var(--color-text);
   font-family: var(--font-sans), system-ui, sans-serif;
 }
@@ -119,10 +144,12 @@ h3 {
   color: var(--color-text);
 }
 
+/* §48 — optional, near-invisible canvas grid (toggled per-canvas, not a
+ * global background wash). */
 .bg-grid {
   background-image:
-    linear-gradient(to right, rgba(22, 33, 27, 0.07) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(22, 33, 27, 0.07) 1px, transparent 1px);
+    linear-gradient(to right, rgba(35, 39, 45, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(35, 39, 45, 0.05) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
@@ -143,9 +170,9 @@ h3 {
   background: transparent;
 }
 
-/* Shell chrome uses its own scrollbar thumb so it stays legible on the
- * dark background (the default .scrollbar-thin thumb is tuned for the
- * light --color-border and would be invisible here). */
+/* Kept as an alias of .scrollbar-thin now that shell surfaces are light
+ * too — components built against .scrollbar-thin-shell keep working
+ * without a class rewrite. */
 .scrollbar-thin-shell::-webkit-scrollbar {
   width: 8px;
   height: 8px;
