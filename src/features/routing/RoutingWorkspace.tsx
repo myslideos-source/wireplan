@@ -33,6 +33,7 @@ export function RoutingWorkspace({ project }: { project: Project }) {
   const switchFloor = useEditorStore((state) => state.switchFloor);
   const treeBranches = useEditorStore((state) => state.treeBranches);
   const deleteTreeBranch = useEditorStore((state) => state.deleteTreeBranch);
+  const autoConnectTreeDevicesOnFloor = useEditorStore((state) => state.autoConnectTreeDevicesOnFloor);
   const audioZones = useEditorStore((state) => state.audioZones);
   const speakerCableType = useEditorStore((state) => state.speakerCableType);
   const setSpeakerCableType = useEditorStore((state) => state.setSpeakerCableType);
@@ -204,6 +205,7 @@ export function RoutingWorkspace({ project }: { project: Project }) {
               smartHomeDevices={smartHomeDevices}
               cables={cables}
               onDeleteBranch={deleteTreeBranch}
+              onAutoConnect={autoConnectTreeDevicesOnFloor}
             />
           )}
         </div>

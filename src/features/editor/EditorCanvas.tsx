@@ -658,32 +658,32 @@ export function EditorCanvas() {
                   <circle
                     cx={device.position.x}
                     cy={device.position.y}
-                    r={210}
+                    r={137}
                     fill="none"
                     stroke="#C96F5B"
-                    strokeWidth={14}
-                    strokeDasharray="30 20"
+                    strokeWidth={9}
+                    strokeDasharray="20 13"
                   />
                 )}
                 <circle
                   cx={device.position.x}
                   cy={device.position.y}
-                  r={160}
+                  r={105}
                   fill={color}
                   fillOpacity={0.18}
                   stroke={isSelected ? "#C96F5B" : color}
-                  strokeWidth={isSelected ? 36 : 24}
+                  strokeWidth={isSelected ? 23 : 16}
                 />
                 {Icon ? (
                   <Icon
-                    x={device.position.x - 70}
-                    y={device.position.y - 70}
-                    width={140}
-                    height={140}
+                    x={device.position.x - 46}
+                    y={device.position.y - 46}
+                    width={92}
+                    height={92}
                     color={isSelected ? "#C96F5B" : color}
                   />
                 ) : (
-                  <circle cx={device.position.x} cy={device.position.y} r={50} fill={color} />
+                  <circle cx={device.position.x} cy={device.position.y} r={33} fill={color} />
                 )}
               </g>
             );

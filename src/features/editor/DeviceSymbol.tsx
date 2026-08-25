@@ -3,7 +3,11 @@ import type { ElectricalDevice, Point } from "@/domain";
 import { findSmartHomeModel } from "@/domain";
 import { SMART_HOME_ICONS } from "./smart-home-icons";
 
-const RADIUS = 130;
+// §70 — shrunk to ~65% of the original size so dense real-world plans
+// (many spots in small rooms) keep enough overview/space; every glyph
+// coordinate below is scaled by the same factor as RADIUS to stay
+// proportionate rather than just shrinking the outer circle.
+const RADIUS = 85;
 
 const DEVICE_COLORS: Record<ElectricalDevice["type"], string> = {
   outlet: "#D9A441",
@@ -18,44 +22,44 @@ function Glyph({ type, color }: { type: ElectricalDevice["type"]; color: string 
     case "outlet":
       return (
         <>
-          <circle cx={-40} cy={0} r={22} fill={color} />
-          <circle cx={40} cy={0} r={22} fill={color} />
+          <circle cx={-26} cy={0} r={14} fill={color} />
+          <circle cx={26} cy={0} r={14} fill={color} />
         </>
       );
     case "light":
       return (
         <>
-          <circle cx={0} cy={0} r={55} fill={color} />
+          <circle cx={0} cy={0} r={36} fill={color} />
           {[0, 60, 120, 180, 240, 300].map((angle) => (
             <line
               key={angle}
-              x1={Math.cos((angle * Math.PI) / 180) * 75}
-              y1={Math.sin((angle * Math.PI) / 180) * 75}
-              x2={Math.cos((angle * Math.PI) / 180) * 105}
-              y2={Math.sin((angle * Math.PI) / 180) * 105}
+              x1={Math.cos((angle * Math.PI) / 180) * 49}
+              y1={Math.sin((angle * Math.PI) / 180) * 49}
+              x2={Math.cos((angle * Math.PI) / 180) * 69}
+              y2={Math.sin((angle * Math.PI) / 180) * 69}
               stroke={color}
-              strokeWidth={14}
+              strokeWidth={9}
             />
           ))}
         </>
       );
     case "switch":
-      return <line x1={-45} y1={45} x2={45} y2={-45} stroke={color} strokeWidth={18} strokeLinecap="round" />;
+      return <line x1={-29} y1={29} x2={29} y2={-29} stroke={color} strokeWidth={12} strokeLinecap="round" />;
     case "sensor":
       return (
         <>
-          <circle cx={0} cy={0} r={30} fill={color} />
+          <circle cx={0} cy={0} r={20} fill={color} />
           <path
-            d="M -90 40 A 100 100 0 0 1 90 40"
+            d="M -59 26 A 65 65 0 0 1 59 26"
             fill="none"
             stroke={color}
-            strokeWidth={14}
-            strokeDasharray="24 18"
+            strokeWidth={9}
+            strokeDasharray="16 12"
           />
         </>
       );
     case "network":
-      return <rect x={-38} y={-38} width={76} height={76} fill="none" stroke={color} strokeWidth={16} />;
+      return <rect x={-25} y={-25} width={50} height={50} fill="none" stroke={color} strokeWidth={10} />;
     default:
       return null;
   }
@@ -109,16 +113,16 @@ export function DeviceSymbol({
       }}
     >
       {multiSelected && (
-        <circle r={RADIUS + 50} fill="none" stroke="#C96F5B" strokeWidth={14} strokeDasharray="30 20" />
+        <circle r={RADIUS + 33} fill="none" stroke="#C96F5B" strokeWidth={9} strokeDasharray="20 13" />
       )}
       <circle
         r={RADIUS}
         fill="#FFFFFF"
         stroke={selected ? "#C96F5B" : color}
-        strokeWidth={selected ? 26 : 16}
+        strokeWidth={selected ? 17 : 10}
       />
       {Icon ? (
-        <Icon x={-70} y={-70} width={140} height={140} color={selected ? "#C96F5B" : color} />
+        <Icon x={-46} y={-46} width={92} height={92} color={selected ? "#C96F5B" : color} />
       ) : (
         <Glyph type={device.type} color={selected ? "#C96F5B" : color} />
       )}

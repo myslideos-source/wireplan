@@ -1,7 +1,9 @@
-import { AlertTriangle, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { AlertTriangle, GitBranch, Trash2 } from "lucide-react";
 import type { Cable, ElectricalDevice, SmartHomeDevice, TreeBranch } from "@/domain";
 import { findSmartHomeModel, treeBranchStatus, TREE_BRANCH_STATUS_LABELS, MAX_TREE_DEVICES_PER_BRANCH, MAX_TREE_CABLE_LENGTH_M } from "@/domain";
 import { formatNumber } from "@/lib/utils";
+import { Button } from "@/components/ui";
 import { computeTreeWarnings } from "@/features/editor/warnings";
 
 const STATUS_DOT: Record<string, string> = {
@@ -16,19 +18,49 @@ export function TreeBranchesTab({
   smartHomeDevices,
   cables,
   onDeleteBranch,
+  onAutoConnect,
 }: {
   treeBranches: TreeBranch[];
   devices: ElectricalDevice[];
   smartHomeDevices: SmartHomeDevice[];
   cables: Cable[];
   onDeleteBranch: (id: string) => void;
+  /** §Phase14.2 — bulk-assigns every unassigned Tree-capable device on the
+   * current floor; returns how many were newly connected. */
+  onAutoConnect: () => number;
 }) {
+  const [lastResult, setLastResult] = useState<number | null>(null);
+
+  const autoConnectButton = (
+    <div className="flex flex-col gap-1.5">
+      <Button
+        variant="secondary"
+        onClick={() => setLastResult(onAutoConnect())}
+        className="self-start"
+      >
+        <GitBranch className="h-4 w-4" />
+        Loxone-Geräte auf diesem Stockwerk automatisch verbinden
+      </Button>
+      {lastResult !== null && (
+        <p className="text-xs text-text-muted">
+          {lastResult === 0
+            ? "Alle Tree-Geräte auf diesem Stockwerk waren bereits einem Ast zugewiesen."
+            : `${lastResult} Gerät${lastResult === 1 ? "" : "e"} neu einem Tree-Ast zugewiesen.`}
+        </p>
+      )}
+    </div>
+  );
+
   if (treeBranches.length === 0) {
     return (
-      <p className="px-5 py-6 text-sm text-text-secondary">
-        Noch keine Tree-Äste angelegt. Sobald Sie im Editor ein Loxone-Tree-Gerät
-        platzieren oder zuweisen, wird automatisch ein Tree-Ast vorgeschlagen.
-      </p>
+      <div className="flex flex-col gap-4 px-5 py-6">
+        <p className="text-sm text-text-secondary">
+          Noch keine Tree-Äste angelegt. Sobald Sie im Editor ein Loxone-Tree-Gerät
+          platzieren oder zuweisen, wird automatisch ein Tree-Ast vorgeschlagen —
+          oder verbinden Sie alle bereits platzierten Geräte auf einmal:
+        </p>
+        {autoConnectButton}
+      </div>
     );
   }
 
@@ -55,6 +87,7 @@ export function TreeBranchesTab({
         Jeder Tree-Ast ist ein gemeinsamer Bus — die Länge kommt aus „Kabelwege
         berechnen“ oben; die Geräteanzahl ist immer live.
       </p>
+      {autoConnectButton}
       {treeBranches.map((branch) => {
         const count = countByBranch[branch.id] ?? 0;
         const length = lengthByBranch[branch.id] ?? 0;

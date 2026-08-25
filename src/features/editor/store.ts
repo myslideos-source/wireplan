@@ -486,6 +486,12 @@ interface EditorState {
   createTreeBranch: (label?: string) => string;
   deleteTreeBranch: (id: string) => void;
   assignDeviceToTreeBranch: (deviceId: string, branchId: string | null) => void;
+  /** §Phase14.2 — bulk-assigns every Tree-capable device on the current
+   * floor that has no branch yet, filling existing branches before
+   * creating new ones (respecting MAX_TREE_DEVICES_PER_BRANCH); devices
+   * with an existing manual assignment are left untouched. Returns the
+   * number of devices newly assigned. */
+  autoConnectTreeDevicesOnFloor: () => number;
 
   // §61 — manual junction points and bus edges, so a branch's topology
   // can be a real graph instead of always the auto nearest-neighbor chain.
@@ -862,6 +868,49 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         d.id === deviceId ? { ...d, treeBranchId: branchId ?? undefined } : d,
       ),
     })),
+
+  autoConnectTreeDevicesOnFloor: () => {
+    const state = get();
+    let treeBranches = state.treeBranches;
+    let devices = state.devices;
+    let smartHomeDevices = state.smartHomeDevices;
+    let assignedCount = 0;
+
+    for (let i = 0; i < devices.length; i += 1) {
+      const device = devices[i];
+      if (device.treeBranchId) continue;
+      const model = device.smartHomeModelId ? findSmartHomeModel(device.smartHomeModelId) : undefined;
+      if (!model?.countsAsTreeDevice) continue;
+      const resolved = resolveTreeBranchAssignment(
+        { devices, smartHomeDevices, treeBranches, floorId: state.floorId },
+        model,
+        undefined,
+      );
+      treeBranches = resolved.treeBranches;
+      devices = devices.map((d, idx) => (idx === i ? { ...d, treeBranchId: resolved.treeBranchId } : d));
+      assignedCount += 1;
+    }
+
+    for (let i = 0; i < smartHomeDevices.length; i += 1) {
+      const device = smartHomeDevices[i];
+      if (device.treeBranchId) continue;
+      const model = findSmartHomeModel(device.modelId);
+      if (!model?.countsAsTreeDevice) continue;
+      const resolved = resolveTreeBranchAssignment(
+        { devices, smartHomeDevices, treeBranches, floorId: state.floorId },
+        model,
+        undefined,
+      );
+      treeBranches = resolved.treeBranches;
+      smartHomeDevices = smartHomeDevices.map((d, idx) =>
+        idx === i ? { ...d, treeBranchId: resolved.treeBranchId } : d,
+      );
+      assignedCount += 1;
+    }
+
+    set({ devices, smartHomeDevices, treeBranches });
+    return assignedCount;
+  },
 
   addTreeJunctionAtPoint: (rawPoint) => {
     const state = get();
