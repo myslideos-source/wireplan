@@ -451,6 +451,14 @@ export function EditorToolbar({
                 </label>
                 <button
                   type="button"
+                  onClick={startCrop}
+                  className="flex items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-primary/40 bg-primary/10 px-2 py-1.5 text-xs font-medium text-primary transition-colors hover:border-primary/60"
+                >
+                  <Crop className="h-3.5 w-3.5" />
+                  Plan zuschneiden
+                </button>
+                <button
+                  type="button"
                   onClick={clearBackgroundImage}
                   className="rounded-[var(--radius-sm)] border border-border px-2 py-1.5 text-xs font-medium text-error transition-colors hover:border-error/60"
                 >
