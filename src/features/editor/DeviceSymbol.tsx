@@ -3,12 +3,11 @@ import type { ElectricalDevice, Point } from "@/domain";
 import { findSmartHomeModel, numberingPrefixFor, formatDeviceNumber } from "@/domain";
 import { SMART_HOME_ICONS } from "./smart-home-icons";
 
-// §70/§102 — shrunk further (now ~35% of the pre-§70 original) so dense
-// real-world plans (many spots in small rooms, rooms as small as 2-4 m²)
-// don't get buried under oversized symbols; every glyph coordinate below
-// is scaled by the same factor as RADIUS to stay proportionate rather
-// than just shrinking the outer circle.
-const RADIUS = 55;
+// §70/§102/§107 — shrunk again (now ~22% of the pre-§70 original) after
+// feedback that symbols still ate up too much of the plan even at 55 —
+// every glyph coordinate below is scaled by the same factor as RADIUS to
+// stay proportionate rather than just shrinking the outer circle.
+const RADIUS = 35;
 
 // §12 (mockup) — the technical color code: Steckdose/Licht get their own
 // colors, Netzwerk its own; a generic Schalter/Sensor symbol isn't one of
@@ -28,44 +27,44 @@ function Glyph({ type, color }: { type: ElectricalDevice["type"]; color: string 
     case "outlet":
       return (
         <>
-          <circle cx={-17} cy={0} r={9} fill={color} />
-          <circle cx={17} cy={0} r={9} fill={color} />
+          <circle cx={-11} cy={0} r={6} fill={color} />
+          <circle cx={11} cy={0} r={6} fill={color} />
         </>
       );
     case "light":
       return (
         <>
-          <circle cx={0} cy={0} r={23} fill={color} />
+          <circle cx={0} cy={0} r={15} fill={color} />
           {[0, 60, 120, 180, 240, 300].map((angle) => (
             <line
               key={angle}
-              x1={Math.cos((angle * Math.PI) / 180) * 32}
-              y1={Math.sin((angle * Math.PI) / 180) * 32}
-              x2={Math.cos((angle * Math.PI) / 180) * 45}
-              y2={Math.sin((angle * Math.PI) / 180) * 45}
+              x1={Math.cos((angle * Math.PI) / 180) * 20}
+              y1={Math.sin((angle * Math.PI) / 180) * 20}
+              x2={Math.cos((angle * Math.PI) / 180) * 29}
+              y2={Math.sin((angle * Math.PI) / 180) * 29}
               stroke={color}
-              strokeWidth={6}
+              strokeWidth={4}
             />
           ))}
         </>
       );
     case "switch":
-      return <line x1={-19} y1={19} x2={19} y2={-19} stroke={color} strokeWidth={8} strokeLinecap="round" />;
+      return <line x1={-12} y1={12} x2={12} y2={-12} stroke={color} strokeWidth={5} strokeLinecap="round" />;
     case "sensor":
       return (
         <>
-          <circle cx={0} cy={0} r={13} fill={color} />
+          <circle cx={0} cy={0} r={8} fill={color} />
           <path
-            d="M -38 17 A 42 42 0 0 1 38 17"
+            d="M -24 11 A 27 27 0 0 1 24 11"
             fill="none"
             stroke={color}
-            strokeWidth={6}
-            strokeDasharray="10 8"
+            strokeWidth={4}
+            strokeDasharray="6 5"
           />
         </>
       );
     case "network":
-      return <rect x={-16} y={-16} width={32} height={32} fill="none" stroke={color} strokeWidth={6} />;
+      return <rect x={-10} y={-10} width={20} height={20} fill="none" stroke={color} strokeWidth={4} />;
     default:
       return null;
   }
@@ -126,16 +125,16 @@ export function DeviceSymbol({
       }}
     >
       {multiSelected && (
-        <circle r={RADIUS + 21} fill="none" stroke="#27AE60" strokeWidth={6} strokeDasharray="13 8" />
+        <circle r={RADIUS + 13} fill="none" stroke="#27AE60" strokeWidth={4} strokeDasharray="8 5" />
       )}
       <circle
         r={RADIUS}
         fill="#FFFFFF"
         stroke={selected ? "#27AE60" : color}
-        strokeWidth={selected ? 11 : 6}
+        strokeWidth={selected ? 7 : 4}
       />
       {Icon ? (
-        <Icon x={-30} y={-30} width={60} height={60} color={selected ? "#27AE60" : color} />
+        <Icon x={-19} y={-19} width={38} height={38} color={selected ? "#27AE60" : color} />
       ) : (
         <Glyph type={device.type} color={selected ? "#27AE60" : color} />
       )}
@@ -144,9 +143,9 @@ export function DeviceSymbol({
       <g transform={`rotate(${-(device.rotation ?? 0)})`}>
         <text
           x={0}
-          y={RADIUS + 25}
+          y={RADIUS + 16}
           textAnchor="middle"
-          fontSize={25}
+          fontSize={16}
           fontWeight={600}
           fill="#23272D"
           pointerEvents="none"

@@ -26,39 +26,67 @@ function mapProjectRow(row: ProjectRow): Project {
   };
 }
 
+/** Same bounded-wait rationale as `src/lib/supabase/floors.ts` — a stalled
+ * connection must not hang a server-rendered page (these two reads run
+ * during SSR) or a client-side write indefinitely. */
+function withTimeout<T>(promise: PromiseLike<T>, ms: number): Promise<T | null> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(null), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      () => {
+        clearTimeout(timer);
+        resolve(null);
+      },
+    );
+  });
+}
+
 export async function fetchProjects(
   supabase: SupabaseClient,
 ): Promise<Project[] | null> {
-  const { data, error } = await supabase
-    .from("projects")
-    .select("id, name, address, geometry_status, updated_at")
-    .order("updated_at", { ascending: false });
-  if (error || !data) return null;
-  return data.map(mapProjectRow);
+  const result = await withTimeout(
+    supabase
+      .from("projects")
+      .select("id, name, address, geometry_status, updated_at")
+      .order("updated_at", { ascending: false }),
+    8000,
+  );
+  if (!result || result.error || !result.data) return null;
+  return result.data.map(mapProjectRow);
 }
 
 export async function fetchProject(
   supabase: SupabaseClient,
   id: string,
 ): Promise<Project | null> {
-  const { data, error } = await supabase
-    .from("projects")
-    .select("id, name, address, geometry_status, updated_at")
-    .eq("id", id)
-    .maybeSingle();
-  if (error || !data) return null;
-  return mapProjectRow(data);
+  const result = await withTimeout(
+    supabase
+      .from("projects")
+      .select("id, name, address, geometry_status, updated_at")
+      .eq("id", id)
+      .maybeSingle(),
+    8000,
+  );
+  if (!result || result.error || !result.data) return null;
+  return mapProjectRow(result.data);
 }
 
 export async function insertProject(
   supabase: SupabaseClient,
   input: { id: string; name: string; address: string },
 ): Promise<Project | null> {
-  const { data, error } = await supabase
-    .from("projects")
-    .insert({ id: input.id, name: input.name, address: input.address || null })
-    .select("id, name, address, geometry_status, updated_at")
-    .single();
-  if (error || !data) return null;
-  return mapProjectRow(data);
+  const result = await withTimeout(
+    supabase
+      .from("projects")
+      .insert({ id: input.id, name: input.name, address: input.address || null })
+      .select("id, name, address, geometry_status, updated_at")
+      .single(),
+    8000,
+  );
+  if (!result || result.error || !result.data) return null;
+  return mapProjectRow(result.data);
 }

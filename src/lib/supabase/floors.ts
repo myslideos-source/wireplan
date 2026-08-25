@@ -37,17 +37,42 @@ function withDefaults(state: Partial<FloorMutableSlice>): FloorMutableSlice {
   };
 }
 
+/** A stalled connection (dropped wifi, a blocked/unreachable host) can
+ * leave a Supabase call pending indefinitely — `fetch` has no built-in
+ * timeout, so nothing here would ever resolve on its own. Every call in
+ * this file is bounded so a network hiccup degrades to "couldn't load
+ * from Supabase this time" (silently falls through to whatever local
+ * state already exists) instead of an infinite loading spinner. */
+function withTimeout<T>(promise: PromiseLike<T>, ms: number): Promise<T | null> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(null), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      () => {
+        clearTimeout(timer);
+        resolve(null);
+      },
+    );
+  });
+}
+
 export async function fetchFloorsForProject(
   supabase: SupabaseClient,
   projectId: string,
 ): Promise<LoadedFloor[] | null> {
-  const { data, error } = await supabase
-    .from("floors")
-    .select("id, project_id, name, level, state")
-    .eq("project_id", projectId)
-    .order("level", { ascending: true });
-  if (error || !data) return null;
-  return (data as FloorRow[]).map((row) => ({
+  const result = await withTimeout(
+    supabase
+      .from("floors")
+      .select("id, project_id, name, level, state")
+      .eq("project_id", projectId)
+      .order("level", { ascending: true }),
+    8000,
+  );
+  if (!result || result.error || !result.data) return null;
+  return (result.data as FloorRow[]).map((row) => ({
     floor: { id: row.id, projectId: row.project_id, name: row.name, level: row.level },
     state: withDefaults(row.state ?? {}),
   }));
@@ -58,13 +83,16 @@ export async function insertFloor(
   floor: Floor,
   state: FloorMutableSlice,
 ): Promise<void> {
-  await supabase.from("floors").insert({
-    id: floor.id,
-    project_id: floor.projectId,
-    name: floor.name,
-    level: floor.level,
-    state,
-  });
+  await withTimeout(
+    supabase.from("floors").insert({
+      id: floor.id,
+      project_id: floor.projectId,
+      name: floor.name,
+      level: floor.level,
+      state,
+    }),
+    8000,
+  );
 }
 
 export async function saveFloorState(
@@ -72,8 +100,11 @@ export async function saveFloorState(
   floorId: string,
   state: FloorMutableSlice,
 ): Promise<void> {
-  await supabase
-    .from("floors")
-    .update({ state, updated_at: new Date().toISOString() })
-    .eq("id", floorId);
+  await withTimeout(
+    supabase
+      .from("floors")
+      .update({ state, updated_at: new Date().toISOString() })
+      .eq("id", floorId),
+    8000,
+  );
 }

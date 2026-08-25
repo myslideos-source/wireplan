@@ -629,7 +629,7 @@ export function EditorCanvas() {
           const width = distributionBoard.width;
           const height = distributionBoard.height;
           const isSelected = selected?.type === "board";
-          const iconSize = Math.min(width, height) * 0.5;
+          const iconSize = Math.min(width, height) * 0.35;
           const componentCount = distributionBoard.cabinetComponentModelIds.length;
           return (
             <g
@@ -667,9 +667,9 @@ export function EditorCanvas() {
               />
               <text
                 x={center.x}
-                y={center.y + height / 2 + 55}
+                y={center.y + height / 2 + 45}
                 textAnchor="middle"
-                fontSize={80}
+                fontSize={52}
                 fontWeight={600}
                 fill="#27AE60"
                 pointerEvents="none"
@@ -737,32 +737,32 @@ export function EditorCanvas() {
                   <circle
                     cx={device.position.x}
                     cy={device.position.y}
-                    r={89}
+                    r={57}
                     fill="none"
                     stroke="#27AE60"
-                    strokeWidth={6}
-                    strokeDasharray="13 8"
+                    strokeWidth={4}
+                    strokeDasharray="8 5"
                   />
                 )}
                 <circle
                   cx={device.position.x}
                   cy={device.position.y}
-                  r={68}
+                  r={43}
                   fill={color}
                   fillOpacity={0.18}
                   stroke={isSelected ? "#27AE60" : color}
-                  strokeWidth={isSelected ? 15 : 10}
+                  strokeWidth={isSelected ? 9 : 6}
                 />
                 {Icon ? (
                   <Icon
-                    x={device.position.x - 30}
-                    y={device.position.y - 30}
-                    width={60}
-                    height={60}
+                    x={device.position.x - 19}
+                    y={device.position.y - 19}
+                    width={38}
+                    height={38}
                     color={isSelected ? "#27AE60" : color}
                   />
                 ) : (
-                  <circle cx={device.position.x} cy={device.position.y} r={21} fill={color} />
+                  <circle cx={device.position.x} cy={device.position.y} r={13} fill={color} />
                 )}
               </g>
             );
@@ -790,31 +790,31 @@ export function EditorCanvas() {
               >
                 {isMultiSelected("consumer", consumer.id) && (
                   <rect
-                    x={consumer.position.x - 130}
-                    y={consumer.position.y - 130}
-                    width={260}
-                    height={260}
+                    x={consumer.position.x - 83}
+                    y={consumer.position.y - 83}
+                    width={166}
+                    height={166}
                     fill="none"
                     stroke="#27AE60"
-                    strokeWidth={9}
-                    strokeDasharray="20 13"
+                    strokeWidth={6}
+                    strokeDasharray="13 8"
                   />
                 )}
                 <rect
-                  x={consumer.position.x - 95}
-                  y={consumer.position.y - 95}
-                  width={190}
-                  height={190}
+                  x={consumer.position.x - 60}
+                  y={consumer.position.y - 60}
+                  width={120}
+                  height={120}
                   fill="rgba(192,57,43,0.15)"
                   stroke={isSelected ? "#27AE60" : "#C0392B"}
-                  strokeWidth={isSelected ? 18 : 12}
+                  strokeWidth={isSelected ? 11 : 8}
                 />
                 <text
                   x={consumer.position.x}
                   y={consumer.position.y}
                   textAnchor="middle"
                   dominantBaseline="central"
-                  fontSize={115}
+                  fontSize={73}
                   fontWeight={700}
                   fill={isSelected ? "#27AE60" : "#C0392B"}
                   pointerEvents="none"
@@ -892,15 +892,15 @@ export function EditorCanvas() {
                 }}
               >
                 <rect
-                  x={junction.position.x - 36}
-                  y={junction.position.y - 36}
-                  width={72}
-                  height={72}
+                  x={junction.position.x - 23}
+                  y={junction.position.y - 23}
+                  width={46}
+                  height={46}
                   transform={`rotate(45 ${junction.position.x} ${junction.position.y})`}
                   fill="#FFFFFF"
                   stroke={isPending ? "#27AE60" : (branch?.colorHex ?? "#27AE60")}
-                  strokeWidth={isSelected || isPending ? 17 : 10}
-                  strokeDasharray={isPending ? "13 8" : undefined}
+                  strokeWidth={isSelected || isPending ? 11 : 6}
+                  strokeDasharray={isPending ? "8 5" : undefined}
                 />
               </g>
             );
@@ -918,10 +918,10 @@ export function EditorCanvas() {
                 pointerEvents="none"
                 opacity={dimArchitecture ? 0.25 : 1}
               >
-                <tspan x={centroid.x} dy={-32} fontSize={130} fontWeight={600} fill="#303030">
+                <tspan x={centroid.x} dy={-20} fontSize={85} fontWeight={600} fill="#303030">
                   {room.name}
                 </tspan>
-                <tspan x={centroid.x} dy={145} fontSize={110} fill="#7F8C8D">
+                <tspan x={centroid.x} dy={95} fontSize={72} fill="#7F8C8D">
                   {formatArea(room.area)}
                 </tspan>
               </text>

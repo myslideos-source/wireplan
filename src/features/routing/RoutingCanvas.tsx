@@ -241,10 +241,10 @@ export function RoutingCanvas({
               key={device.id}
               cx={position.x}
               cy={position.y}
-              r={65}
+              r={42}
               fill="#FFFFFF"
               stroke={color}
-              strokeWidth={10}
+              strokeWidth={7}
               opacity={dimmed ? 0.3 : 1}
             />
           );
@@ -264,11 +264,11 @@ export function RoutingCanvas({
               key={device.id}
               cx={device.position.x}
               cy={device.position.y}
-              r={65}
+              r={42}
               fill={color}
               fillOpacity={0.18}
               stroke={color}
-              strokeWidth={10}
+              strokeWidth={7}
               opacity={dimmed ? 0.3 : 1}
             />
           );
@@ -280,13 +280,13 @@ export function RoutingCanvas({
           return (
             <rect
               key={consumer.id}
-              x={consumer.position.x - 60}
-              y={consumer.position.y - 60}
-              width={120}
-              height={120}
+              x={consumer.position.x - 38}
+              y={consumer.position.y - 38}
+              width={76}
+              height={76}
               fill="#FFFFFF"
               stroke="#C0392B"
-              strokeWidth={10}
+              strokeWidth={7}
               opacity={dimmed ? 0.3 : 1}
             />
           );
@@ -300,7 +300,7 @@ export function RoutingCanvas({
             height={250}
             fill="rgba(39,174,96,0.15)"
             stroke="#27AE60"
-            strokeWidth={16}
+            strokeWidth={10}
           />
         )}
       </svg>
