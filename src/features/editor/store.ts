@@ -1522,7 +1522,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   planViewMode: "planer",
   setPlanViewMode: (mode) => set({ planViewMode: mode }),
 
-  snapEnabled: true,
+  // §111 — defaulting this on meant every drag (placing OR repositioning
+  // a symbol) always jumped in 50mm steps, with no obvious way to get
+  // smooth mm-precise movement short of discovering this toggle. Since
+  // fine-tuning symbols against a real uploaded plan is the whole point,
+  // free positioning is now the default; snapping stays one click away
+  // for anyone who wants quick grid alignment instead.
+  snapEnabled: false,
   toggleSnap: () => set((state) => ({ snapEnabled: !state.snapEnabled })),
 
   showLegacySmartHomeDevices: false,
