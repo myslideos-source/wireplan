@@ -6,10 +6,19 @@ import { cn } from "@/lib/utils";
 export function Dropdown({
   trigger,
   align = "end",
+  side = "bottom",
+  triggerClassName,
   children,
 }: {
   trigger: React.ReactNode;
   align?: "start" | "end";
+  /** Which side of the trigger the popup opens on. Use "top" for triggers
+   * anchored near the bottom of the viewport (e.g. a footer row), where
+   * opening downward would render the popup off-screen. */
+  side?: "top" | "bottom";
+  /** Override the trigger button's own layout classes — e.g. `w-full` for
+   * a trigger meant to fill its container instead of shrinking to fit. */
+  triggerClassName?: string;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = React.useState(false);
@@ -38,14 +47,15 @@ export function Dropdown({
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        className="flex items-center gap-2"
+        className={cn("flex items-center gap-2", triggerClassName)}
       >
         {trigger}
       </button>
       {open && (
         <div
           className={cn(
-            "absolute top-[calc(100%+8px)] z-50 min-w-[220px] rounded-[var(--radius-md)] border border-border bg-panel-elevated p-1 shadow-xl shadow-black/40",
+            "absolute z-50 min-w-[220px] rounded-[var(--radius-md)] border border-border bg-panel-elevated p-1 shadow-xl shadow-black/40",
+            side === "top" ? "bottom-[calc(100%+8px)]" : "top-[calc(100%+8px)]",
             align === "end" ? "right-0" : "left-0",
           )}
           onClick={() => setOpen(false)}
