@@ -37,11 +37,15 @@ export function RoutingCanvas({
   const viewBox = `${box.minX} ${box.minY} ${box.width} ${box.height}`;
   const boardPosition = distributionBoard ? distributionBoard.position : null;
 
-  // Tree bus cables have no single deviceId (§33) — this device-to-cable
-  // lookup only covers the classic star cables this canvas visualizes.
-  const cablesByDeviceId = new Map<string, Cable>(
-    cables.filter((c) => c.deviceId).map((c) => [c.deviceId as string, c]),
-  );
+  // Tree bus cables have no single deviceId (§33) and are drawn separately
+  // below — this lookup covers every cable this canvas draws per-device:
+  // a classic single-device home-run (deviceId) or a room-circuit loop
+  // cable shared by several devices (deviceIds, §Phase15).
+  const cablesByDeviceId = new Map<string, Cable>();
+  for (const cable of cables) {
+    if (cable.deviceId) cablesByDeviceId.set(cable.deviceId, cable);
+    for (const id of cable.deviceIds ?? []) cablesByDeviceId.set(id, cable);
+  }
 
   return (
     <svg
@@ -60,9 +64,45 @@ export function RoutingCanvas({
       </g>
 
       {cables.map((cable) => {
+        if (!boardPosition) return null;
+        // A room-circuit loop cable (§Phase15) hops board -> device -> device
+        // -> ... in bus order, drawn as one corner-to-corner segment per hop
+        // instead of the single-device home-run below.
+        if (cable.deviceIds) {
+          const positions = cable.deviceIds
+            .map((id) => devices.find((d) => d.id === id))
+            .filter((d): d is NonNullable<typeof d> => d !== undefined)
+            .map((d) => devicePosition(d));
+          if (positions.length === 0) return null;
+          const isSelected = selectedCableId === cable.id;
+          const dimmed = selectedCableId !== null && !isSelected;
+          let d = `M ${boardPosition.x} ${boardPosition.y}`;
+          let current = boardPosition;
+          for (const position of positions) {
+            d += ` L ${position.x} ${current.y} L ${position.x} ${position.y}`;
+            current = position;
+          }
+          return (
+            <path
+              key={cable.id}
+              d={d}
+              fill="none"
+              stroke={CABLE_COLORS[cable.type]}
+              strokeWidth={isSelected ? 50 : 30}
+              strokeDasharray="90 50"
+              opacity={dimmed ? 0.2 : 1}
+              className="cursor-pointer"
+              onClick={(event) => {
+                event.stopPropagation();
+                onSelectCable(cable.id);
+              }}
+            />
+          );
+        }
+
         const device = devices.find((d) => d.id === cable.deviceId);
         const position = device && devicePosition(device);
-        if (!position || !boardPosition) return null;
+        if (!position) return null;
         const isSelected = selectedCableId === cable.id;
         const dimmed = selectedCableId !== null && !isSelected;
         // Every mode renders as the simple corner-to-corner line it was

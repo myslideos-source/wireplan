@@ -1719,6 +1719,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       state.distributionBoard,
       state.rooms,
       state.routingMode,
+      state.roomCircuits,
     );
     const treeCables = computeTreeBranchCables(
       state.treeBranches,

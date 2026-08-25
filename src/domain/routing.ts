@@ -40,12 +40,23 @@ export type RoutingMode = "Boden" | "Decke" | "Hybrid";
 
 export interface Cable {
   id: string;
-  /** Present for a classic star/home-run cable (one device, one cable).
-   * Absent for a Tree bus cable, which serves an entire branch instead —
-   * see `treeBranchId`. */
+  /** Present for a single-device star/home-run cable (a sensor or network
+   * Dose, still one cable per device). Absent for a Tree bus cable or a
+   * room circuit loop, which both serve several devices on one shared
+   * cable instead — see `treeBranchId`/`deviceIds`. */
   deviceId?: string;
   /** Present for a Tree bus cable — which branch it carries. */
   treeBranchId?: string;
+  /** Present for a room-circuit loop cable (§Phase15 — outlets/lights/
+   * switches on the same circuit are looped through/"durchgeschleift"
+   * from one device to the next instead of each getting its own home-run)
+   * — every device the shared cable passes through, in bus order from the
+   * board. */
+  deviceIds?: string[];
+  /** Present alongside `deviceIds` — the grouping key the loop was formed
+   * from (an assigned Circuit id, or a synthetic per-room key when the
+   * room has no circuit assigned yet). */
+  circuitGroupId?: string;
   type: CableType;
   lengthMeters: number;
   mode: RoutingMode;
