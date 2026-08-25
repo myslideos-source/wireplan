@@ -5,7 +5,7 @@ import { AlertTriangle, Cable as CableIcon, Zap, GitBranch, Network } from "luci
 import type { CableType, Project, RoutingMode } from "@/domain";
 import { SPEAKER_CABLE_TYPES } from "@/domain";
 import { KpiCard, Button } from "@/components/ui";
-import { formatNumber } from "@/lib/utils";
+import { cn, formatNumber } from "@/lib/utils";
 import { useEditorStore } from "@/features/editor/store";
 import { computeCircuitWarnings, computeLegacyWarnings } from "@/features/editor/warnings";
 import { RoutingCanvas } from "./RoutingCanvas";
@@ -18,10 +18,11 @@ import { SystemOverviewCard } from "./SystemOverviewCard";
 import { CabinetUtilizationCard } from "./CabinetUtilizationCard";
 import { WarningsCard } from "./WarningsCard";
 import { BottomLegend } from "./BottomLegend";
+import { CabinetView } from "./CabinetView";
 
 const ROUTING_MODES: RoutingMode[] = ["Boden", "Decke", "Hybrid"];
 
-type Tab = "kabelliste" | "materialliste" | "loxone" | "tree";
+type Tab = "kabelliste" | "materialliste" | "loxone" | "tree" | "schaltschrank";
 
 export function RoutingWorkspace({ project }: { project: Project }) {
   const devices = useEditorStore((state) => state.devices);
@@ -147,19 +148,22 @@ export function RoutingWorkspace({ project }: { project: Project }) {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_400px]">
-        <div className="aspect-[4/3] overflow-hidden rounded-[var(--radius-lg)] border border-border bg-bg-secondary">
-          <RoutingCanvas selectedCableId={selectedCableId} onSelectCable={setSelectedCableId} />
-        </div>
+      <div className={cn("grid grid-cols-1 gap-6", tab !== "schaltschrank" && "lg:grid-cols-[1fr_400px]")}>
+        {tab !== "schaltschrank" && (
+          <div className="aspect-[4/3] overflow-hidden rounded-[var(--radius-lg)] border border-border bg-bg-secondary">
+            <RoutingCanvas selectedCableId={selectedCableId} onSelectCable={setSelectedCableId} />
+          </div>
+        )}
 
         <div className="flex min-w-0 flex-col rounded-[var(--radius-lg)] border border-border bg-panel">
-          <div className="flex border-b border-border">
+          <div className="flex flex-wrap border-b border-border">
             {(
               [
                 ["kabelliste", "Kabelliste"],
                 ["materialliste", "Materialliste"],
                 ["loxone", "Loxone"],
                 ["tree", "Tree-Äste"],
+                ["schaltschrank", "Schaltschrank"],
               ] as const
             ).map(([id, label]) => (
               <button
@@ -221,6 +225,8 @@ export function RoutingWorkspace({ project }: { project: Project }) {
               onAutoConnect={autoConnectTreeDevicesOnFloor}
             />
           )}
+
+          {tab === "schaltschrank" && <CabinetView distributionBoard={distributionBoard} />}
         </div>
       </div>
 

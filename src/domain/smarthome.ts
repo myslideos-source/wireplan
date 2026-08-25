@@ -229,6 +229,12 @@ export interface SmartHomeDeviceModel {
    * a future device could conceivably be neither (e.g. a pure software
    * integration). */
   isCabinetComponent: boolean;
+  /** Approximate DIN-rail module width ("TE", 1 TE = 17.5mm) — only set
+   * for isCabinetComponent entries, and only meant for proportional
+   * layout in the cabinet visualization (Phase 25), not as a certified
+   * spec. Loxone's own datasheets are the source of truth for a real
+   * installation; verify against those before treating this as exact. */
+  dinUnits?: number;
   /** §5 — a superseded/discontinued product, hidden from the picker by
    * default (still plannable for an existing installation being
    * extended, via "Legacy-Geräte anzeigen"). Absent/false = current. */
@@ -286,6 +292,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 4,
   },
   {
     id: "loxone-miniserver-gen1",
@@ -305,6 +312,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 4,
     legacy: true,
   },
   {
@@ -324,6 +332,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 6,
   },
   {
     id: "loxone-miniserver-go",
@@ -341,6 +350,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 4,
   },
 
   // 2. Taster und Bedienelemente
@@ -1124,6 +1134,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: true,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
   {
     id: "loxone-rgbw-dimmer-air",
@@ -1141,6 +1152,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
   {
     id: "loxone-led-spot-ww-pwm",
@@ -1178,6 +1190,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
   {
     id: "loxone-nano-motor-controller-tree",
@@ -1408,6 +1421,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 4,
   },
   {
     id: "loxone-stereo-extension",
@@ -1425,6 +1439,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
 
   // 15. Loxone Lautsprecher
@@ -1683,6 +1698,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
   {
     id: "loxone-air-base-extension",
@@ -1701,6 +1717,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
   {
     id: "loxone-relay-extension",
@@ -1719,6 +1736,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
   {
     id: "loxone-dimmer-extension",
@@ -1737,6 +1755,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
   {
     id: "loxone-di-extension",
@@ -1755,6 +1774,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
   {
     id: "loxone-ai-extension",
@@ -1773,6 +1793,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
   {
     id: "loxone-ao-extension",
@@ -1791,6 +1812,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
   {
     id: "loxone-multi-extension-air",
@@ -1809,6 +1831,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
   {
     id: "loxone-dali-extension-64",
@@ -1827,6 +1850,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
   {
     id: "loxone-dali-extension-10",
@@ -1845,6 +1869,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
   {
     id: "loxone-dmx-extension",
@@ -1863,6 +1888,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
   {
     id: "loxone-modbus-extension",
@@ -1881,6 +1907,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
   {
     id: "loxone-rs232-extension",
@@ -1899,6 +1926,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
   {
     id: "loxone-rs485-extension",
@@ -1917,6 +1945,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
   {
     id: "loxone-knx-extension",
@@ -1935,6 +1964,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
   {
     id: "loxone-enocean-extension",
@@ -1953,6 +1983,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
   {
     id: "loxone-1wire-extension",
@@ -1971,6 +2002,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
   {
     id: "loxone-mbus-extension",
@@ -1989,6 +2021,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
   {
     id: "loxone-ir-extension",
@@ -2007,6 +2040,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
   {
     id: "loxone-internorm-extension",
@@ -2025,6 +2059,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
   {
     id: "loxone-froeling-extension",
@@ -2043,6 +2078,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
   {
     id: "loxone-schueco-extension",
@@ -2061,6 +2097,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
 
   // 23. Kleine Einbaumodule (dezentral, am/im Gerät verbaut)
@@ -2188,6 +2225,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 1,
   },
   {
     id: "loxone-energy-meter-3phase-tree",
@@ -2206,6 +2244,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 2,
   },
   {
     id: "loxone-energy-meter-ct-1-5a-tree",
@@ -2224,6 +2263,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 1,
   },
   {
     id: "loxone-energy-meter-ct-40ma-tree",
@@ -2242,6 +2282,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 1,
   },
 
   // 25. Stromversorgung
@@ -2261,6 +2302,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 4,
   },
   {
     id: "loxone-power-supply-backup",
@@ -2278,6 +2320,7 @@ export const LOXONE_CATALOG: SmartHomeDeviceModel[] = [
     countsAsTreeDevice: false,
     isPlanableOnFloorplan: false,
     isCabinetComponent: true,
+    dinUnits: 6,
   },
 ];
 
