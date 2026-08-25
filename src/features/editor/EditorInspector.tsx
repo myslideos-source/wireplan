@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { MousePointer2, Plug, Lightbulb, ToggleLeft, Radar, Wifi, Trash2, Copy, Server, Home, Zap, GitFork, type LucideIcon } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { MousePointer2, Plug, Lightbulb, ToggleLeft, Radar, Wifi, Trash2, Copy, Server, Home, Zap, GitFork, ChevronDown, type LucideIcon } from "lucide-react";
 import { Badge, Button, KpiCard } from "@/components/ui";
 import {
   DEVICE_TYPE_LABELS,
@@ -25,7 +25,7 @@ import {
   type PlanningCategory,
 } from "@/domain";
 import { isFeatureEnabled } from "@/lib/feature-flags";
-import { formatArea, formatNumber } from "@/lib/utils";
+import { cn, formatArea, formatNumber } from "@/lib/utils";
 import { MOCK_CIRCUITS, getCircuit } from "@/features/electrical/mock-circuits";
 import { useEditorStore } from "./store";
 
@@ -57,13 +57,37 @@ const DEVICE_ICONS: Record<ElectricalDeviceType, LucideIcon> = {
   network: Wifi,
 };
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+/** §17 (mockup) — each section is independently collapsible, so a device
+ * with several groups (Allgemein/Stromkreis/Verkabelung/Loxone) doesn't
+ * have to show all of them expanded at once. */
+function Section({
+  title,
+  children,
+  defaultOpen = true,
+}: {
+  title: string;
+  children: ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border-b border-shell-border px-5 py-4 last:border-b-0">
-      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-shell-text-muted">
-        {title}
-      </h3>
-      <div className="flex flex-col gap-3">{children}</div>
+    <div className="border-b border-shell-border last:border-b-0">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        className="flex w-full items-center justify-between gap-2 px-5 py-3 text-left"
+      >
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-shell-text-muted">
+          {title}
+        </h3>
+        <ChevronDown
+          className={cn(
+            "h-3.5 w-3.5 shrink-0 text-shell-text-muted transition-transform",
+            open && "rotate-180",
+          )}
+        />
+      </button>
+      {open && <div className="flex flex-col gap-3 px-5 pb-4">{children}</div>}
     </div>
   );
 }
