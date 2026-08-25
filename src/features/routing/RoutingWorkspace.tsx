@@ -13,6 +13,11 @@ import { CableListTable } from "./CableListTable";
 import { MaterialListTab } from "./MaterialListTab";
 import { LoxoneListTab } from "./LoxoneListTab";
 import { TreeBranchesTab } from "./TreeBranchesTab";
+import { CircuitOverviewCard } from "./CircuitOverviewCard";
+import { SystemOverviewCard } from "./SystemOverviewCard";
+import { CabinetUtilizationCard } from "./CabinetUtilizationCard";
+import { WarningsCard } from "./WarningsCard";
+import { BottomLegend } from "./BottomLegend";
 
 const ROUTING_MODES: RoutingMode[] = ["Boden", "Decke", "Hybrid"];
 
@@ -55,16 +60,6 @@ export function RoutingWorkspace({ project }: { project: Project }) {
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-6 px-8 py-8">
-      {planWarnings.length > 0 && (
-        <div className="flex flex-col gap-1.5 rounded-[var(--radius-lg)] border border-warning/40 bg-warning/10 px-4 py-3">
-          {planWarnings.map((warning) => (
-            <div key={warning.id} className="flex items-start gap-1.5 text-xs text-warning">
-              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <span>{warning.message}</span>
-            </div>
-          ))}
-        </div>
-      )}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <p className="text-sm text-text-secondary">{project.name}</p>
@@ -228,6 +223,20 @@ export function RoutingWorkspace({ project }: { project: Project }) {
           )}
         </div>
       </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+        <CircuitOverviewCard cables={cables} rooms={rooms} onShowAll={() => setTab("kabelliste")} />
+        <SystemOverviewCard
+          devices={devices}
+          smartHomeDevices={smartHomeDevices}
+          treeBranches={treeBranches}
+          audioZones={audioZones}
+        />
+        <CabinetUtilizationCard distributionBoard={distributionBoard} />
+        <WarningsCard warnings={planWarnings} />
+      </div>
+
+      <BottomLegend />
     </div>
   );
 }
