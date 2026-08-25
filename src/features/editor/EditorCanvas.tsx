@@ -607,18 +607,18 @@ export function EditorCanvas() {
               points={drawingRoomPoints.map((p) => `${p.x},${p.y}`).join(" ")}
               fill="none"
               stroke="#27AE60"
-              strokeWidth={30}
-              strokeDasharray="60 40"
+              strokeWidth={16}
+              strokeDasharray="32 20"
             />
             {drawingRoomPoints.map((p, index) => (
               <circle
                 key={index}
                 cx={p.x}
                 cy={p.y}
-                r={index === 0 && drawingRoomPoints.length >= 3 ? 90 : 50}
+                r={index === 0 && drawingRoomPoints.length >= 3 ? 48 : 26}
                 fill={index === 0 && drawingRoomPoints.length >= 3 ? "#F5F8F6" : "#27AE60"}
                 stroke="#27AE60"
-                strokeWidth={index === 0 && drawingRoomPoints.length >= 3 ? 24 : 0}
+                strokeWidth={index === 0 && drawingRoomPoints.length >= 3 ? 12 : 0}
               />
             ))}
           </g>
@@ -629,7 +629,7 @@ export function EditorCanvas() {
           const width = distributionBoard.width;
           const height = distributionBoard.height;
           const isSelected = selected?.type === "board";
-          const iconSize = Math.min(width, height) * 0.35;
+          const iconSize = Math.min(width, height) * 0.28;
           const componentCount = distributionBoard.cabinetComponentModelIds.length;
           return (
             <g
@@ -656,7 +656,7 @@ export function EditorCanvas() {
                 height={height}
                 fill="rgba(39,174,96,0.12)"
                 stroke="#27AE60"
-                strokeWidth={isSelected ? 20 : 14}
+                strokeWidth={isSelected ? 14 : 10}
               />
               <Server
                 x={center.x - iconSize / 2}
@@ -667,9 +667,9 @@ export function EditorCanvas() {
               />
               <text
                 x={center.x}
-                y={center.y + height / 2 + 45}
+                y={center.y + height / 2 + 34}
                 textAnchor="middle"
-                fontSize={52}
+                fontSize={38}
                 fontWeight={600}
                 fill="#27AE60"
                 pointerEvents="none"
@@ -918,10 +918,10 @@ export function EditorCanvas() {
                 pointerEvents="none"
                 opacity={dimArchitecture ? 0.25 : 1}
               >
-                <tspan x={centroid.x} dy={-20} fontSize={85} fontWeight={600} fill="#303030">
+                <tspan x={centroid.x} dy={-12} fontSize={56} fontWeight={600} fill="#303030">
                   {room.name}
                 </tspan>
-                <tspan x={centroid.x} dy={95} fontSize={72} fill="#7F8C8D">
+                <tspan x={centroid.x} dy={62} fontSize={46} fill="#7F8C8D">
                   {formatArea(room.area)}
                 </tspan>
               </text>

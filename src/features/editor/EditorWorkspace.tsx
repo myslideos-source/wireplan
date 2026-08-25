@@ -6,7 +6,7 @@ import { ArrowLeft, PanelLeft, PanelRight } from "lucide-react";
 import type { Project } from "@/domain";
 import type { FlaggedArea } from "@/features/plan-analysis/types";
 import type { FloorGeometry } from "./mock-geometry";
-import { useEditorStore } from "./store";
+import { useEditorStore, type UploadedBackgroundImage } from "./store";
 import { EditorToolbar } from "./EditorToolbar";
 import { EditorCanvas } from "./EditorCanvas";
 import { SmartHomeDevicePicker } from "./SmartHomeDevicePicker";
@@ -32,7 +32,7 @@ export function EditorWorkspace({
    * each already have their own page image before the user has ever
    * visited most of them. Omit for the normal server-fetched-geometries
    * path, which never has a background to seed up front. */
-  backgroundImages?: Record<string, { dataUrl: string; naturalWidth: number; naturalHeight: number }>;
+  backgroundImages?: Record<string, UploadedBackgroundImage>;
 }) {
   const hydrate = useEditorStore((state) => state.hydrate);
   const hydrateWithBackgrounds = useEditorStore((state) => state.hydrateWithBackgrounds);

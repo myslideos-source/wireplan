@@ -9,11 +9,12 @@ import {
   sequentialFallbackName,
   type PageDraft,
 } from "@/features/plan-upload/floor-detection";
+import type { UploadedBackgroundImage } from "@/features/editor/store";
 
 export interface StartFloorInput {
   name: string;
   level: number;
-  backgroundImage?: { dataUrl: string; naturalWidth: number; naturalHeight: number };
+  backgroundImage?: UploadedBackgroundImage;
 }
 
 export function SinglePlanForm({
@@ -31,11 +32,20 @@ export function SinglePlanForm({
 }) {
   const [name, setName] = React.useState(suggestedName);
   const [level, setLevel] = React.useState(suggestedLevel);
+  const [realWidthMeters, setRealWidthMeters] = React.useState("");
 
   function handleSubmit() {
     const trimmedName = name.trim();
     if (!trimmedName) return;
-    onCreate([{ name: trimmedName, level, backgroundImage: backgroundImage ?? undefined }]);
+    const parsedWidth = Number.parseFloat(realWidthMeters.replace(",", "."));
+    const realWidthMm = Number.isFinite(parsedWidth) && parsedWidth > 0 ? parsedWidth * 1000 : undefined;
+    onCreate([
+      {
+        name: trimmedName,
+        level,
+        backgroundImage: backgroundImage ? { ...backgroundImage, realWidthMm } : undefined,
+      },
+    ]);
     onClose();
   }
 
@@ -62,10 +72,27 @@ export function SinglePlanForm({
       </label>
 
       {backgroundImage && (
-        <div className="overflow-hidden rounded-[var(--radius-md)] border border-border bg-bg">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={backgroundImage.dataUrl} alt="Vorschau des Originalplans" className="max-h-40 w-full object-contain" />
-        </div>
+        <>
+          <div className="overflow-hidden rounded-[var(--radius-md)] border border-border bg-bg">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={backgroundImage.dataUrl} alt="Vorschau des Originalplans" className="max-h-40 w-full object-contain" />
+          </div>
+          <label className="flex flex-col gap-1 text-xs font-medium text-text-secondary">
+            Reale Breite des Plans in Metern (empfohlen)
+            <input
+              type="text"
+              inputMode="decimal"
+              value={realWidthMeters}
+              onChange={(event) => setRealWidthMeters(event.target.value)}
+              placeholder="z. B. 12,5"
+              className="rounded-[var(--radius-sm)] border border-border bg-bg px-3 py-2 text-sm text-text"
+            />
+            <span className="font-normal text-text-muted">
+              Ohne diese Angabe wird die Etage auf einen Schätzwert skaliert —
+              Raumflächen und Symbolgrößen können dann ungenau wirken.
+            </span>
+          </label>
+        </>
       )}
 
       <div className="flex justify-end gap-2">

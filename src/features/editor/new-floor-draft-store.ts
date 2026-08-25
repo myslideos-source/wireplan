@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import type { Project } from "@/domain";
 import type { FloorGeometry } from "./mock-geometry";
+import type { UploadedBackgroundImage } from "./store";
 
 export interface NewFloorDraftEntry {
   geometry: FloorGeometry;
@@ -10,7 +11,7 @@ export interface NewFloorDraftEntry {
    * once the editor has hydrated — held here rather than baked into
    * `geometry` because a floor's background image is runtime store state,
    * not part of its seed geometry (see `BackgroundImage` in store.ts). */
-  backgroundImage?: { dataUrl: string; naturalWidth: number; naturalHeight: number };
+  backgroundImage?: UploadedBackgroundImage;
 }
 
 interface NewFloorDraft {

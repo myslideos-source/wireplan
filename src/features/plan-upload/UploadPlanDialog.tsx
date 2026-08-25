@@ -19,8 +19,6 @@ import type { RealAnalysisResult } from "@/features/plan-analysis/types";
 
 const ACCEPTED_MIME_TYPES = ["application/pdf", "image/png", "image/jpeg"];
 
-let nextUploadFloorId = 1;
-
 /** Fire-and-forget informational plausibility check (Google Gemini) —
  * runs alongside the real 1:1 floor creation below, never gates or slows
  * it down. Its result only ever powers the separate, optional "Analyse"
@@ -138,7 +136,7 @@ function UploadPlanDialogContent({
     const floors: NewFloorDraftEntry[] = inputs.map((input) => ({
       geometry: {
         floor: {
-          id: `floor-upload-${nextUploadFloorId++}`,
+          id: crypto.randomUUID(),
           projectId: project.id,
           name: input.name,
           level: input.level,

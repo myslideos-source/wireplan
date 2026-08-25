@@ -8,8 +8,6 @@ import type { Project } from "@/domain";
 import { StartFloorDialog, type StartFloorInput } from "./StartFloorDialog";
 import { useNewFloorDraftStore, type NewFloorDraftEntry } from "./new-floor-draft-store";
 
-let nextDraftFloorId = 1;
-
 export function NoGeometryYet({ project }: { project: Project }) {
   const router = useRouter();
   const setDraft = useNewFloorDraftStore((state) => state.setDraft);
@@ -18,7 +16,7 @@ export function NoGeometryYet({ project }: { project: Project }) {
     const floors: NewFloorDraftEntry[] = inputs.map((input) => ({
       geometry: {
         floor: {
-          id: `floor-draft-${nextDraftFloorId++}`,
+          id: crypto.randomUUID(),
           projectId: project.id,
           name: input.name,
           level: input.level,

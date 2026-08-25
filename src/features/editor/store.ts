@@ -91,6 +91,17 @@ export interface BackgroundImage {
   aspectRatio: number;
 }
 
+/** A freshly-uploaded (not-yet-fitted) plan image. `realWidthMm`, when the
+ * user provided it at upload time, is the true real-world width of the
+ * depicted floor — used to size the image at actual scale instead of
+ * guessing against an arbitrary default box (see `fitBackgroundImage`). */
+export interface UploadedBackgroundImage {
+  dataUrl: string;
+  naturalWidth: number;
+  naturalHeight: number;
+  realWidthMm?: number;
+}
+
 const MIN_BACKGROUND_SIZE_MM = 300;
 
 /** Fits a freshly-uploaded image inside a floor's current extent (drawn
@@ -98,14 +109,28 @@ const MIN_BACKGROUND_SIZE_MM = 300;
  * usable right away instead of appearing off-screen or at the wrong
  * scale. Shared by `setBackgroundImage` (an existing floor) and
  * `addFloor` (a brand-new one, always fitting against the default box
- * since it has no rooms yet). */
+ * since it has no rooms yet).
+ *
+ * When `realWidthMm` is given (the user told us the plan's true
+ * real-world width at upload time), the image is sized at that exact
+ * scale instead — without it, a brand-new floor with no rooms yet falls
+ * back to the fixed 10m default box, which silently compresses or
+ * stretches whatever the photo actually depicts. That mismatch is what
+ * previously made room-area math come out wrong and every fixed-size
+ * canvas symbol look oversized relative to the (wrongly-scaled) drawing. */
 function fitBackgroundImage(
   rooms: Room[],
   dataUrl: string,
   naturalWidth: number,
   naturalHeight: number,
+  realWidthMm?: number,
 ): BackgroundImage {
   const aspectRatio = naturalWidth / naturalHeight;
+  if (realWidthMm && realWidthMm > 0) {
+    const width = realWidthMm;
+    const height = width / aspectRatio;
+    return { dataUrl, x: 0, y: 0, width, height, aspectRatio };
+  }
   const box = floorExtentBox(rooms, null, 0);
   let width = box.width;
   let height = width / aspectRatio;
@@ -615,7 +640,7 @@ interface EditorState {
    * the user has ever visited most of those floors. */
   hydrateWithBackgrounds: (
     geometries: FloorGeometry[],
-    backgroundImages: Record<string, { dataUrl: string; naturalWidth: number; naturalHeight: number }>,
+    backgroundImages: Record<string, UploadedBackgroundImage>,
   ) => void;
   switchFloor: (floorId: string) => void;
   /** Loads every persisted floor (and its full editable content) for a
@@ -633,7 +658,7 @@ interface EditorState {
   addFloor: (input: {
     name: string;
     level: number;
-    backgroundImage?: { dataUrl: string; naturalWidth: number; naturalHeight: number };
+    backgroundImage?: UploadedBackgroundImage;
   }) => string;
   setBackgroundImage: (dataUrl: string, naturalWidth: number, naturalHeight: number) => void;
   moveBackgroundImageToPoint: (point: Point) => void;
@@ -1167,7 +1192,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     function backgroundFor(geometry: FloorGeometry): BackgroundImage | null {
       const raw = backgroundImages[geometry.floor.id];
       if (!raw) return null;
-      return fitBackgroundImage(geometry.rooms, raw.dataUrl, raw.naturalWidth, raw.naturalHeight);
+      return fitBackgroundImage(geometry.rooms, raw.dataUrl, raw.naturalWidth, raw.naturalHeight, raw.realWidthMm);
     }
     const floorCache: Record<string, FloorMutableSlice> = {};
     for (const geometry of geometries.slice(1)) {
@@ -1188,6 +1213,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       future: [],
     });
     isRestoringHistory = false;
+
+    // These floors only ever existed in this draft store until now (the
+    // upload-a-plan flow that produces them never goes through `addFloor`)
+    // — without this they'd render fine for the current session but never
+    // actually reach Supabase, so a later revisit finds no floors at all.
+    const supabase = createSupabaseBrowserClient();
+    if (supabase) {
+      for (const geometry of geometries) {
+        const slice = geometry.floor.id === first.floor.id
+          ? { ...firstSlice, backgroundImage: firstBackground ?? firstSlice.backgroundImage }
+          : floorCache[geometry.floor.id];
+        insertFloor(supabase, geometry.floor, slice);
+      }
+    }
   },
 
   hydrateFromSupabase: async (projectId) => {
@@ -1235,7 +1274,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     const freshSlice = freshSliceFromGeometry(geometry);
     const seededBackground = backgroundImage
-      ? fitBackgroundImage([], backgroundImage.dataUrl, backgroundImage.naturalWidth, backgroundImage.naturalHeight)
+      ? fitBackgroundImage(
+          [],
+          backgroundImage.dataUrl,
+          backgroundImage.naturalWidth,
+          backgroundImage.naturalHeight,
+          backgroundImage.realWidthMm,
+        )
       : null;
 
     isRestoringHistory = true;
