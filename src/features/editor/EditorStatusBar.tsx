@@ -34,18 +34,18 @@ export function EditorStatusBar() {
   }, []);
 
   return (
-    <footer className="flex h-9 shrink-0 items-center justify-between border-t border-border bg-bg-secondary px-4 text-xs text-text-secondary">
+    <footer className="flex h-9 shrink-0 items-center justify-between border-t border-shell-border bg-shell-bg px-4 text-xs text-shell-text-muted">
       <div className="flex items-center gap-3">
         <CheckCircle2 className="h-3.5 w-3.5 text-success" />
         Keine Fehler
-        <div className="flex items-center gap-1 border-l border-border pl-3">
+        <div className="flex items-center gap-1 border-l border-shell-border pl-3">
           <button
             type="button"
             aria-label="Rückgängig"
             title="Rückgängig (Strg+Z)"
             disabled={history.length === 0}
             onClick={undo}
-            className="rounded-[var(--radius-sm)] p-1 hover:bg-panel-elevated hover:text-text disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+            className="rounded-[var(--radius-sm)] p-1 hover:bg-shell-bg-elevated hover:text-shell-text disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
           >
             <Undo2 className="h-3.5 w-3.5" />
           </button>
@@ -55,7 +55,7 @@ export function EditorStatusBar() {
             title="Wiederholen (Strg+Umschalt+Z)"
             disabled={future.length === 0}
             onClick={redo}
-            className="rounded-[var(--radius-sm)] p-1 hover:bg-panel-elevated hover:text-text disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+            className="rounded-[var(--radius-sm)] p-1 hover:bg-shell-bg-elevated hover:text-shell-text disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
           >
             <Redo2 className="h-3.5 w-3.5" />
           </button>
@@ -63,7 +63,7 @@ export function EditorStatusBar() {
       </div>
 
       <div className="flex items-center gap-4">
-        <span className="text-text-muted">
+        <span className="text-shell-text-muted">
           {visibleLayers} / {Object.keys(layers).length} Ebenen sichtbar
         </span>
         <div className="flex items-center gap-1">
@@ -71,18 +71,18 @@ export function EditorStatusBar() {
             type="button"
             aria-label="Verkleinern"
             onClick={() => setZoom((z) => z - 0.2)}
-            className="rounded-[var(--radius-sm)] p-1 hover:bg-panel-elevated hover:text-text"
+            className="rounded-[var(--radius-sm)] p-1 hover:bg-shell-bg-elevated hover:text-shell-text"
           >
             <ZoomOut className="h-3.5 w-3.5" />
           </button>
-          <span className="tabular-nums-font w-10 text-center text-text">
+          <span className="tabular-nums-font w-10 text-center text-shell-text">
             {Math.round(zoom * 100)}%
           </span>
           <button
             type="button"
             aria-label="Vergrößern"
             onClick={() => setZoom((z) => z + 0.2)}
-            className="rounded-[var(--radius-sm)] p-1 hover:bg-panel-elevated hover:text-text"
+            className="rounded-[var(--radius-sm)] p-1 hover:bg-shell-bg-elevated hover:text-shell-text"
           >
             <ZoomIn className="h-3.5 w-3.5" />
           </button>
@@ -90,7 +90,7 @@ export function EditorStatusBar() {
             type="button"
             aria-label="Zoom zurücksetzen"
             onClick={() => setZoom(1)}
-            className="rounded-[var(--radius-sm)] p-1 hover:bg-panel-elevated hover:text-text"
+            className="rounded-[var(--radius-sm)] p-1 hover:bg-shell-bg-elevated hover:text-shell-text"
           >
             <RotateCcw className="h-3.5 w-3.5" />
           </button>
@@ -102,8 +102,8 @@ export function EditorStatusBar() {
           className={cn(
             "flex items-center gap-1.5 rounded-[var(--radius-sm)] border px-2 py-1 transition-colors",
             snapEnabled
-              ? "border-primary/60 text-primary"
-              : "border-border text-text-muted hover:text-text",
+              ? "border-shell-accent/60 text-shell-accent"
+              : "border-shell-border text-shell-text-muted hover:text-shell-text",
           )}
         >
           <Magnet className="h-3.5 w-3.5" />

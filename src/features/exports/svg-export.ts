@@ -53,11 +53,11 @@ export function buildFloorPlanSvg(params: {
   parts.push(
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${box.minX} ${box.minY} ${box.width} ${totalHeight}" width="${box.width}" height="${totalHeight}" font-family="Inter, sans-serif">`,
   );
-  parts.push(`<rect x="${box.minX}" y="${box.minY}" width="${box.width}" height="${totalHeight}" fill="#FAF8F4" />`);
+  parts.push(`<rect x="${box.minX}" y="${box.minY}" width="${box.width}" height="${totalHeight}" fill="#F5F8F6" />`);
 
   for (const room of rooms) {
     const points = room.polygon.map((p) => `${p.x},${p.y}`).join(" ");
-    parts.push(`<polygon points="${points}" fill="#EFE7D8" />`);
+    parts.push(`<polygon points="${points}" fill="#E3EDE6" />`);
     const centroid = polygonCentroid(room.polygon);
     parts.push(
       `<text x="${centroid.x}" y="${centroid.y}" text-anchor="middle" font-size="340" font-weight="600" fill="#303030">${escapeXml(room.name)}</text>`,

@@ -1,27 +1,49 @@
 @import "tailwindcss";
 
 :root {
-  --color-bg: #faf8f4;
-  --color-bg-secondary: #f6f2ea;
+  /* Light content surfaces — the canvas/workspace, cool neutral with a
+   * faint green undertone that ties to the Loxone-green brand accent
+   * without competing with floor-plan drawings or device-color coding. */
+  --color-bg: #f5f8f6;
+  --color-bg-secondary: #edf2ef;
   --color-panel: #ffffff;
-  --color-panel-elevated: #f6f2ea;
-  --color-border: #e4dccc;
-  --color-border-subtle: #ede7da;
+  --color-panel-elevated: #f0f4f1;
+  --color-border: #dbe4de;
+  --color-border-subtle: #e6ede9;
 
-  --color-primary: #c96f5b;
-  --color-primary-soft: #c96f5b;
-  --color-secondary: #4a8fa8;
-  --color-success: #7a9d6e;
-  --color-warning: #d9a441;
-  --color-error: #c4534a;
+  /* Loxone-green primary — this is a Loxone electrical/smart-home
+   * planner, so the brand accent runs through every primary action
+   * instead of a generic color. Kept distinct from the domain-semantic
+   * greens used elsewhere (Tree bus, "success") so none of them collide
+   * pixel-for-pixel with the UI's own primary accent. */
+  --color-primary: #1b7a4a;
+  --color-primary-soft: #e5f3ea;
+  --color-secondary: #2f6fd6;
+  --color-success: #279a5b;
+  --color-warning: #d97a06;
+  --color-error: #dc3b3b;
 
-  --color-text: #303030;
-  --color-text-secondary: #6b6459;
-  --color-text-muted: #9c9587;
+  --color-text: #16211b;
+  --color-text-secondary: #56655c;
+  --color-text-muted: #8a978e;
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  /* Dark "shell chrome" — top nav, side rails, status bars, everywhere
+   * that frames the light workspace rather than being the workspace
+   * itself. A deliberate two-tone system (dark chrome / light canvas)
+   * instead of one flat palette everywhere. */
+  --color-shell-bg: #101d16;
+  --color-shell-bg-elevated: #17281e;
+  --color-shell-border: #24392c;
+  --color-shell-text: #f2f7f4;
+  --color-shell-text-muted: #93a89b;
+  --color-shell-accent: #4ade80;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+
+  --shadow-sm: 0 1px 2px rgba(16, 33, 27, 0.06);
+  --shadow-md: 0 4px 16px rgba(16, 33, 27, 0.08);
 }
 
 @theme inline {
@@ -33,6 +55,7 @@
   --color-border-subtle: var(--color-border-subtle);
 
   --color-primary: var(--color-primary);
+  --color-primary-soft: var(--color-primary-soft);
   --color-secondary: var(--color-secondary);
   --color-success: var(--color-success);
   --color-warning: var(--color-warning);
@@ -41,6 +64,13 @@
   --color-text: var(--color-text);
   --color-text-secondary: var(--color-text-secondary);
   --color-text-muted: var(--color-text-muted);
+
+  --color-shell-bg: var(--color-shell-bg);
+  --color-shell-bg-elevated: var(--color-shell-bg-elevated);
+  --color-shell-border: var(--color-shell-border);
+  --color-shell-text: var(--color-shell-text);
+  --color-shell-text-muted: var(--color-shell-text-muted);
+  --color-shell-accent: var(--color-shell-accent);
 
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
@@ -71,8 +101,8 @@ body {
 
 .bg-grid {
   background-image:
-    linear-gradient(to right, rgba(48, 48, 48, 0.08) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(48, 48, 48, 0.08) 1px, transparent 1px);
+    linear-gradient(to right, rgba(22, 33, 27, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(22, 33, 27, 0.07) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
@@ -90,5 +120,20 @@ body {
   border-radius: 999px;
 }
 .scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Shell chrome uses its own scrollbar thumb so it stays legible on the
+ * dark background (the default .scrollbar-thin thumb is tuned for the
+ * light --color-border and would be invisible here). */
+.scrollbar-thin-shell::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scrollbar-thin-shell::-webkit-scrollbar-thumb {
+  background: var(--color-shell-border);
+  border-radius: 999px;
+}
+.scrollbar-thin-shell::-webkit-scrollbar-track {
   background: transparent;
 }

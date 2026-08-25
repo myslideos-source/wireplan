@@ -59,8 +59,8 @@ const DEVICE_ICONS: Record<ElectricalDeviceType, LucideIcon> = {
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="border-b border-border px-5 py-4 last:border-b-0">
-      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-text-muted">
+    <div className="border-b border-shell-border px-5 py-4 last:border-b-0">
+      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-shell-text-muted">
         {title}
       </h3>
       <div className="flex flex-col gap-3">{children}</div>
@@ -86,14 +86,21 @@ function FieldRow({
 }) {
   return (
     <Tag className="flex items-center justify-between gap-3 text-sm">
-      <span className="text-text-secondary">{label}</span>
+      <span className="text-shell-text-muted">{label}</span>
       {children}
     </Tag>
   );
 }
 
 const inputClass =
-  "w-32 rounded-[var(--radius-sm)] border border-border bg-bg px-2 py-1 text-right text-sm text-text outline-none focus:border-primary/60 disabled:cursor-not-allowed disabled:opacity-50";
+  "w-32 rounded-[var(--radius-sm)] border border-shell-border bg-shell-bg-elevated px-2 py-1 text-right text-sm text-shell-text outline-none focus:border-shell-accent/60 disabled:cursor-not-allowed disabled:opacity-50";
+
+// The shared Button's "secondary" variant assumes a light panel
+// (border-border/text-text) — this panel is dark shell chrome, so every
+// secondary Button here needs an explicit override or its label is
+// unreadable (dark text on a dark background).
+const secondaryButtonClass =
+  "border-shell-border text-shell-text hover:border-shell-accent/60 hover:text-shell-accent";
 
 function DemoField({ value }: { value: string }) {
   return (
@@ -318,11 +325,11 @@ export function EditorInspector() {
 
   if (!selected) {
     return (
-      <aside className="flex w-80 shrink-0 flex-col items-center justify-center gap-3 border-l border-border bg-bg-secondary px-6 text-center">
-        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-panel-elevated text-text-muted">
+      <aside className="flex w-80 shrink-0 flex-col items-center justify-center gap-3 border-l border-shell-border bg-shell-bg px-6 text-center">
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-shell-bg-elevated text-shell-text-muted">
           <MousePointer2 className="h-4 w-4" />
         </span>
-        <p className="text-sm text-text-secondary">
+        <p className="text-sm text-shell-text-muted">
           Kein Element ausgewählt. Wählen Sie einen Raum oder ein Gerät im
           Grundriss.
         </p>
@@ -343,24 +350,24 @@ export function EditorInspector() {
       device.number,
     );
     return (
-      <aside className="w-80 shrink-0 overflow-y-auto border-l border-border bg-bg-secondary scrollbar-thin">
-        <div className="flex items-center gap-2 border-b border-border px-5 py-4">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-panel-elevated text-text-secondary">
+      <aside className="w-80 shrink-0 overflow-y-auto border-l border-shell-border bg-shell-bg scrollbar-thin-shell">
+        <div className="flex items-center gap-2 border-b border-shell-border px-5 py-4">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-shell-bg-elevated text-shell-text-muted">
             <Icon className="h-4 w-4" />
           </span>
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
+            <p className="text-xs font-medium uppercase tracking-wide text-shell-text-muted">
               Gerät · {deviceNumber}
             </p>
-            <h2 className="text-sm font-semibold text-text">{deviceLabel}</h2>
+            <h2 className="text-sm font-semibold text-shell-text">{deviceLabel}</h2>
           </div>
         </div>
         <Section title="Gerät">
           <FieldRow label="Nummer">
-            <span className="tabular-nums-font text-sm font-medium text-text">{deviceNumber}</span>
+            <span className="tabular-nums-font text-sm font-medium text-shell-text">{deviceNumber}</span>
           </FieldRow>
           <FieldRow label="Typ">
-            <span className="text-sm text-text">{DEVICE_TYPE_LABELS[device.type]}</span>
+            <span className="text-sm text-shell-text">{DEVICE_TYPE_LABELS[device.type]}</span>
           </FieldRow>
           {device.type === "network" && (
             <FieldRow label="Subtyp">
@@ -382,20 +389,20 @@ export function EditorInspector() {
             </FieldRow>
           )}
           <FieldRow label="Höhe">
-            <span className="tabular-nums-font text-sm text-text">
+            <span className="tabular-nums-font text-sm text-shell-text">
               {formatNumber(device.mount.height / 1000, 2)} m
             </span>
           </FieldRow>
           <FieldRow label="Raum">
-            <span className="text-sm text-text">{room?.name ?? "—"}</span>
+            <span className="text-sm text-shell-text">{room?.name ?? "—"}</span>
           </FieldRow>
           <FieldRow label="Stromkreis">
-            <span className="text-sm text-text">
+            <span className="text-sm text-shell-text">
               {room ? (getCircuit(roomCircuits[room.id] ?? null)?.label ?? "—") : "—"}
             </span>
           </FieldRow>
           <FieldRow label="Position">
-            <span className="tabular-nums-font text-sm text-text">
+            <span className="tabular-nums-font text-sm text-shell-text">
               {formatNumber(device.mount.position.x / 1000, 2)} / {formatNumber(device.mount.position.y / 1000, 2)} m
             </span>
           </FieldRow>
@@ -410,7 +417,7 @@ export function EditorInspector() {
                 onChange={(event) => updateDeviceMeta(device.id, { rotation: Number(event.target.value) })}
                 className={inputClass}
               />
-              <span className="text-xs text-text-muted">°</span>
+              <span className="text-xs text-shell-text-muted">°</span>
             </div>
           </FieldRow>
           <FieldRow label="Notiz" as="div">
@@ -444,6 +451,7 @@ export function EditorInspector() {
           <Button
             variant="secondary"
             size="sm"
+            className={secondaryButtonClass}
             onClick={() => duplicateDevice(device.id)}
           >
             <Copy className="h-3.5 w-3.5" />
@@ -452,6 +460,7 @@ export function EditorInspector() {
           <Button
             variant="secondary"
             size="sm"
+            className={secondaryButtonClass}
             onClick={() => {
               deleteDevice(device.id);
               select(null);
@@ -469,36 +478,36 @@ export function EditorInspector() {
     if (!distributionBoard) return null;
     const room = rooms.find((r) => r.id === distributionBoard.roomId);
     return (
-      <aside className="w-80 shrink-0 overflow-y-auto border-l border-border bg-bg-secondary scrollbar-thin">
-        <div className="flex items-center gap-2 border-b border-border px-5 py-4">
+      <aside className="w-80 shrink-0 overflow-y-auto border-l border-shell-border bg-shell-bg scrollbar-thin-shell">
+        <div className="flex items-center gap-2 border-b border-shell-border px-5 py-4">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-success/10 text-success">
             <Server className="h-4 w-4" />
           </span>
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
+            <p className="text-xs font-medium uppercase tracking-wide text-shell-text-muted">
               Verteiler
             </p>
-            <h2 className="text-sm font-semibold text-text">Schaltschrank</h2>
+            <h2 className="text-sm font-semibold text-shell-text">Schaltschrank</h2>
           </div>
         </div>
         <Section title="Schaltschrank">
           <FieldRow label="Raum">
-            <span className="text-sm text-text">{room?.name ?? "—"}</span>
+            <span className="text-sm text-shell-text">{room?.name ?? "—"}</span>
           </FieldRow>
           <FieldRow label="Breite">
-            <span className="tabular-nums-font text-sm text-text">
+            <span className="tabular-nums-font text-sm text-shell-text">
               {formatNumber(distributionBoard.width / 1000, 2)} m
             </span>
           </FieldRow>
           <FieldRow label="Höhe">
-            <span className="tabular-nums-font text-sm text-text">
+            <span className="tabular-nums-font text-sm text-shell-text">
               {formatNumber(distributionBoard.height / 1000, 2)} m
             </span>
           </FieldRow>
         </Section>
         <Section title="Schaltschrank-Komponenten">
           {distributionBoard.cabinetComponentModelIds.length === 0 ? (
-            <p className="text-xs text-text-muted">
+            <p className="text-xs text-shell-text-muted">
               Noch keine Komponenten hinzugefügt.
             </p>
           ) : (
@@ -508,14 +517,14 @@ export function EditorInspector() {
                 return (
                   <div
                     key={modelId}
-                    className="flex items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-border bg-panel px-2.5 py-1.5"
+                    className="flex items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-shell-border bg-shell-bg-elevated px-2.5 py-1.5"
                   >
-                    <span className="text-sm text-text">{model?.label ?? modelId}</span>
+                    <span className="text-sm text-shell-text">{model?.label ?? modelId}</span>
                     <button
                       type="button"
                       aria-label={`${model?.label ?? modelId} entfernen`}
                       onClick={() => removeCabinetComponent(modelId)}
-                      className="text-text-muted hover:text-error"
+                      className="text-shell-text-muted hover:text-error"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -530,6 +539,7 @@ export function EditorInspector() {
           <Button
             variant="secondary"
             size="sm"
+            className={secondaryButtonClass}
             onClick={() => {
               deleteDistributionBoard();
               select(null);
@@ -553,21 +563,21 @@ export function EditorInspector() {
       device.number,
     );
     return (
-      <aside className="w-80 shrink-0 overflow-y-auto border-l border-border bg-bg-secondary scrollbar-thin">
-        <div className="flex items-center gap-2 border-b border-border px-5 py-4">
+      <aside className="w-80 shrink-0 overflow-y-auto border-l border-shell-border bg-shell-bg scrollbar-thin-shell">
+        <div className="flex items-center gap-2 border-b border-shell-border px-5 py-4">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary/10 text-secondary">
             <Home className="h-4 w-4" />
           </span>
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
+            <p className="text-xs font-medium uppercase tracking-wide text-shell-text-muted">
               Smart-Home-Gerät · {deviceNumber}
             </p>
-            <h2 className="text-sm font-semibold text-text">{model?.label ?? device.modelId}</h2>
+            <h2 className="text-sm font-semibold text-shell-text">{model?.label ?? device.modelId}</h2>
           </div>
         </div>
         <Section title="Smart Home (Loxone)">
           <FieldRow label="Nummer">
-            <span className="tabular-nums-font text-sm font-medium text-text">{deviceNumber}</span>
+            <span className="tabular-nums-font text-sm font-medium text-shell-text">{deviceNumber}</span>
           </FieldRow>
           <FieldRow label="Loxone-Gerät">
             <SmartHomeModelSelect
@@ -594,27 +604,27 @@ export function EditorInspector() {
           )}
           {model && (
             <FieldRow label="Beschreibung" as="div">
-              <span className="text-right text-xs text-text-secondary">{model.description}</span>
+              <span className="text-right text-xs text-shell-text-muted">{model.description}</span>
             </FieldRow>
           )}
           <FieldRow label="Raum">
-            <span className="text-sm text-text">{room?.name ?? "— (außerhalb eines Raums)"}</span>
+            <span className="text-sm text-shell-text">{room?.name ?? "— (außerhalb eines Raums)"}</span>
           </FieldRow>
         </Section>
         {model && (
           <Section title="Anschluss">
             <FieldRow label="System">
-              <span className="text-sm text-text">{model.connectionType}</span>
+              <span className="text-sm text-shell-text">{model.connectionType}</span>
             </FieldRow>
             <FieldRow label="Versorgung">
-              <span className="text-sm text-text">{model.powerSupply}</span>
+              <span className="text-sm text-shell-text">{model.powerSupply}</span>
             </FieldRow>
             <FieldRow label="Montage">
-              <span className="text-sm text-text">{model.mountingType}</span>
+              <span className="text-sm text-shell-text">{model.mountingType}</span>
             </FieldRow>
             {model.cableType && (
               <FieldRow label="Kabeltyp">
-                <span className="text-sm text-text">{model.cableType}</span>
+                <span className="text-sm text-shell-text">{model.cableType}</span>
               </FieldRow>
             )}
           </Section>
@@ -623,6 +633,7 @@ export function EditorInspector() {
           <Button
             variant="secondary"
             size="sm"
+            className={secondaryButtonClass}
             onClick={() => {
               deleteSmartHomeDevice(device.id);
               select(null);
@@ -642,21 +653,21 @@ export function EditorInspector() {
     const room = consumer.roomId ? rooms.find((r) => r.id === consumer.roomId) : undefined;
     const number = formatDeviceNumber("V", consumer.number);
     return (
-      <aside className="w-80 shrink-0 overflow-y-auto border-l border-border bg-bg-secondary scrollbar-thin">
-        <div className="flex items-center gap-2 border-b border-border px-5 py-4">
+      <aside className="w-80 shrink-0 overflow-y-auto border-l border-shell-border bg-shell-bg scrollbar-thin-shell">
+        <div className="flex items-center gap-2 border-b border-shell-border px-5 py-4">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-error/10 text-error">
             <Zap className="h-4 w-4" />
           </span>
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
+            <p className="text-xs font-medium uppercase tracking-wide text-shell-text-muted">
               Fester Verbraucher · {number}
             </p>
-            <h2 className="text-sm font-semibold text-text">{fixedConsumerLabel(consumer)}</h2>
+            <h2 className="text-sm font-semibold text-shell-text">{fixedConsumerLabel(consumer)}</h2>
           </div>
         </div>
         <Section title="Verbraucher">
           <FieldRow label="Nummer">
-            <span className="tabular-nums-font text-sm font-medium text-text">{number}</span>
+            <span className="tabular-nums-font text-sm font-medium text-shell-text">{number}</span>
           </FieldRow>
           <FieldRow label="Zuleitung">
             <select
@@ -674,14 +685,14 @@ export function EditorInspector() {
             </select>
           </FieldRow>
           <FieldRow label="Raum">
-            <span className="text-sm text-text">{room?.name ?? "— (außerhalb eines Raums)"}</span>
+            <span className="text-sm text-shell-text">{room?.name ?? "— (außerhalb eines Raums)"}</span>
           </FieldRow>
-          <label className="flex items-center gap-2 py-1 text-sm text-text">
+          <label className="flex items-center gap-2 py-1 text-sm text-shell-text">
             <input
               type="checkbox"
               checked={consumer.reserveConduit}
               onChange={(event) => setFixedConsumerReserveConduit(consumer.id, event.target.checked)}
-              className="h-4 w-4 rounded border-border"
+              className="h-4 w-4 rounded border-shell-border"
             />
             Reserve-Leerrohr mitführen
           </label>
@@ -690,6 +701,7 @@ export function EditorInspector() {
           <Button
             variant="secondary"
             size="sm"
+            className={secondaryButtonClass}
             onClick={() => {
               deleteFixedConsumer(consumer.id);
               select(null);
@@ -710,16 +722,16 @@ export function EditorInspector() {
       (e) => e.fromRef === `junction:${junction.id}` || e.toRef === `junction:${junction.id}`,
     ).length;
     return (
-      <aside className="w-80 shrink-0 overflow-y-auto border-l border-border bg-bg-secondary scrollbar-thin">
-        <div className="flex items-center gap-2 border-b border-border px-5 py-4">
+      <aside className="w-80 shrink-0 overflow-y-auto border-l border-shell-border bg-shell-bg scrollbar-thin-shell">
+        <div className="flex items-center gap-2 border-b border-shell-border px-5 py-4">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-success/10 text-success">
             <GitFork className="h-4 w-4" />
           </span>
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
+            <p className="text-xs font-medium uppercase tracking-wide text-shell-text-muted">
               Tree-Verzweigung
             </p>
-            <h2 className="text-sm font-semibold text-text">Verzweigungspunkt</h2>
+            <h2 className="text-sm font-semibold text-shell-text">Verzweigungspunkt</h2>
           </div>
         </div>
         <Section title="Verzweigung">
@@ -730,13 +742,14 @@ export function EditorInspector() {
             />
           </FieldRow>
           <FieldRow label="Verbindungen">
-            <span className="text-sm text-text">{edgeCount}</span>
+            <span className="text-sm text-shell-text">{edgeCount}</span>
           </FieldRow>
         </Section>
         <div className="px-5 py-4">
           <Button
             variant="secondary"
             size="sm"
+            className={secondaryButtonClass}
             onClick={() => {
               deleteTreeJunction(junction.id);
               select(null);
@@ -770,12 +783,12 @@ export function EditorInspector() {
   const loxoneDeviceCount = roomDevices.filter((d) => d.smartHomeModelId).length + roomSmartHomeDevices.length;
 
   return (
-    <aside className="w-80 shrink-0 overflow-y-auto border-l border-border bg-bg-secondary scrollbar-thin">
-      <div className="border-b border-border px-5 py-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
+    <aside className="w-80 shrink-0 overflow-y-auto border-l border-shell-border bg-shell-bg scrollbar-thin-shell">
+      <div className="border-b border-shell-border px-5 py-4">
+        <p className="text-xs font-medium uppercase tracking-wide text-shell-text-muted">
           Raum
         </p>
-        <h2 className="text-sm font-semibold text-text">{room.name}</h2>
+        <h2 className="text-sm font-semibold text-shell-text">{room.name}</h2>
       </div>
 
       <div className="grid grid-cols-3 gap-2 px-5 py-4">
@@ -793,7 +806,7 @@ export function EditorInspector() {
           />
         </FieldRow>
         <FieldRow label="Fläche">
-          <span className="tabular-nums-font text-sm font-medium text-text">
+          <span className="tabular-nums-font text-sm font-medium text-shell-text">
             {formatArea(room.area)}
           </span>
         </FieldRow>
@@ -823,7 +836,7 @@ export function EditorInspector() {
               }
               className={inputClass}
             />
-            <span className="text-xs text-text-muted">m</span>
+            <span className="text-xs text-shell-text-muted">m</span>
           </div>
         </FieldRow>
         <FieldRow label="Technikraum" as="div">
@@ -833,6 +846,7 @@ export function EditorInspector() {
             <Button
               variant="secondary"
               size="sm"
+              className={secondaryButtonClass}
               onClick={() => setTechnikraum(room.id)}
             >
               Als Technikraum festlegen
@@ -873,14 +887,14 @@ export function EditorInspector() {
         </FieldRow>
         <FieldRow label="FI / RCD">
           {electricalEnabled ? (
-            <span className="text-sm text-text">{circuit?.rcd ?? "—"}</span>
+            <span className="text-sm text-shell-text">{circuit?.rcd ?? "—"}</span>
           ) : (
             <DemoField value="—" />
           )}
         </FieldRow>
         <FieldRow label="Leistung gesamt">
           {electricalEnabled ? (
-            <span className="tabular-nums-font text-sm font-medium text-text">
+            <span className="tabular-nums-font text-sm font-medium text-shell-text">
               {formatNumber(totalWatts / 1000, 2)} kW
             </span>
           ) : (
@@ -907,12 +921,12 @@ export function EditorInspector() {
         <FieldRow label="Beschattung">
           <DemoField value="—" />
         </FieldRow>
-        <div className="flex flex-col gap-1.5 border-t border-border pt-3">
-          <p className="text-xs font-medium text-text-secondary">
+        <div className="flex flex-col gap-1.5 border-t border-shell-border pt-3">
+          <p className="text-xs font-medium text-shell-text-muted">
             Zugewiesene Loxone-Geräte
           </p>
           {roomDevices.filter((d) => d.smartHomeModelId).length === 0 ? (
-            <p className="text-xs text-text-muted">
+            <p className="text-xs text-shell-text-muted">
               Noch keinem Gerät in diesem Raum ist Loxone-Hardware zugewiesen.
               Wählen Sie dazu ein Gerät im Grundriss aus.
             </p>
@@ -923,10 +937,10 @@ export function EditorInspector() {
                 const model = findSmartHomeModel(d.smartHomeModelId!);
                 return (
                   <div key={d.id} className="flex items-center justify-between text-xs">
-                    <span className="text-text-secondary">
+                    <span className="text-shell-text-muted">
                       {DEVICE_TYPE_LABELS[d.type]}
                     </span>
-                    <span className="font-medium text-text">
+                    <span className="font-medium text-shell-text">
                       {model?.label ?? d.smartHomeModelId}
                     </span>
                   </div>
@@ -938,19 +952,19 @@ export function EditorInspector() {
 
       <Section title="Anzahl Elemente">
         <FieldRow label="Steckdosen">
-          <span className="tabular-nums-font text-sm text-text">{deviceCounts.outlet}</span>
+          <span className="tabular-nums-font text-sm text-shell-text">{deviceCounts.outlet}</span>
         </FieldRow>
         <FieldRow label="Lichtpunkte">
-          <span className="tabular-nums-font text-sm text-text">{deviceCounts.light}</span>
+          <span className="tabular-nums-font text-sm text-shell-text">{deviceCounts.light}</span>
         </FieldRow>
         <FieldRow label="Schalter / Taster">
-          <span className="tabular-nums-font text-sm text-text">{deviceCounts.switch}</span>
+          <span className="tabular-nums-font text-sm text-shell-text">{deviceCounts.switch}</span>
         </FieldRow>
         <FieldRow label="Netzwerkdosen">
-          <span className="tabular-nums-font text-sm text-text">{deviceCounts.network}</span>
+          <span className="tabular-nums-font text-sm text-shell-text">{deviceCounts.network}</span>
         </FieldRow>
         <FieldRow label="Sensoren">
-          <span className="tabular-nums-font text-sm text-text">{deviceCounts.sensor}</span>
+          <span className="tabular-nums-font text-sm text-shell-text">{deviceCounts.sensor}</span>
         </FieldRow>
       </Section>
     </aside>

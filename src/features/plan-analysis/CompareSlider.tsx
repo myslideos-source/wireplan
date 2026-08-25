@@ -56,7 +56,7 @@ export function CompareSlider() {
       </span>
 
       <div
-        className="absolute inset-y-0 w-px bg-primary shadow-[0_0_12px_rgba(201,111,91,0.6)]"
+        className="absolute inset-y-0 w-px bg-primary shadow-[0_0_12px_rgba(27,122,74,0.6)]"
         style={{ left: `${percent}%` }}
       />
       <button

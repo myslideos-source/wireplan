@@ -67,16 +67,16 @@ export function EditorWorkspace({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-11 shrink-0 items-center gap-3 border-b border-border bg-bg-secondary px-4 text-sm">
+      <div className="flex h-11 shrink-0 items-center gap-3 border-b border-shell-border bg-shell-bg px-4 text-sm">
         <Link
           href="/dashboard"
-          className="flex items-center gap-1.5 text-text-secondary hover:text-text"
+          className="flex items-center gap-1.5 text-shell-text-muted hover:text-shell-text"
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
-        <span className="font-medium text-text">{project.name}</span>
+        <span className="font-medium text-shell-text">{project.name}</span>
         {sortedFloors.length > 1 ? (
-          <div className="flex items-center gap-0.5 rounded-[var(--radius-sm)] border border-border bg-bg p-0.5">
+          <div className="flex items-center gap-0.5 rounded-[var(--radius-sm)] border border-shell-border bg-shell-bg-elevated p-0.5">
             {sortedFloors.map((f) => (
               <button
                 key={f.floor.id}
@@ -85,8 +85,8 @@ export function EditorWorkspace({
                 className={cn(
                   "rounded-[calc(var(--radius-sm)-2px)] px-2.5 py-1 text-xs font-medium transition-colors",
                   f.floor.id === activeFloor?.floor.id
-                    ? "bg-primary/15 text-primary"
-                    : "text-text-secondary hover:text-text",
+                    ? "bg-shell-accent/15 text-shell-accent"
+                    : "text-shell-text-muted hover:text-shell-text",
                 )}
               >
                 {f.floor.name}
@@ -94,7 +94,7 @@ export function EditorWorkspace({
             ))}
           </div>
         ) : (
-          <span className="text-text-muted">· {activeFloor?.floor.name}</span>
+          <span className="text-shell-text-muted">· {activeFloor?.floor.name}</span>
         )}
         <StartFloorDialog
           suggestedName={`Etage ${sortedFloors.length + 1}`}
@@ -107,14 +107,14 @@ export function EditorWorkspace({
               onClick={onOpen}
               aria-label="Etage hinzufügen"
               title="Etage hinzufügen"
-              className="flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] text-text-muted transition-colors hover:bg-panel-elevated hover:text-text"
+              className="flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] text-shell-text-muted transition-colors hover:bg-shell-bg-elevated hover:text-shell-text"
             >
               <Plus className="h-3.5 w-3.5" />
             </button>
           )}
         />
 
-        <div className="ml-auto flex items-center gap-0.5 rounded-[var(--radius-sm)] border border-border bg-bg p-0.5">
+        <div className="ml-auto flex items-center gap-0.5 rounded-[var(--radius-sm)] border border-shell-border bg-shell-bg-elevated p-0.5">
           {(["original", "planer"] as const).map((mode) => (
             <button
               key={mode}
@@ -123,8 +123,8 @@ export function EditorWorkspace({
               className={cn(
                 "rounded-[calc(var(--radius-sm)-2px)] px-3 py-1 text-xs font-semibold uppercase tracking-wide transition-colors",
                 planViewMode === mode
-                  ? "bg-primary/15 text-primary"
-                  : "text-text-secondary hover:text-text",
+                  ? "bg-shell-accent/15 text-shell-accent"
+                  : "text-shell-text-muted hover:text-shell-text",
               )}
             >
               {mode === "original" ? "Original" : "Planer"}

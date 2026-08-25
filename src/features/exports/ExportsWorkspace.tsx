@@ -189,7 +189,7 @@ export function ExportsWorkspace({ project }: { project: Project }) {
         canvas.height = Math.round(img.naturalHeight * scale);
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
-        ctx.fillStyle = "#FAF8F4";
+        ctx.fillStyle = "#F5F8F6";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         const pngBlob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));

@@ -183,16 +183,16 @@ export function EditorToolbar() {
   }
 
   return (
-    <aside className="flex w-56 shrink-0 flex-col gap-6 overflow-y-auto border-r border-border bg-bg-secondary p-3 scrollbar-thin">
-      <div className="flex rounded-[var(--radius-sm)] border border-border p-0.5">
+    <aside className="flex w-56 shrink-0 flex-col gap-6 overflow-y-auto border-r border-shell-border bg-shell-bg p-3 scrollbar-thin-shell">
+      <div className="flex rounded-[var(--radius-sm)] border border-shell-border p-0.5">
         <button
           type="button"
           onClick={() => setLeftPanelTab("elemente")}
           className={cn(
             "flex-1 rounded-[calc(var(--radius-sm)-2px)] px-3 py-1.5 text-sm font-medium transition-colors",
             leftPanelTab === "elemente"
-              ? "bg-primary/10 text-primary"
-              : "text-text-secondary hover:text-text",
+              ? "bg-shell-accent/15 text-shell-accent"
+              : "text-shell-text-muted hover:text-shell-text",
           )}
         >
           Elemente
@@ -203,8 +203,8 @@ export function EditorToolbar() {
           className={cn(
             "flex-1 rounded-[calc(var(--radius-sm)-2px)] px-3 py-1.5 text-sm font-medium transition-colors",
             leftPanelTab === "raeume"
-              ? "bg-primary/10 text-primary"
-              : "text-text-secondary hover:text-text",
+              ? "bg-shell-accent/15 text-shell-accent"
+              : "text-shell-text-muted hover:text-shell-text",
           )}
         >
           Räume
@@ -213,10 +213,10 @@ export function EditorToolbar() {
 
       {leftPanelTab === "raeume" && (
         <div>
-          <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
+          <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-shell-text-muted">
             Räume definieren
           </p>
-          <p className="px-2 pb-3 text-xs text-text-muted">
+          <p className="px-2 pb-3 text-xs text-shell-text-muted">
             Räume sind farblich hervorgehoben. Einen Raum anklicken, um ihn
             im Grundriss auszuwählen und Details rechts zu bearbeiten.
           </p>
@@ -231,8 +231,8 @@ export function EditorToolbar() {
                   className={cn(
                     "flex items-center gap-2.5 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm font-medium transition-colors",
                     isSelected
-                      ? "bg-primary/10 text-primary"
-                      : "text-text-secondary hover:bg-panel-elevated hover:text-text",
+                      ? "bg-shell-accent/15 text-shell-accent"
+                      : "text-shell-text-muted hover:bg-shell-bg-elevated hover:text-shell-text",
                   )}
                 >
                   <span
@@ -240,7 +240,7 @@ export function EditorToolbar() {
                     style={{ backgroundColor: roomZoneColor(index) }}
                   />
                   <span className="flex-1 truncate">{room.name}</span>
-                  <span className="tabular-nums-font text-xs text-text-muted">
+                  <span className="tabular-nums-font text-xs text-shell-text-muted">
                     {formatArea(room.area)}
                   </span>
                 </button>
@@ -251,17 +251,17 @@ export function EditorToolbar() {
             type="button"
             onClick={() => setTool("room")}
             className={cn(
-              "mt-3 flex w-full items-center justify-center gap-2 rounded-[var(--radius-sm)] border border-border px-3 py-2 text-sm font-medium transition-colors",
+              "mt-3 flex w-full items-center justify-center gap-2 rounded-[var(--radius-sm)] border border-shell-border px-3 py-2 text-sm font-medium transition-colors",
               activeTool === "room"
-                ? "border-primary/60 bg-primary/10 text-primary"
-                : "text-text-secondary hover:border-primary/60 hover:text-text",
+                ? "border-shell-accent/60 bg-shell-accent/15 text-shell-accent"
+                : "text-shell-text-muted hover:border-shell-accent/60 hover:text-shell-text",
             )}
           >
             <Square className="h-4 w-4" />
             Raum hinzufügen
           </button>
           {activeTool === "room" && (
-            <p className="mt-2 px-1 text-[11px] text-text-muted">
+            <p className="mt-2 px-1 text-[11px] text-shell-text-muted">
               {drawingRoomPoints && drawingRoomPoints.length >= 3
                 ? "Am ersten Punkt (hell markiert) klicken zum Schließen, oder Enter drücken."
                 : "Ecken im Grundriss anklicken. Esc zum Abbrechen."}
@@ -273,7 +273,7 @@ export function EditorToolbar() {
       {leftPanelTab === "elemente" && (
       <>
       <div>
-        <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
+        <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-shell-text-muted">
           Werkzeuge
         </p>
         <div className="flex flex-col gap-0.5">
@@ -309,15 +309,15 @@ export function EditorToolbar() {
                     "flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40",
                     enabled && DRAGGABLE_TOOLS.includes(tool.id) && "cursor-grab active:cursor-grabbing",
                     activeTool === tool.id && enabled
-                      ? "bg-primary/10 text-primary"
-                      : "text-text-secondary hover:bg-panel-elevated hover:text-text disabled:hover:bg-transparent",
+                      ? "bg-shell-accent/15 text-shell-accent"
+                      : "text-shell-text-muted hover:bg-shell-bg-elevated hover:text-shell-text disabled:hover:bg-transparent",
                   )}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
                   {tool.label}
                 </button>
                 {tool.id === "smarthome" && loxoneEnabled && activeTool === "smarthome" && (
-                  <p className="mx-1 px-1 text-[11px] text-text-muted">
+                  <p className="mx-1 px-1 text-[11px] text-shell-text-muted">
                     Gerät oberhalb des Grundrisses auswählen.
                   </p>
                 )}
@@ -328,7 +328,7 @@ export function EditorToolbar() {
                       onChange={(event) =>
                         setFixedConsumerPlacementType(event.target.value as FixedConsumerType)
                       }
-                      className="rounded-[var(--radius-sm)] border border-border bg-bg px-2 py-1.5 text-xs text-text outline-none focus:border-primary/60"
+                      className="rounded-[var(--radius-sm)] border border-shell-border bg-shell-bg-elevated px-2 py-1.5 text-xs text-shell-text outline-none focus:border-shell-accent/60"
                     >
                       {(Object.entries(FIXED_CONSUMER_LABELS) as [FixedConsumerType, string][]).map(
                         ([type, label]) => (
@@ -343,7 +343,7 @@ export function EditorToolbar() {
                         value={fixedConsumerCustomLabel}
                         onChange={(event) => setFixedConsumerCustomLabel(event.target.value)}
                         placeholder="Bezeichnung"
-                        className="rounded-[var(--radius-sm)] border border-border bg-bg px-2 py-1.5 text-xs text-text outline-none focus:border-primary/60"
+                        className="rounded-[var(--radius-sm)] border border-shell-border bg-shell-bg-elevated px-2 py-1.5 text-xs text-shell-text outline-none focus:border-shell-accent/60"
                       />
                     )}
                   </div>
@@ -354,7 +354,7 @@ export function EditorToolbar() {
                     onChange={(event) =>
                       setNetworkDevicePlacementSubtype(event.target.value as NetworkDeviceSubtype)
                     }
-                    className="mx-1 rounded-[var(--radius-sm)] border border-border bg-bg px-2 py-1.5 text-xs text-text outline-none focus:border-primary/60"
+                    className="mx-1 rounded-[var(--radius-sm)] border border-shell-border bg-shell-bg-elevated px-2 py-1.5 text-xs text-shell-text outline-none focus:border-shell-accent/60"
                   >
                     {(Object.entries(NETWORK_DEVICE_LABELS) as [NetworkDeviceSubtype, string][]).map(
                       ([subtype, label]) => (
@@ -367,7 +367,7 @@ export function EditorToolbar() {
                 )}
                 {tool.id === "room" && activeTool === "room" && (
                   <div className="mx-1 flex flex-col gap-1.5">
-                    <p className="px-1 text-[11px] text-text-muted">
+                    <p className="px-1 text-[11px] text-shell-text-muted">
                       {drawingRoomPoints && drawingRoomPoints.length >= 3
                         ? "Am ersten Punkt klicken zum Schließen, oder Enter drücken."
                         : "Ecken anklicken, am ersten Punkt schließen. Esc zum Abbrechen, Enter zum Fertigstellen."}
@@ -376,7 +376,7 @@ export function EditorToolbar() {
                       <button
                         type="button"
                         onClick={cancelRoomDraw}
-                        className="rounded-[var(--radius-sm)] border border-border px-2 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-primary/60 hover:text-text"
+                        className="rounded-[var(--radius-sm)] border border-shell-border px-2 py-1.5 text-xs font-medium text-shell-text-muted transition-colors hover:border-shell-accent/60 hover:text-shell-text"
                       >
                         Abbrechen
                       </button>
@@ -385,7 +385,7 @@ export function EditorToolbar() {
                 )}
                 {tool.id === "treeConnect" && activeTool === "treeConnect" && (
                   <div className="mx-1 flex flex-col gap-1.5">
-                    <p className="px-1 text-[11px] text-text-muted">
+                    <p className="px-1 text-[11px] text-shell-text-muted">
                       {treeConnectPendingNodeRef
                         ? "Erster Punkt gewählt — jetzt den zweiten Punkt (Schaltschrank, Gerät oder Verzweigung) anklicken."
                         : "Ersten Punkt anklicken (Schaltschrank, Gerät oder Verzweigung)."}
@@ -394,7 +394,7 @@ export function EditorToolbar() {
                       <button
                         type="button"
                         onClick={cancelTreeConnect}
-                        className="rounded-[var(--radius-sm)] border border-border px-2 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-primary/60 hover:text-text"
+                        className="rounded-[var(--radius-sm)] border border-shell-border px-2 py-1.5 text-xs font-medium text-shell-text-muted transition-colors hover:border-shell-accent/60 hover:text-shell-text"
                       >
                         Abbrechen
                       </button>
@@ -403,11 +403,11 @@ export function EditorToolbar() {
                 )}
                 {tool.id === "light" && activeTool === "light" && (
                   <div className="mx-1 flex flex-col gap-1.5">
-                    <p className="px-1 text-[11px] text-text-muted">Mehrere Spots platzieren</p>
+                    <p className="px-1 text-[11px] text-shell-text-muted">Mehrere Spots platzieren</p>
                     <select
                       value={spotArrayCount}
                       onChange={(event) => setSpotArrayCount(Number(event.target.value))}
-                      className="rounded-[var(--radius-sm)] border border-border bg-bg px-2 py-1.5 text-xs text-text outline-none focus:border-primary/60"
+                      className="rounded-[var(--radius-sm)] border border-shell-border bg-shell-bg-elevated px-2 py-1.5 text-xs text-shell-text outline-none focus:border-shell-accent/60"
                     >
                       <option value={1}>Einzeln</option>
                       {SPOT_COUNTS.map((count) => (
@@ -422,7 +422,7 @@ export function EditorToolbar() {
                         onChange={(event) =>
                           setSpotArrayArrangement(event.target.value as (typeof SPOT_ARRANGEMENTS)[number]["id"])
                         }
-                        className="rounded-[var(--radius-sm)] border border-border bg-bg px-2 py-1.5 text-xs text-text outline-none focus:border-primary/60"
+                        className="rounded-[var(--radius-sm)] border border-shell-border bg-shell-bg-elevated px-2 py-1.5 text-xs text-shell-text outline-none focus:border-shell-accent/60"
                       >
                         {SPOT_ARRANGEMENTS.map((arrangement) => (
                           <option key={arrangement.id} value={arrangement.id}>
@@ -432,7 +432,7 @@ export function EditorToolbar() {
                       </select>
                     )}
                     {spotArrayCount > 1 && (
-                      <p className="px-1 text-[11px] text-text-muted">
+                      <p className="px-1 text-[11px] text-shell-text-muted">
                         Klicken Sie in einen Raum — die Spots werden dort verteilt und lassen sich
                         danach einzeln verschieben.
                       </p>
@@ -451,17 +451,17 @@ export function EditorToolbar() {
                     <button
                       type="button"
                       onClick={() => backgroundInputRef.current?.click()}
-                      className="rounded-[var(--radius-sm)] border border-border px-2 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-primary/60 hover:text-text"
+                      className="rounded-[var(--radius-sm)] border border-shell-border px-2 py-1.5 text-xs font-medium text-shell-text-muted transition-colors hover:border-shell-accent/60 hover:text-shell-text"
                     >
                       {backgroundImage ? "Anderes Bild wählen" : "Originalplan hochladen"}
                     </button>
                     {backgroundImage && (
                       <>
-                        <p className="px-1 text-[11px] text-text-muted">
+                        <p className="px-1 text-[11px] text-shell-text-muted">
                           Bild ziehen zum Verschieben, Ecke unten rechts zum
                           Skalieren.
                         </p>
-                        <label className="flex flex-col gap-1 px-1 text-[11px] text-text-muted">
+                        <label className="flex flex-col gap-1 px-1 text-[11px] text-shell-text-muted">
                           Plan Hintergrund — {Math.round(backgroundImageOpacity * 100)}%
                           <input
                             type="range"
@@ -471,13 +471,13 @@ export function EditorToolbar() {
                             onChange={(event) =>
                               setBackgroundImageOpacity(Number(event.target.value) / 100)
                             }
-                            className="accent-primary"
+                            className="accent-shell-accent"
                           />
                         </label>
                         <button
                           type="button"
                           onClick={clearBackgroundImage}
-                          className="rounded-[var(--radius-sm)] border border-border px-2 py-1.5 text-xs font-medium text-error transition-colors hover:border-error/60"
+                          className="rounded-[var(--radius-sm)] border border-shell-border px-2 py-1.5 text-xs font-medium text-error transition-colors hover:border-error/60"
                         >
                           Hintergrundbild entfernen
                         </button>
@@ -492,7 +492,7 @@ export function EditorToolbar() {
       </div>
 
       <div>
-        <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
+        <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-shell-text-muted">
           Ansicht
         </p>
         <div className="flex flex-col gap-0.5">
@@ -505,8 +505,8 @@ export function EditorToolbar() {
               className={cn(
                 "flex w-full items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2 text-sm font-medium transition-colors",
                 viewMode === mode.id
-                  ? "bg-primary/10 text-primary"
-                  : "text-text-secondary hover:bg-panel-elevated hover:text-text",
+                  ? "bg-shell-accent/15 text-shell-accent"
+                  : "text-shell-text-muted hover:bg-shell-bg-elevated hover:text-shell-text",
               )}
             >
               <mode.icon className="h-4 w-4 shrink-0" />
@@ -517,7 +517,7 @@ export function EditorToolbar() {
       </div>
 
       <div>
-        <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
+        <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-shell-text-muted">
           Ebenen
         </p>
         <div className="flex flex-col gap-0.5">
@@ -528,13 +528,13 @@ export function EditorToolbar() {
                 key={layer.id}
                 type="button"
                 onClick={() => toggleLayer(layer.id)}
-                className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-panel-elevated hover:text-text"
+                className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] px-3 py-2 text-sm text-shell-text-muted transition-colors hover:bg-shell-bg-elevated hover:text-shell-text"
               >
                 {layer.label}
                 {visible ? (
-                  <Eye className="h-4 w-4 text-text-muted" />
+                  <Eye className="h-4 w-4 text-shell-text-muted" />
                 ) : (
-                  <EyeOff className="h-4 w-4 text-text-muted/50" />
+                  <EyeOff className="h-4 w-4 text-shell-text-muted/50" />
                 )}
               </button>
             );

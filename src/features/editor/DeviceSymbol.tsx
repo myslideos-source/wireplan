@@ -113,18 +113,18 @@ export function DeviceSymbol({
       }}
     >
       {multiSelected && (
-        <circle r={RADIUS + 33} fill="none" stroke="#C96F5B" strokeWidth={9} strokeDasharray="20 13" />
+        <circle r={RADIUS + 33} fill="none" stroke="#1B7A4A" strokeWidth={9} strokeDasharray="20 13" />
       )}
       <circle
         r={RADIUS}
         fill="#FFFFFF"
-        stroke={selected ? "#C96F5B" : color}
+        stroke={selected ? "#1B7A4A" : color}
         strokeWidth={selected ? 17 : 10}
       />
       {Icon ? (
-        <Icon x={-46} y={-46} width={92} height={92} color={selected ? "#C96F5B" : color} />
+        <Icon x={-46} y={-46} width={92} height={92} color={selected ? "#1B7A4A" : color} />
       ) : (
-        <Glyph type={device.type} color={selected ? "#C96F5B" : color} />
+        <Glyph type={device.type} color={selected ? "#1B7A4A" : color} />
       )}
     </g>
   );

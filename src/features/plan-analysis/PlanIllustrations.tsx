@@ -187,8 +187,8 @@ export function DigitalPlanSvg() {
       role="img"
       aria-label="Digitalisierter Vektorgrundriss mit Räumen, Wänden, Türen und Fenstern"
     >
-      <rect x={0} y={0} width={800} height={560} fill="#FAF8F4" />
-      <g stroke="#E4DCCC" strokeWidth={1}>
+      <rect x={0} y={0} width={800} height={560} fill="#F5F8F6" />
+      <g stroke="#DBE4DE" strokeWidth={1}>
         {Array.from({ length: 33 }).map((_, i) => (
           <line key={`v${i}`} x1={i * 25} y1={0} x2={i * 25} y2={560} />
         ))}
@@ -204,7 +204,7 @@ export function DigitalPlanSvg() {
           y={room.y}
           width={room.w}
           height={room.h}
-          fill="#EFE7D8"
+          fill="#E3EDE6"
         />
       ))}
 

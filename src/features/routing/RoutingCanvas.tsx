@@ -78,8 +78,8 @@ export function RoutingCanvas({
           <polygon
             key={room.id}
             points={room.polygon.map((p) => `${p.x},${p.y}`).join(" ")}
-            fill="#EFE7D8"
-            stroke="#C9BFA8"
+            fill="#E3EDE6"
+            stroke="#B9CBBF"
             strokeWidth={8}
           />
         ))}

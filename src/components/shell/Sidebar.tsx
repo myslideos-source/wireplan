@@ -31,7 +31,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col gap-0.5 border-r border-border bg-bg-secondary p-3">
+    <aside className="flex w-60 shrink-0 flex-col gap-0.5 border-r border-shell-border bg-shell-bg p-3">
       {SIDEBAR_ITEMS.map((item) => {
         const Icon = ICONS[item.icon];
         const isActive = pathname?.startsWith(item.href);
@@ -42,8 +42,8 @@ export function Sidebar() {
             className={cn(
               "flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2 text-sm font-medium transition-colors",
               isActive
-                ? "bg-primary/10 text-primary"
-                : "text-text-secondary hover:bg-panel-elevated hover:text-text",
+                ? "bg-shell-accent/15 text-shell-accent"
+                : "text-shell-text-muted hover:bg-shell-bg-elevated hover:text-shell-text",
             )}
           >
             <Icon className="h-4 w-4 shrink-0" strokeWidth={2} />
