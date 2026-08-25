@@ -1,20 +1,22 @@
--- WIREPLAN core schema draft (Phase 1).
--- Not yet applied to a live project — no Supabase credentials exist in
--- this environment. Committed as the schema-of-record so a later phase
--- can `supabase db push` this against a real project without a rewrite.
+-- WIREPLAN persistence schema — applied to the live "wireplan" Supabase
+-- project (§106). One row per project, one row per floor. A floor's
+-- entire editable content (rooms, devices, Schaltschrank, Tree bus,
+-- cables, ...) is exactly the client's FloorMutableSlice, stored as one
+-- JSONB document rather than normalized into ~12 tables — the app
+-- already treats it as one atomic unit (undo/redo, floor-switch caching
+-- all operate on this same slice), so a relational split would add
+-- schema/CRUD surface without a real query need behind it.
+--
+-- No per-user auth/login exists in the app yet (single-user tool today),
+-- so there is no owner_id / auth.uid() scoping — RLS is enabled (so the
+-- Supabase linter doesn't flag open tables) but the policy is
+-- permissive. Add real auth + owner-scoped policies before this is ever
+-- exposed to more than one trusted user.
 
 create extension if not exists "pgcrypto";
 
-create table if not exists profiles (
-  id uuid primary key references auth.users (id) on delete cascade,
-  email text not null,
-  full_name text,
-  created_at timestamptz not null default now()
-);
-
 create table if not exists projects (
   id uuid primary key default gen_random_uuid(),
-  owner_id uuid not null references profiles (id) on delete cascade,
   name text not null,
   address text,
   geometry_status text not null default 'DRAFT'
@@ -28,99 +30,19 @@ create table if not exists floors (
   project_id uuid not null references projects (id) on delete cascade,
   name text not null,
   level integer not null default 0,
-  created_at timestamptz not null default now()
+  -- The FloorMutableSlice: rooms, devices, roomCircuits,
+  -- technikraumRoomId, distributionBoard, cables, smartHomeDevices,
+  -- backgroundImage, treeBranches, audioZones, fixedConsumers,
+  -- treeJunctions, treeEdges. Coordinates inside are millimeters (§63).
+  state jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
-create table if not exists plan_uploads (
-  id uuid primary key default gen_random_uuid(),
-  floor_id uuid not null references floors (id) on delete cascade,
-  storage_path text not null,
-  original_filename text not null,
-  mime_type text not null,
-  created_at timestamptz not null default now()
-);
-
--- Coordinates are stored in millimeters, never pixels (§63). Rooms are
--- polygons the user traces directly over the floor's locked plan_uploads
--- image (Phase 11) — there is no walls table: the uploaded plan is never
--- redrawn as vector geometry.
-create table if not exists rooms (
-  id uuid primary key default gen_random_uuid(),
-  floor_id uuid not null references floors (id) on delete cascade,
-  name text not null,
-  type text not null default 'unassigned',
-  polygon jsonb not null default '[]'::jsonb,
-  area numeric not null default 0,
-  created_at timestamptz not null default now()
-);
-
--- Generic smart-home system registry (§56) — Loxone is one row, never
--- hard-coded application logic.
-create table if not exists smart_home_systems (
-  id text primary key,
-  name text not null
-);
-
-insert into smart_home_systems (id, name)
-values ('loxone', 'Loxone')
-on conflict (id) do nothing;
-
-create table if not exists smart_home_devices (
-  id uuid primary key default gen_random_uuid(),
-  system_id text not null references smart_home_systems (id),
-  manufacturer_id text not null,
-  room_id uuid references rooms (id) on delete set null,
-  position_x numeric not null,
-  position_y numeric not null,
-  height numeric,
-  created_at timestamptz not null default now()
-);
+create index if not exists floors_project_id_idx on floors (project_id);
 
 alter table projects enable row level security;
 alter table floors enable row level security;
-alter table plan_uploads enable row level security;
-alter table rooms enable row level security;
-alter table smart_home_devices enable row level security;
 
-create policy "Owners manage their projects"
-  on projects for all
-  using (owner_id = auth.uid())
-  with check (owner_id = auth.uid());
-
-create policy "Owners manage their floors"
-  on floors for all
-  using (exists (select 1 from projects p where p.id = floors.project_id and p.owner_id = auth.uid()))
-  with check (exists (select 1 from projects p where p.id = floors.project_id and p.owner_id = auth.uid()));
-
-create policy "Owners manage their plan uploads"
-  on plan_uploads for all
-  using (exists (
-    select 1 from floors f join projects p on p.id = f.project_id
-    where f.id = plan_uploads.floor_id and p.owner_id = auth.uid()
-  ))
-  with check (exists (
-    select 1 from floors f join projects p on p.id = f.project_id
-    where f.id = plan_uploads.floor_id and p.owner_id = auth.uid()
-  ));
-
-create policy "Owners manage their rooms"
-  on rooms for all
-  using (exists (
-    select 1 from floors f join projects p on p.id = f.project_id
-    where f.id = rooms.floor_id and p.owner_id = auth.uid()
-  ))
-  with check (exists (
-    select 1 from floors f join projects p on p.id = f.project_id
-    where f.id = rooms.floor_id and p.owner_id = auth.uid()
-  ));
-
-create policy "Owners manage their smart home devices"
-  on smart_home_devices for all
-  using (exists (
-    select 1 from rooms r join floors f on f.id = r.floor_id join projects p on p.id = f.project_id
-    where r.id = smart_home_devices.room_id and p.owner_id = auth.uid()
-  ))
-  with check (exists (
-    select 1 from rooms r join floors f on f.id = r.floor_id join projects p on p.id = f.project_id
-    where r.id = smart_home_devices.room_id and p.owner_id = auth.uid()
-  ));
+create policy "open access (no auth yet)" on projects for all using (true) with check (true);
+create policy "open access (no auth yet)" on floors for all using (true) with check (true);

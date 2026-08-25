@@ -28,7 +28,7 @@ export const TOP_NAV_ITEMS: NavItem[] = [
 export const MORE_NAV_ITEMS: NavItem[] = [
   { label: "Alle Projekte", href: "/projects", icon: "FolderKanban" },
   { label: "Uploads", href: "/uploads", icon: "UploadCloud" },
-  { label: "KI-Analyse", href: "/analysis", icon: "ScanSearch" },
+  { label: "KI-Analyse", href: "/analysis/real", icon: "ScanSearch" },
   { label: "Geräte", href: "/devices", icon: "Plug" },
   { label: "Kabel", href: "/cables", icon: "Cable" },
   { label: "Exporte", href: "/exports", icon: "FileOutput" },

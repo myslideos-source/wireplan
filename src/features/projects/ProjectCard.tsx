@@ -40,7 +40,7 @@ export function ProjectHeroCard({ project }: { project: Project }) {
               <ArrowUpRight className="h-4 w-4" />
             </Link>
             <Link
-              href={`/analysis?project=${project.id}`}
+              href="/analysis/real"
               className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-border bg-panel px-4 py-2.5 text-sm font-medium text-text transition-colors hover:border-primary/60 hover:text-primary"
             >
               <ScanSearch className="h-4 w-4" />

@@ -2,6 +2,9 @@
 
 import { create } from "zustand";
 import type { Project } from "@/domain";
+import { defaultProjectStages, emptyProjectKpis } from "@/domain";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { insertProject } from "@/lib/supabase/projects";
 
 interface ProjectsState {
   projects: Project[];
@@ -13,26 +16,13 @@ interface ProjectsState {
 
 function createEmptyProject(input: { name: string; address: string }): Project {
   return {
-    id: `proj-${Date.now()}`,
+    id: crypto.randomUUID(),
     name: input.name,
     address: input.address,
     geometryStatus: "DRAFT",
     updatedAt: new Date().toISOString(),
-    stages: [
-      { id: "upload", label: "Grundriss hochladen", status: "active" },
-      { id: "analyze", label: "Analysieren", status: "pending" },
-      { id: "validate", label: "Validieren", status: "pending" },
-      { id: "electrical", label: "Elektroplanung", status: "pending" },
-      { id: "routing", label: "Routing", status: "pending" },
-      { id: "export", label: "Export", status: "pending" },
-    ],
-    kpis: {
-      floors: 0,
-      rooms: 0,
-      devices: 0,
-      cableLengthMeters: 0,
-      circuits: 0,
-    },
+    stages: defaultProjectStages(),
+    kpis: emptyProjectKpis(),
   };
 }
 
@@ -46,6 +36,13 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
   addProject: (input) => {
     const project = createEmptyProject(input);
     set((state) => ({ projects: [project, ...state.projects] }));
+    // Fire-and-forget — if no Supabase project is configured this is a
+    // no-op (createSupabaseBrowserClient returns null) and the project
+    // simply stays client-memory-only for this session, same as before.
+    const supabase = createSupabaseBrowserClient();
+    if (supabase) {
+      insertProject(supabase, { id: project.id, name: project.name, address: project.address });
+    }
     return project;
   },
   advanceToValidation: (projectId) => {
@@ -67,5 +64,13 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
         };
       }),
     }));
+    const supabase = createSupabaseBrowserClient();
+    if (supabase) {
+      supabase
+        .from("projects")
+        .update({ geometry_status: "IN_REVIEW", updated_at: new Date().toISOString() })
+        .eq("id", projectId)
+        .eq("geometry_status", "DRAFT");
+    }
   },
 }));

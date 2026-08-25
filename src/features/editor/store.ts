@@ -52,6 +52,8 @@ import {
   type SplitDirection,
   type SpotArrangement,
 } from "./geometry-utils";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { fetchFloorsForProject, insertFloor, saveFloorState } from "@/lib/supabase/floors";
 
 export type EditorTool =
   | "select"
@@ -192,7 +194,7 @@ function selectionFromTarget(target: FlaggedAreaTarget | undefined): Selection {
 /** Everything that's per-floor and independently editable — each floor
  * has its own geometry, devices, Technikraum/Schaltschrank, and cables,
  * so switching floors swaps this whole slice rather than resetting it. */
-interface FloorMutableSlice {
+export interface FloorMutableSlice {
   rooms: Room[];
   devices: ElectricalDevice[];
   roomCircuits: Record<string, string | null>;
@@ -616,6 +618,14 @@ interface EditorState {
     backgroundImages: Record<string, { dataUrl: string; naturalWidth: number; naturalHeight: number }>,
   ) => void;
   switchFloor: (floorId: string) => void;
+  /** Loads every persisted floor (and its full editable content) for a
+   * project from Supabase — the client-only floors/devices/etc. this
+   * store otherwise only ever holds in memory for the current tab.
+   * Returns whether any floors were found (false when no Supabase project
+   * is configured, the project has no saved floors yet, or the request
+   * fails) — the caller decides what "no floors" means (e.g. show the
+   * empty state) rather than this action guessing. */
+  hydrateFromSupabase: (projectId: string) => Promise<boolean>;
   /** Adds a brand-new, empty floor to the current project and switches to
    * it — e.g. a second locked-raster floor added from the editor, rather
    * than only the floors a project was hydrated with. Returns the new
@@ -1136,6 +1146,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       future: [],
     });
     isRestoringHistory = false;
+
+    // Flush the outgoing floor's last state immediately rather than
+    // waiting on the debounced autosave below, which may not have fired
+    // yet for an edit made just before switching away.
+    if (currentFloorId) {
+      const supabase = createSupabaseBrowserClient();
+      if (supabase) saveFloorState(supabase, currentFloorId, currentSlice);
+    }
   },
 
   hydrateWithBackgrounds: (geometries, backgroundImages) => {
@@ -1172,10 +1190,42 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     isRestoringHistory = false;
   },
 
+  hydrateFromSupabase: async (projectId) => {
+    const supabase = createSupabaseBrowserClient();
+    if (!supabase) return false;
+    const loaded = await fetchFloorsForProject(supabase, projectId);
+    if (!loaded || loaded.length === 0) return false;
+    // Same dedup guard as `hydrate` — don't clobber in-progress edits if
+    // this project's floors are already loaded (e.g. a second gate check
+    // firing after the first already hydrated it).
+    if (get().floors[0]?.floor.projectId === projectId) return true;
+
+    const geometries: FloorGeometry[] = loaded.map(({ floor, state }) => ({
+      floor,
+      rooms: state.rooms,
+    }));
+    const floorCache: Record<string, FloorMutableSlice> = {};
+    for (const { floor, state } of loaded.slice(1)) floorCache[floor.id] = state;
+    const first = loaded[0];
+
+    isRestoringHistory = true;
+    set({
+      floors: geometries,
+      floorCache,
+      floorId: first.floor.id,
+      ...first.state,
+      selected: null,
+      history: [],
+      future: [],
+    });
+    isRestoringHistory = false;
+    return true;
+  },
+
   addFloor: ({ name, level, backgroundImage }) => {
     const state = get();
     const projectId = state.floors[0]?.floor.projectId ?? "";
-    const floor: Floor = { id: generateId("floor"), projectId, name, level };
+    const floor: Floor = { id: crypto.randomUUID(), projectId, name, level };
     const geometry: FloorGeometry = { floor, rooms: [] };
     const currentFloorId = state.floorId;
     const currentSlice = sliceOf(state);
@@ -1183,21 +1233,33 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ? { ...state.floorCache, [currentFloorId]: currentSlice }
       : state.floorCache;
 
+    const freshSlice = freshSliceFromGeometry(geometry);
+    const seededBackground = backgroundImage
+      ? fitBackgroundImage([], backgroundImage.dataUrl, backgroundImage.naturalWidth, backgroundImage.naturalHeight)
+      : null;
+
     isRestoringHistory = true;
     set({
       floors: [...state.floors, geometry],
       floorCache: newCache,
       floorId: floor.id,
-      ...freshSliceFromGeometry(geometry),
-      backgroundImage: backgroundImage
-        ? fitBackgroundImage([], backgroundImage.dataUrl, backgroundImage.naturalWidth, backgroundImage.naturalHeight)
-        : null,
+      ...freshSlice,
+      backgroundImage: seededBackground,
       selected: null,
       activeTool: "select",
       history: [],
       future: [],
     });
     isRestoringHistory = false;
+
+    // Persist the outgoing floor's last state (autosave's debounce may not
+    // have fired yet) plus the brand-new floor row, if Supabase is
+    // configured — a no-op fire-and-forget otherwise.
+    const supabase = createSupabaseBrowserClient();
+    if (supabase) {
+      if (currentFloorId) saveFloorState(supabase, currentFloorId, currentSlice);
+      insertFloor(supabase, floor, { ...freshSlice, backgroundImage: seededBackground });
+    }
     return floor.id;
   },
 
@@ -1912,6 +1974,26 @@ useEditorStore.subscribe((state, previousState) => {
     history: [...current.history, sliceOf(previousState)].slice(-MAX_HISTORY),
     future: [],
   }));
+});
+
+// Autosave — debounced so a burst of edits (dragging a device, typing in
+// a field) doesn't fire one Supabase write per intermediate frame.
+// `switchFloor`/`addFloor` already flush the outgoing floor's state
+// immediately on their own, so this only needs to cover edits made while
+// staying on the same floor. A no-op when no Supabase project is
+// configured (`createSupabaseBrowserClient` returns null).
+let autosaveTimer: ReturnType<typeof setTimeout> | null = null;
+useEditorStore.subscribe((state, previousState) => {
+  if (isRestoringHistory) return;
+  if (!state.floorId || state.floorId !== previousState.floorId) return;
+  if (!sliceChanged(state, previousState)) return;
+  const floorId = state.floorId;
+  const snapshot = sliceOf(state);
+  if (autosaveTimer) clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(() => {
+    const supabase = createSupabaseBrowserClient();
+    if (supabase) saveFloorState(supabase, floorId, snapshot);
+  }, 800);
 });
 
 export function roomAreaSqMeters(room: Room): number {
