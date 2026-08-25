@@ -119,6 +119,51 @@ function FieldRow({
 const inputClass =
   "w-32 rounded-[var(--radius-sm)] border border-shell-border bg-shell-bg-elevated px-2 py-1 text-right text-sm text-shell-text outline-none focus:border-shell-accent/60 disabled:cursor-not-allowed disabled:opacity-50";
 
+/** Editable X/Y in mm — routed through `nudgeSelected` (a delta, not an
+ * absolute setter) so typing an exact value goes through the same
+ * snap-bypassing path as the arrow-key nudge (§110), instead of duplicating
+ * the per-type position-mutation logic here. Also reachable with the
+ * keyboard arrows directly on the canvas for fine-tuning against an
+ * uploaded plan without opening this panel at all. */
+function PositionMmFields({
+  x,
+  y,
+  onNudge,
+}: {
+  x: number;
+  y: number;
+  onNudge: (dx: number, dy: number) => void;
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      <input
+        type="number"
+        step={1}
+        value={Math.round(x)}
+        onChange={(event) => {
+          const next = Number(event.target.value);
+          if (Number.isFinite(next)) onNudge(next - x, 0);
+        }}
+        aria-label="Position X in mm"
+        className={`${inputClass} w-20`}
+      />
+      <span className="text-shell-text-muted">/</span>
+      <input
+        type="number"
+        step={1}
+        value={Math.round(y)}
+        onChange={(event) => {
+          const next = Number(event.target.value);
+          if (Number.isFinite(next)) onNudge(0, next - y);
+        }}
+        aria-label="Position Y in mm"
+        className={`${inputClass} w-20`}
+      />
+      <span className="text-xs text-shell-text-muted">mm</span>
+    </div>
+  );
+}
+
 // The shared Button's "secondary" variant assumes a light panel
 // (border-border/text-text) — this panel is dark shell chrome, so every
 // secondary Button here needs an explicit override or its label is
@@ -353,6 +398,7 @@ export function EditorInspector({
   const setFixedConsumerReserveConduit = useEditorStore((state) => state.setFixedConsumerReserveConduit);
   const updateDeviceNetworkSubtype = useEditorStore((state) => state.updateDeviceNetworkSubtype);
   const updateDeviceMeta = useEditorStore((state) => state.updateDeviceMeta);
+  const nudgeSelected = useEditorStore((state) => state.nudgeSelected);
 
   const electricalEnabled = isFeatureEnabled("ELECTRICAL_EDITOR");
 
@@ -460,10 +506,12 @@ export function EditorInspector({
               {room ? (getCircuit(roomCircuits[room.id] ?? null)?.label ?? "—") : "—"}
             </span>
           </FieldRow>
-          <FieldRow label="Position">
-            <span className="tabular-nums-font text-sm text-shell-text">
-              {formatNumber(device.mount.position.x / 1000, 2)} / {formatNumber(device.mount.position.y / 1000, 2)} m
-            </span>
+          <FieldRow label="Position" as="div">
+            <PositionMmFields
+              x={device.mount.position.x}
+              y={device.mount.position.y}
+              onNudge={nudgeSelected}
+            />
           </FieldRow>
           <FieldRow label="Rotation">
             <div className="flex items-center gap-1.5">

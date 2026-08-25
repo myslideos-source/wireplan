@@ -39,6 +39,7 @@ export function EditorCanvas() {
   const layers = useEditorStore((state) => state.layers);
   const zoom = useEditorStore((state) => state.zoom);
   const selected = useEditorStore((state) => state.selected);
+  const nudgeSelected = useEditorStore((state) => state.nudgeSelected);
   const select = useEditorStore((state) => state.select);
   const activeTool = useEditorStore((state) => state.activeTool);
   const focusTarget = useEditorStore((state) => state.focusTarget);
@@ -467,6 +468,29 @@ export function EditorCanvas() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [overlapPicker]);
+
+  // §110 — arrow keys nudge the selected item by exact mm, bypassing the
+  // snap grid, so a symbol can be fine-tuned against an uploaded plan
+  // instead of only jumping in 50mm steps. Shift held = 10mm steps.
+  useEffect(() => {
+    if (!selected) return;
+    function onKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (target && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;
+      const step = event.shiftKey ? 10 : 1;
+      let dx = 0;
+      let dy = 0;
+      if (event.key === "ArrowLeft") dx = -step;
+      else if (event.key === "ArrowRight") dx = step;
+      else if (event.key === "ArrowUp") dy = -step;
+      else if (event.key === "ArrowDown") dy = step;
+      else return;
+      event.preventDefault();
+      nudgeSelected(dx, dy);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selected, nudgeSelected]);
 
   function handleCanvasDragOver(event: ReactDragEvent) {
     if (event.dataTransfer.types.includes(DRAG_TOOL_MIME)) event.preventDefault();

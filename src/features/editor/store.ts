@@ -680,6 +680,11 @@ interface EditorState {
 
   selected: Selection;
   select: (selection: Selection) => void;
+  /** Moves the current selection by an exact mm delta, bypassing the snap
+   * grid entirely (§109 — mouse-drag placement is grid-snapped for speed,
+   * but fine-tuning against a real uploaded plan needs mm precision the
+   * 50mm grid can't give). Arrow keys on the canvas call this directly. */
+  nudgeSelected: (dx: number, dy: number) => void;
 
   // §48-50 — multi-select, duplicate, align, distribute.
   multiSelection: MultiSelectItem[];
@@ -1310,6 +1315,58 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   selected: null,
   select: (selection) => set({ selected: selection }),
+
+  nudgeSelected: (dx, dy) => {
+    const state = get();
+    const sel = state.selected;
+    if (!sel) return;
+    if (sel.type === "device") {
+      const device = state.devices.find((d) => d.id === sel.id);
+      if (!device) return;
+      const point = { x: device.mount.position.x + dx, y: device.mount.position.y + dy };
+      const room = state.rooms.find((r) => isPointInPolygon(point, r.polygon));
+      set((s) => ({
+        devices: s.devices.map((d) =>
+          d.id === sel.id
+            ? { ...d, mount: { position: point, height: d.mount.height }, roomId: room?.id ?? null }
+            : d,
+        ),
+      }));
+    } else if (sel.type === "smarthome") {
+      const device = state.smartHomeDevices.find((d) => d.id === sel.id);
+      if (!device) return;
+      const point = { x: device.position.x + dx, y: device.position.y + dy };
+      const room = state.rooms.find((r) => isPointInPolygon(point, r.polygon));
+      set((s) => ({
+        smartHomeDevices: s.smartHomeDevices.map((d) =>
+          d.id === sel.id ? { ...d, position: point, roomId: room?.id ?? null } : d,
+        ),
+      }));
+    } else if (sel.type === "consumer") {
+      const consumer = state.fixedConsumers.find((c) => c.id === sel.id);
+      if (!consumer) return;
+      const point = { x: consumer.position.x + dx, y: consumer.position.y + dy };
+      const room = state.rooms.find((r) => isPointInPolygon(point, r.polygon));
+      set((s) => ({
+        fixedConsumers: s.fixedConsumers.map((c) =>
+          c.id === sel.id ? { ...c, position: point, roomId: room?.id ?? null } : c,
+        ),
+      }));
+    } else if (sel.type === "junction") {
+      const junction = state.treeJunctions.find((j) => j.id === sel.id);
+      if (!junction) return;
+      const point = { x: junction.position.x + dx, y: junction.position.y + dy };
+      set((s) => ({
+        treeJunctions: s.treeJunctions.map((j) => (j.id === sel.id ? { ...j, position: point } : j)),
+      }));
+    } else if (sel.type === "board" && state.distributionBoard) {
+      const point = {
+        x: state.distributionBoard.position.x + dx,
+        y: state.distributionBoard.position.y + dy,
+      };
+      get().placeDistributionBoard(point);
+    }
+  },
 
   multiSelection: [],
   toggleMultiSelect: (item) =>
