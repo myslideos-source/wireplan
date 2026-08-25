@@ -10,6 +10,7 @@ import type {
   DistributionBoard,
   Cable,
   CableType,
+  CableGroup,
   RoutingMode,
   SmartHomeDevice,
   TreeBranch,
@@ -571,6 +572,12 @@ interface EditorState {
   technikraumRoomId: string | null;
   distributionBoard: DistributionBoard | null;
   cables: Cable[];
+  /** §112 — independent show/hide per wiring group in the Routing view
+   * (Tree/Loxone, Lautsprecher, Netzwerk, Steckdosen/Stromkreise), unlike
+   * the editor's `viewMode` which is a single-select focus dim rather than
+   * a multi-toggle. All four default visible. */
+  visibleCableGroups: Record<CableGroup, boolean>;
+  toggleCableGroup: (group: CableGroup) => void;
   routingMode: RoutingMode;
   smartHomeDevices: SmartHomeDevice[];
   smartHomePlacementModelId: string;
@@ -809,6 +816,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   technikraumRoomId: null,
   distributionBoard: null,
   cables: [],
+  visibleCableGroups: { tree: true, audio: true, network: true, power: true },
+  toggleCableGroup: (group) =>
+    set((state) => ({
+      visibleCableGroups: { ...state.visibleCableGroups, [group]: !state.visibleCableGroups[group] },
+    })),
   routingMode: "Decke",
   smartHomeDevices: [],
   smartHomePlacementModelId:

@@ -79,7 +79,7 @@ function treeBusPointsForBranch(
  * turning a manually-drawn edge into an actual length. Mirrors
  * `resolveTreeNodeRef` in the editor store but stays a pure function here
  * since routing computations don't touch the store directly. */
-function positionForRef(
+export function positionForRef(
   ref: string,
   boardPosition: Point,
   devices: ElectricalDevice[],
@@ -141,6 +141,7 @@ export function computeTreeBranchCables(
       cables.push({
         id: `TREE-${branch.id}`,
         treeBranchId: branch.id,
+        kind: "tree",
         type: "Tree Cable",
         lengthMeters,
         mode,
@@ -156,6 +157,11 @@ export function computeTreeBranchCables(
     cables.push({
       id: `TREE-${branch.id}`,
       treeBranchId: branch.id,
+      // The routing canvas draws this exactly like a room-circuit loop —
+      // one shared cable hopping board -> device -> device -> ... — a
+      // real Tree bus is the same shape, just a different wiring group.
+      deviceIds: ordered.map((p) => p.id),
+      kind: "tree",
       type: "Tree Cable",
       lengthMeters,
       mode,

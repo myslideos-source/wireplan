@@ -25,6 +25,7 @@ export function computeConsumerCables(
     const lead: Cable = {
       id: `V-${consumer.id}`,
       deviceId: consumer.id,
+      kind: "power",
       type: consumer.cableType,
       lengthMeters,
       mode,
@@ -35,6 +36,7 @@ export function computeConsumerCables(
     const reserve: Cable = {
       id: `V-${consumer.id}-reserve`,
       deviceId: consumer.id,
+      kind: "power",
       type: "Leerrohr M25",
       lengthMeters,
       mode,

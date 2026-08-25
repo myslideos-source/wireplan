@@ -1,11 +1,19 @@
 "use client";
 
 import { useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
-import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
-import type { Cable, CableType } from "@/domain";
+import { ZoomIn, ZoomOut, RotateCcw, Eye, EyeOff } from "lucide-react";
+import type { Cable, CableType, CableGroup, Point } from "@/domain";
 import { findSmartHomeModel } from "@/domain";
 import { useEditorStore } from "@/features/editor/store";
 import { floorExtentBox, devicePosition } from "@/features/editor/geometry-utils";
+import { positionForRef } from "./compute-tree-cables";
+
+const CABLE_GROUPS: { id: CableGroup; label: string; color: string }[] = [
+  { id: "tree", label: "Tree (Loxone)", color: "#27AE60" },
+  { id: "audio", label: "Lautsprecher", color: "#EB6F92" },
+  { id: "network", label: "Netzwerk", color: "#9B51E0" },
+  { id: "power", label: "Steckdosen / Stromkreise", color: "#F2C94C" },
+];
 
 // §12 (mockup) — the technical color code, applied to cable types by what
 // they actually carry: lighting circuits get the Licht color, outlet/
@@ -65,9 +73,28 @@ export function RoutingCanvas({
   const backgroundImageOpacity = useEditorStore((state) => state.backgroundImageOpacity);
   const distributionBoard = useEditorStore((state) => state.distributionBoard);
   const cables = useEditorStore((state) => state.cables);
+  const treeJunctions = useEditorStore((state) => state.treeJunctions);
+  const treeEdges = useEditorStore((state) => state.treeEdges);
+  const visibleCableGroups = useEditorStore((state) => state.visibleCableGroups);
+  const toggleCableGroup = useEditorStore((state) => state.toggleCableGroup);
 
   const box = floorExtentBox(rooms, backgroundImage);
   const boardPosition = distributionBoard ? distributionBoard.position : null;
+
+  // A bare id (from `deviceIds`) can point at a regular ElectricalDevice,
+  // a standalone SmartHomeDevice (e.g. a Tree device with no electrical
+  // mount, or a speaker), or a FixedConsumer — all three live in separate
+  // arrays, so every cable-endpoint lookup on this canvas goes through
+  // this one place instead of only ever checking `devices`.
+  function resolvePosition(id: string): Point | null {
+    const device = devices.find((d) => d.id === id);
+    if (device) return devicePosition(device);
+    const smartHome = smartHomeDevices.find((d) => d.id === id);
+    if (smartHome) return smartHome.position;
+    const consumer = fixedConsumers.find((c) => c.id === id);
+    if (consumer) return consumer.position;
+    return null;
+  }
 
   // §104 — this canvas had no way to move around at all (no zoom, no
   // pan): the viewBox was always the whole plan's fixed extent, which
@@ -170,17 +197,63 @@ export function RoutingCanvas({
 
         {cables.map((cable) => {
           if (!boardPosition) return null;
-          // A room-circuit loop cable (§Phase15) hops board -> device -> device
-          // -> ... in bus order, drawn as one corner-to-corner segment per hop
-          // instead of the single-device home-run below.
+          if (!visibleCableGroups[cable.kind]) return null;
+          const isSelected = selectedCableId === cable.id;
+          const dimmed = selectedCableId !== null && !isSelected;
+          // §112 — a real home-run (network/audio/power's own lead) is
+          // solid; anything that hops through several devices on one
+          // shared cable (a Tree bus or a looped-through circuit) is
+          // dashed, so the "never durchgeschleift" network rule is
+          // visible at a glance rather than only in the cable list.
+          const dashed = cable.kind === "tree" || cable.kind === "power";
+          const strokeWidth = isSelected ? 12 : 6;
+
+          // A Tree branch with any manually-drawn edges (§61) is a real
+          // graph (it can fork at a junction) — draw each edge as its own
+          // Manhattan segment instead of forcing it through the linear
+          // board->device->device chain below, which can't represent a
+          // fork.
+          if (cable.treeBranchId) {
+            const branchEdges = treeEdges.filter((e) => e.treeBranchId === cable.treeBranchId);
+            if (branchEdges.length > 0) {
+              return (
+                <g key={cable.id}>
+                  {branchEdges.map((edge) => {
+                    const from = positionForRef(edge.fromRef, boardPosition, devices, smartHomeDevices, treeJunctions);
+                    const to = positionForRef(edge.toRef, boardPosition, devices, smartHomeDevices, treeJunctions);
+                    if (!from || !to) return null;
+                    const d = `M ${from.x} ${from.y} L ${to.x} ${from.y} L ${to.x} ${to.y}`;
+                    return (
+                      <path
+                        key={edge.id}
+                        d={d}
+                        fill="none"
+                        stroke={CABLE_COLORS[cable.type]}
+                        strokeWidth={strokeWidth}
+                        strokeDasharray="24 14"
+                        opacity={dimmed ? 0.2 : 1}
+                        className="cursor-pointer"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onSelectCable(cable.id);
+                        }}
+                      />
+                    );
+                  })}
+                </g>
+              );
+            }
+          }
+
+          // A room-circuit loop cable (§Phase15) or a Tree bus hops board
+          // -> device -> device -> ... in bus order, drawn as one
+          // corner-to-corner segment per hop instead of the single-device
+          // home-run below.
           if (cable.deviceIds) {
             const positions = cable.deviceIds
-              .map((id) => devices.find((d) => d.id === id))
-              .filter((d): d is NonNullable<typeof d> => d !== undefined)
-              .map((d) => devicePosition(d));
+              .map((id) => resolvePosition(id))
+              .filter((p): p is Point => p !== null);
             if (positions.length === 0) return null;
-            const isSelected = selectedCableId === cable.id;
-            const dimmed = selectedCableId !== null && !isSelected;
             let d = `M ${boardPosition.x} ${boardPosition.y}`;
             let current = boardPosition;
             for (const position of positions) {
@@ -193,8 +266,8 @@ export function RoutingCanvas({
                 d={d}
                 fill="none"
                 stroke={CABLE_COLORS[cable.type]}
-                strokeWidth={isSelected ? 32 : 18}
-                strokeDasharray="55 30"
+                strokeWidth={strokeWidth}
+                strokeDasharray={dashed ? "24 14" : undefined}
                 opacity={dimmed ? 0.2 : 1}
                 className="cursor-pointer"
                 onClick={(event) => {
@@ -205,11 +278,8 @@ export function RoutingCanvas({
             );
           }
 
-          const device = devices.find((d) => d.id === cable.deviceId);
-          const position = device && devicePosition(device);
+          const position = cable.deviceId ? resolvePosition(cable.deviceId) : null;
           if (!position) return null;
-          const isSelected = selectedCableId === cable.id;
-          const dimmed = selectedCableId !== null && !isSelected;
           // Every mode renders as the simple corner-to-corner line it was
           // always computed as (§47 — Manhattan distance, no wall routing).
           const d = `M ${boardPosition.x} ${boardPosition.y} L ${position.x} ${boardPosition.y} L ${position.x} ${position.y}`;
@@ -219,8 +289,8 @@ export function RoutingCanvas({
               d={d}
               fill="none"
               stroke={CABLE_COLORS[cable.type]}
-              strokeWidth={isSelected ? 32 : 18}
-              strokeDasharray={cable.type === "CAT7" ? undefined : "55 30"}
+              strokeWidth={strokeWidth}
+              strokeDasharray={dashed ? "24 14" : undefined}
               opacity={dimmed ? 0.2 : 1}
               className="cursor-pointer"
               onClick={(event) => {
@@ -304,6 +374,39 @@ export function RoutingCanvas({
           />
         )}
       </svg>
+
+      {/* §112 — independent show/hide per wiring group, so one type (e.g.
+       * just the Tree bus) can be reviewed on its own instead of always
+       * seeing every cable at once. */}
+      <div className="absolute right-3 top-3 z-10 flex flex-col gap-0.5 rounded-[var(--radius-sm)] border border-border bg-panel/95 p-2 text-xs shadow-[var(--shadow-sm)] backdrop-blur-sm">
+        <p className="px-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wide text-text-muted">
+          Leitungsgruppen
+        </p>
+        {CABLE_GROUPS.map((group) => {
+          const visible = visibleCableGroups[group.id];
+          return (
+            <button
+              key={group.id}
+              type="button"
+              onClick={() => toggleCableGroup(group.id)}
+              className="flex items-center justify-between gap-4 rounded-[var(--radius-sm)] px-1.5 py-1 font-medium text-text-secondary transition-colors hover:bg-panel-elevated hover:text-text"
+            >
+              <span className="flex items-center gap-1.5">
+                <span
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: group.color, opacity: visible ? 1 : 0.35 }}
+                />
+                {group.label}
+              </span>
+              {visible ? (
+                <Eye className="h-3.5 w-3.5" />
+              ) : (
+                <EyeOff className="h-3.5 w-3.5 text-text-muted/50" />
+              )}
+            </button>
+          );
+        })}
+      </div>
 
       <div className="absolute bottom-2 right-2 flex items-center gap-0.5 rounded-[var(--radius-sm)] border border-border bg-panel/95 p-1 shadow-sm backdrop-blur-sm">
         <button

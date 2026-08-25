@@ -29,6 +29,7 @@ export function computeAudioCables(
     cables.push({
       id: `AUDIO-${device.id}`,
       deviceId: device.id,
+      kind: "audio",
       type: cableType,
       lengthMeters: lengthMm / 1000,
       mode,

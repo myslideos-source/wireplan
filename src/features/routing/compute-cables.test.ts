@@ -53,6 +53,7 @@ test("computeCables loops outlets in the same room through one shared cable inst
   // board->d1 1m, d1->d2 1m => 2m, a real loop, not two 1-2m home-runs.
   assert.equal(cables[0].lengthMeters, 2);
   assert.match(cables[0].targetLabel, /durchgeschleift/);
+  assert.equal(cables[0].kind, "power");
 });
 
 test("computeCables folds a light/switch in the same room into the same loop as the outlets", () => {
@@ -70,6 +71,9 @@ test("computeCables keeps sensors and network devices on their own individual ho
   assert.equal(cables.length, 2);
   assert.ok(cables.every((c) => c.deviceId));
   assert.ok(cables.every((c) => !c.deviceIds));
+  // §112 — never looped in the routing view either, both get their own
+  // "network" group so they're never mistaken for a durchgeschleift circuit.
+  assert.ok(cables.every((c) => c.kind === "network"));
 });
 
 test("computeCables loops two different rooms together when both are assigned to the same circuit", () => {

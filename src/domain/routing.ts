@@ -38,8 +38,16 @@ export const SPEAKER_CABLE_TYPES: CableType[] = [
  * labeling/intent (floor vs. ceiling vs. a mix), not in computed length. */
 export type RoutingMode = "Boden" | "Decke" | "Hybrid";
 
+/** §112 — which of the four independently show/hide-able wiring groups a
+ * cable belongs to, for the Routing view's group toggle. "network" also
+ * covers sensor home-runs (CAT7, same never-looped wiring rule as a real
+ * network dose) — deliberately not split further, since the toggle is
+ * about wiring *behavior*, not the exact device type. */
+export type CableGroup = "tree" | "audio" | "network" | "power";
+
 export interface Cable {
   id: string;
+  kind: CableGroup;
   /** Present for a single-device star/home-run cable (a sensor or network
    * Dose, still one cable per device). Absent for a Tree bus cable or a
    * room circuit loop, which both serve several devices on one shared

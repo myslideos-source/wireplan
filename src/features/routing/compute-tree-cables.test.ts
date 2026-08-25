@@ -76,4 +76,9 @@ test("computeTreeBranchCables falls back to the automatic nearest-neighbor chain
   assert.equal(cables.length, 1);
   assert.equal(cables[0].lengthMeters, 1);
   assert.doesNotMatch(cables[0].targetLabel, /manuell verbunden/);
+  assert.equal(cables[0].kind, "tree");
+  // §112 — the routing canvas draws a Tree bus via deviceIds, same as a
+  // room-circuit loop, so it actually renders instead of silently having
+  // no path at all.
+  assert.deepEqual(cables[0].deviceIds, ["d1"]);
 });

@@ -31,6 +31,7 @@ test("computeConsumerCables emits only the lead cable when reserveConduit is off
   const cables = computeConsumerCables([makeConsumer()], board, "Boden");
   assert.equal(cables.length, 1);
   assert.equal(cables[0].type, "NYM-J 5x6");
+  assert.equal(cables[0].kind, "power");
 });
 
 test("computeConsumerCables emits an extra same-length Leerrohr M25 cable when reserveConduit is on", () => {

@@ -91,6 +91,7 @@ export function computeCables(
       cables.push({
         id: `L-${String(index).padStart(3, "0")}`,
         deviceId: device.id,
+        kind: "network",
         type: cableTypeFor(device),
         lengthMeters,
         mode,
@@ -128,6 +129,7 @@ export function computeCables(
       id: `L-${String(index).padStart(3, "0")}`,
       deviceIds: ordered.map((p) => p.id),
       circuitGroupId: key,
+      kind: "power",
       type: "NYM-J 3x1,5",
       lengthMeters,
       mode,
