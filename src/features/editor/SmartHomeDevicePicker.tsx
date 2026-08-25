@@ -99,12 +99,12 @@ export function SmartHomeDevicePicker() {
         </label>
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-thin">
         <button
           type="button"
           onClick={() => setActiveCategory("alle")}
           className={cn(
-            "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+            "shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
             activeCategory === "alle"
               ? "border-primary bg-primary/10 text-primary"
               : "border-border text-text-secondary hover:border-primary/50 hover:text-text",
@@ -118,7 +118,7 @@ export function SmartHomeDevicePicker() {
             type="button"
             onClick={() => setActiveCategory(category)}
             className={cn(
-              "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+              "shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
               activeCategory === category
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border text-text-secondary hover:border-primary/50 hover:text-text",
@@ -129,7 +129,12 @@ export function SmartHomeDevicePicker() {
         ))}
       </div>
 
-      <div className="flex max-h-52 flex-col gap-3 overflow-y-auto pr-1 scrollbar-thin">
+      {/* §113 — this panel sits above the canvas and used to be able to
+       * grow tall enough (wrapped category chips + a 208px tile area) to
+       * swallow most of a small/tablet viewport's plan area; the chips
+       * row now scrolls horizontally instead of wrapping, and the tile
+       * area is capped shorter. */}
+      <div className="flex max-h-36 flex-col gap-3 overflow-y-auto pr-1 scrollbar-thin">
         {groups.length === 0 && (
           <p className="py-4 text-center text-sm text-text-muted">
             Keine Geräte für „{query}“ gefunden.

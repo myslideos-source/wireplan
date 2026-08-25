@@ -304,6 +304,9 @@ export function RoutingCanvas({
         {devices.map((device) => {
           const position = devicePosition(device);
           const cable = cablesByDeviceId.get(device.id);
+          // §113 — hiding a Leitungsgruppe hides the components that
+          // wiring belongs to as well, not just the cable line itself.
+          if (cable && !visibleCableGroups[cable.kind]) return null;
           const dimmed = selectedCableId !== null && cable?.id !== selectedCableId;
           const color = cable?.circuitGroupId ? circuitColor(cable.circuitGroupId) : "#7F8C8D";
           return (
@@ -328,6 +331,7 @@ export function RoutingCanvas({
           const model = findSmartHomeModel(device.modelId);
           const color = model?.color ?? "#2D9CDB";
           const cable = cablesByDeviceId.get(device.id);
+          if (cable && !visibleCableGroups[cable.kind]) return null;
           const dimmed = selectedCableId !== null && cable?.id !== selectedCableId;
           return (
             <circle
@@ -346,6 +350,7 @@ export function RoutingCanvas({
 
         {fixedConsumers.map((consumer) => {
           const cable = cablesByDeviceId.get(consumer.id);
+          if (cable && !visibleCableGroups[cable.kind]) return null;
           const dimmed = selectedCableId !== null && cable?.id !== selectedCableId;
           return (
             <rect

@@ -124,29 +124,27 @@ const TOOLS: ToolDef[] = [
 
 const TOOLS_BY_ID = new Map(TOOLS.map((tool) => [tool.id, tool]));
 
-/** §5 (mockup) — the categories a Loxone electrical planner's component
- * library is grouped by. Our existing toolset doesn't have a discrete
- * tool for every one of these (some device types — Beschattung, Heizung/
- * Klima, Audio, Sicherheit — are only reachable today via the "Smart
- * Home"-Katalog rather than a dedicated placement tool), so those
- * categories stay present but point at the catalog instead of listing a
- * tool of their own. Nothing is hidden — every tool from before still
- * appears in exactly one category. */
-const CATEGORIES: { label: string; toolIds: EditorTool[]; catalogHint?: boolean }[] = [
+/** §5 (mockup)/§113 — the categories a Loxone electrical planner's
+ * component library is grouped by. Beschattung/Heizung-Klima/Audio/
+ * Sicherheit used to be listed here too, each expanding to nothing but a
+ * "verfügbar über den Loxone-Katalog" pointer — dead-end clutter with no
+ * tool of their own, removed outright rather than kept as an empty
+ * category. "Smart Home (Loxone-Katalog)" — the actual way every one of
+ * those device families gets placed — is its own top-level category
+ * instead of buried inside "Sonstiges", since it's the primary catalog
+ * for most of what gets planned, not an afterthought. */
+const CATEGORIES: { label: string; toolIds: EditorTool[] }[] = [
   { label: "Beleuchtung", toolIds: ["light"] },
   { label: "Steuerung", toolIds: ["switch"] },
   { label: "Sensoren", toolIds: ["sensor"] },
   { label: "Steckdosen", toolIds: ["outlet"] },
-  { label: "Beschattung", toolIds: [], catalogHint: true },
-  { label: "Heizung / Klima", toolIds: [], catalogHint: true },
-  { label: "Audio", toolIds: [], catalogHint: true },
   { label: "Netzwerk", toolIds: ["network"] },
-  { label: "Sicherheit", toolIds: [], catalogHint: true },
   { label: "Verbraucher", toolIds: ["consumer"] },
   { label: "Schaltschrank", toolIds: ["board"] },
+  { label: "Smart Home (Loxone-Katalog)", toolIds: ["smarthome"] },
   {
     label: "Sonstiges",
-    toolIds: ["room", "smarthome", "junction", "treeConnect", "background", "crop", "cable"],
+    toolIds: ["room", "junction", "treeConnect", "background", "crop", "cable"],
   },
 ];
 
@@ -674,15 +672,7 @@ export function EditorToolbar({
                         />
                       </button>
                       {isOpen && (
-                        <div className="flex flex-col gap-0.5 pb-2">
-                          {tools.length > 0 ? (
-                            tools.map((tool) => renderTool(tool))
-                          ) : (
-                            <p className="px-2.5 py-1.5 text-xs text-text-muted">
-                              Über „Smart Home (Loxone-Katalog)&quot; unter Sonstiges verfügbar.
-                            </p>
-                          )}
-                        </div>
+                        <div className="flex flex-col gap-0.5 pb-2">{tools.map((tool) => renderTool(tool))}</div>
                       )}
                     </div>
                   );

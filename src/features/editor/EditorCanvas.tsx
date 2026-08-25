@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
   type DragEvent as ReactDragEvent,
 } from "react";
 import { Server } from "lucide-react";
@@ -206,7 +207,7 @@ export function EditorCanvas() {
     if (panOffset.x !== 0 || panOffset.y !== 0) setPanOffset({ x: 0, y: 0 });
   }
 
-  function handlePanMouseDown(event: ReactMouseEvent) {
+  function handlePanPointerDown(event: ReactPointerEvent) {
     if (!canSelect || dragging) return;
     const svg = svgRef.current;
     if (!svg) return;
@@ -358,7 +359,7 @@ export function EditorCanvas() {
   useEffect(() => {
     if (!dragging) return;
     const current = dragging;
-    function handleMove(event: MouseEvent) {
+    function handleMove(event: PointerEvent) {
       // Pan uses a fixed mm-per-client-px scale sampled at drag start
       // instead of toSvgPoint's live CTM — the CTM itself shifts as
       // panOffset updates, which would otherwise distort the drag speed
@@ -387,11 +388,16 @@ export function EditorCanvas() {
     function handleUp() {
       setDragging(null);
     }
-    window.addEventListener("mousemove", handleMove);
-    window.addEventListener("mouseup", handleUp);
+    // Pointer events (not mouse events) so dragging a symbol works with
+    // touch on a tablet, not just a mouse — pointercancel covers the OS
+    // interrupting a touch gesture mid-drag (e.g. an incoming call).
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    window.addEventListener("pointercancel", handleUp);
     return () => {
-      window.removeEventListener("mousemove", handleMove);
-      window.removeEventListener("mouseup", handleUp);
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+      window.removeEventListener("pointercancel", handleUp);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dragging]);
@@ -568,9 +574,9 @@ export function EditorCanvas() {
       <svg
         ref={svgRef}
         viewBox={viewBox}
-        className="h-full w-full"
+        className="h-full w-full touch-none"
         onClick={handleBackgroundClick}
-        onMouseDown={handlePanMouseDown}
+        onPointerDown={handlePanPointerDown}
         onDragOver={handleCanvasDragOver}
         onDrop={handleCanvasDrop}
       >
@@ -599,7 +605,7 @@ export function EditorCanvas() {
               preserveAspectRatio="none"
               style={{ cursor: placingBackground ? "grab" : undefined }}
               pointerEvents={placingBackground ? "auto" : "none"}
-              onMouseDown={(event) => {
+              onPointerDown={(event) => {
                 if (!placingBackground) return;
                 event.stopPropagation();
                 setDragging({ kind: "background" });
@@ -615,7 +621,7 @@ export function EditorCanvas() {
                 stroke="#F5F8F6"
                 strokeWidth={20}
                 style={{ cursor: "nwse-resize" }}
-                onMouseDown={(event) => {
+                onPointerDown={(event) => {
                   event.stopPropagation();
                   setDragging({ kind: "background-resize" });
                 }}
@@ -659,7 +665,7 @@ export function EditorCanvas() {
               strokeWidth={16}
               style={{ cursor: "nwse-resize" }}
               pointerEvents="auto"
-              onMouseDown={(event) => {
+              onPointerDown={(event) => {
                 event.stopPropagation();
                 setDragging({ kind: "crop-tl" });
               }}
@@ -673,7 +679,7 @@ export function EditorCanvas() {
               strokeWidth={16}
               style={{ cursor: "nwse-resize" }}
               pointerEvents="auto"
-              onMouseDown={(event) => {
+              onPointerDown={(event) => {
                 event.stopPropagation();
                 setDragging({ kind: "crop-br" });
               }}
@@ -760,7 +766,7 @@ export function EditorCanvas() {
                 }
                 select({ type: "board" });
               }}
-              onMouseDown={(event) => {
+              onPointerDown={(event) => {
                 if (!canSelect) return;
                 event.stopPropagation();
                 setDragging({ kind: "board" });
@@ -843,7 +849,7 @@ export function EditorCanvas() {
                   }
                   handleItemClick("smarthome", device.id, device.position, event);
                 }}
-                onMouseDown={(event) => {
+                onPointerDown={(event) => {
                   if (!canSelect) return;
                   event.stopPropagation();
                   setDragging({ kind: "smarthome", id: device.id });
@@ -897,7 +903,7 @@ export function EditorCanvas() {
                   event.stopPropagation();
                   handleItemClick("consumer", consumer.id, consumer.position, event);
                 }}
-                onMouseDown={(event) => {
+                onPointerDown={(event) => {
                   if (!canSelect) return;
                   event.stopPropagation();
                   setDragging({ kind: "consumer", id: consumer.id });
@@ -1000,7 +1006,7 @@ export function EditorCanvas() {
                   if (!canSelect) return;
                   select({ type: "junction", id: junction.id });
                 }}
-                onMouseDown={(event) => {
+                onPointerDown={(event) => {
                   if (!canSelect) return;
                   event.stopPropagation();
                   setDragging({ kind: "junction", id: junction.id });

@@ -1,4 +1,4 @@
-import type { MouseEvent as ReactMouseEvent } from "react";
+import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
 import type { ElectricalDevice, Point } from "@/domain";
 import { findSmartHomeModel, numberingPrefixFor, formatDeviceNumber } from "@/domain";
 import { SMART_HOME_ICONS } from "./smart-home-icons";
@@ -85,7 +85,7 @@ export function DeviceSymbol({
   selected: boolean;
   clickable: boolean;
   onSelect: (event: ReactMouseEvent) => void;
-  onDragStart?: (event: ReactMouseEvent) => void;
+  onDragStart?: (event: ReactPointerEvent) => void;
   /** §67 Tree View — fades out devices that aren't Tree hardware while
    * the user focuses on Tree cabling, without hiding them entirely. */
   dimmed?: boolean;
@@ -118,7 +118,7 @@ export function DeviceSymbol({
         event.stopPropagation();
         onSelect(event);
       }}
-      onMouseDown={(event) => {
+      onPointerDown={(event) => {
         if (!clickable || !onDragStart) return;
         event.stopPropagation();
         onDragStart(event);

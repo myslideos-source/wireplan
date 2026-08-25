@@ -14,6 +14,7 @@ import { EditorInspector } from "./EditorInspector";
 import { EditorStatusBar } from "./EditorStatusBar";
 import { FloorTabs } from "./FloorTabs";
 import { LayerToggleBar } from "./LayerToggleBar";
+import { QuickSelectBar } from "./QuickSelectBar";
 import { ReviewPanel } from "./ReviewPanel";
 import { type StartFloorInput } from "./StartFloorDialog";
 import { cn } from "@/lib/utils";
@@ -135,6 +136,7 @@ export function EditorWorkspace({
           <SmartHomeDevicePicker />
           <div className="relative min-h-0 flex-1 bg-canvas-bg">
             <EditorCanvas />
+            <QuickSelectBar />
             <LayerToggleBar />
             <ReviewPanel />
           </div>
