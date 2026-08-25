@@ -14,8 +14,6 @@ import {
   Cable,
   Image as ImageIcon,
   Crop,
-  Eye,
-  EyeOff,
   GitBranch,
   GitFork,
   Link2,
@@ -36,7 +34,7 @@ import {
   type FixedConsumerType,
   type NetworkDeviceSubtype,
 } from "@/domain";
-import { useEditorStore, type EditorTool, type LayerId, type ViewMode } from "./store";
+import { useEditorStore, type EditorTool, type ViewMode } from "./store";
 import { DRAG_TOOL_MIME } from "./drag-tool";
 import { roomZoneColor } from "./geometry-utils";
 import { formatArea } from "@/lib/utils";
@@ -151,19 +149,9 @@ const CATEGORIES: { label: string; toolIds: EditorTool[]; catalogHint?: boolean 
   },
 ];
 
-const LAYERS: { id: LayerId; label: string }[] = [
-  { id: "grundriss", label: "Grundriss" },
-  { id: "elektro", label: "Elektro" },
-  { id: "kabelwege", label: "Kabelwege" },
-  { id: "beschriftung", label: "Beschriftung" },
-  { id: "hintergrund", label: "Hintergrundbild" },
-];
-
 export function EditorToolbar() {
   const activeTool = useEditorStore((state) => state.activeTool);
   const setTool = useEditorStore((state) => state.setTool);
-  const layers = useEditorStore((state) => state.layers);
-  const toggleLayer = useEditorStore((state) => state.toggleLayer);
   const technikraumRoomId = useEditorStore((state) => state.technikraumRoomId);
   const backgroundImage = useEditorStore((state) => state.backgroundImage);
   const startCrop = useEditorStore((state) => state.startCrop);
@@ -686,32 +674,6 @@ export function EditorToolbar() {
                     {mode.label}
                   </button>
                 ))}
-              </div>
-            </div>
-
-            <div className="border-t border-border p-3">
-              <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
-                Ebenen
-              </p>
-              <div className="flex flex-col gap-0.5">
-                {LAYERS.map((layer) => {
-                  const visible = layers[layer.id];
-                  return (
-                    <button
-                      key={layer.id}
-                      type="button"
-                      onClick={() => toggleLayer(layer.id)}
-                      className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-panel-elevated hover:text-text"
-                    >
-                      {layer.label}
-                      {visible ? (
-                        <Eye className="h-4 w-4 text-text-muted" />
-                      ) : (
-                        <EyeOff className="h-4 w-4 text-text-muted/50" />
-                      )}
-                    </button>
-                  );
-                })}
               </div>
             </div>
           </>

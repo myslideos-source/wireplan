@@ -1,6 +1,6 @@
 import type { MouseEvent as ReactMouseEvent } from "react";
 import type { ElectricalDevice, Point } from "@/domain";
-import { findSmartHomeModel } from "@/domain";
+import { findSmartHomeModel, numberingPrefixFor, formatDeviceNumber } from "@/domain";
 import { SMART_HOME_ICONS } from "./smart-home-icons";
 
 // §70 — shrunk to ~65% of the original size so dense real-world plans
@@ -95,6 +95,13 @@ export function DeviceSymbol({
   const model = device.smartHomeModelId ? findSmartHomeModel(device.smartHomeModelId) : undefined;
   const color = model?.color ?? DEVICE_COLORS[device.type];
   const Icon = model ? SMART_HOME_ICONS[model.icon] : null;
+  // §10 (mockup) — a small ID badge under the symbol (e.g. "SD04") so a
+  // dense plan stays legible without opening the properties panel for
+  // every device.
+  const numberLabel = formatDeviceNumber(
+    numberingPrefixFor({ type: device.type, networkDeviceSubtype: device.networkDeviceSubtype }),
+    device.number,
+  );
 
   return (
     <g
@@ -126,6 +133,21 @@ export function DeviceSymbol({
       ) : (
         <Glyph type={device.type} color={selected ? "#1B7A4A" : color} />
       )}
+      {/* Counter-rotate so the ID label always reads upright regardless
+       * of the device's own rotation. */}
+      <g transform={`rotate(${-(device.rotation ?? 0)})`}>
+        <text
+          x={0}
+          y={RADIUS + 38}
+          textAnchor="middle"
+          fontSize={38}
+          fontWeight={600}
+          fill="#23272D"
+          pointerEvents="none"
+        >
+          {numberLabel}
+        </text>
+      </g>
     </g>
   );
 }

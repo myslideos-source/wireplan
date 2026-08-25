@@ -399,7 +399,7 @@ export function EditorCanvas() {
       >
         <defs>
           <pattern id="editor-grid" width={300} height={300} patternUnits="userSpaceOnUse">
-            <path d="M 300 0 L 0 0 0 300" fill="none" stroke="#DBE4DE" strokeWidth={8} />
+            <path d="M 300 0 L 0 0 0 300" fill="none" stroke="#E5E8E5" strokeWidth={8} />
           </pattern>
         </defs>
         <rect
