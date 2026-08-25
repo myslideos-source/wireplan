@@ -9,6 +9,7 @@ import type { FloorGeometry } from "./mock-geometry";
 import { useEditorStore } from "./store";
 import { EditorToolbar } from "./EditorToolbar";
 import { EditorCanvas } from "./EditorCanvas";
+import { SmartHomeDevicePicker } from "./SmartHomeDevicePicker";
 import { EditorInspector } from "./EditorInspector";
 import { EditorStatusBar } from "./EditorStatusBar";
 import { ReviewPanel } from "./ReviewPanel";
@@ -133,9 +134,12 @@ export function EditorWorkspace({
       </div>
       <div className="flex min-h-0 flex-1">
         <EditorToolbar />
-        <div className="relative min-w-0 flex-1">
-          <EditorCanvas />
-          <ReviewPanel />
+        <div className="relative flex min-w-0 flex-1 flex-col">
+          <SmartHomeDevicePicker />
+          <div className="relative min-h-0 flex-1">
+            <EditorCanvas />
+            <ReviewPanel />
+          </div>
         </div>
         <EditorInspector />
       </div>

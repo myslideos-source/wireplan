@@ -28,9 +28,6 @@ import {
 import { cn } from "@/lib/utils";
 import { isFeatureEnabled, type FeatureFlag } from "@/lib/feature-flags";
 import {
-  LOXONE_CATALOG,
-  PLANNING_CATEGORY_LABELS,
-  PLANNING_CATEGORY_ORDER,
   FIXED_CONSUMER_LABELS,
   NETWORK_DEVICE_LABELS,
   type FixedConsumerType,
@@ -138,10 +135,6 @@ export function EditorToolbar() {
   const layers = useEditorStore((state) => state.layers);
   const toggleLayer = useEditorStore((state) => state.toggleLayer);
   const technikraumRoomId = useEditorStore((state) => state.technikraumRoomId);
-  const smartHomePlacementModelId = useEditorStore((state) => state.smartHomePlacementModelId);
-  const setSmartHomePlacementModelId = useEditorStore(
-    (state) => state.setSmartHomePlacementModelId,
-  );
   const backgroundImage = useEditorStore((state) => state.backgroundImage);
   const startCrop = useEditorStore((state) => state.startCrop);
   const setBackgroundImage = useEditorStore((state) => state.setBackgroundImage);
@@ -161,10 +154,6 @@ export function EditorToolbar() {
   const networkDevicePlacementSubtype = useEditorStore((state) => state.networkDevicePlacementSubtype);
   const setNetworkDevicePlacementSubtype = useEditorStore(
     (state) => state.setNetworkDevicePlacementSubtype,
-  );
-  const showLegacySmartHomeDevices = useEditorStore((state) => state.showLegacySmartHomeDevices);
-  const toggleShowLegacySmartHomeDevices = useEditorStore(
-    (state) => state.toggleShowLegacySmartHomeDevices,
   );
   const treeConnectPendingNodeRef = useEditorStore((state) => state.treeConnectPendingNodeRef);
   const cancelTreeConnect = useEditorStore((state) => state.cancelTreeConnect);
@@ -328,42 +317,9 @@ export function EditorToolbar() {
                   {tool.label}
                 </button>
                 {tool.id === "smarthome" && loxoneEnabled && activeTool === "smarthome" && (
-                  <div className="mx-1 flex flex-col gap-1.5">
-                    <select
-                      value={smartHomePlacementModelId}
-                      onChange={(event) => setSmartHomePlacementModelId(event.target.value)}
-                      className="rounded-[var(--radius-sm)] border border-border bg-bg px-2 py-1.5 text-xs text-text outline-none focus:border-primary/60"
-                    >
-                      {PLANNING_CATEGORY_ORDER.map((category) => {
-                        const models = LOXONE_CATALOG.filter(
-                          (model) =>
-                            model.planningCategory === category &&
-                            model.isPlanableOnFloorplan &&
-                            (showLegacySmartHomeDevices || !model.legacy),
-                        );
-                        if (models.length === 0) return null;
-                        return (
-                          <optgroup key={category} label={PLANNING_CATEGORY_LABELS[category]}>
-                            {models.map((model) => (
-                              <option key={model.id} value={model.id}>
-                                {model.label}
-                                {model.legacy ? " (Legacy)" : ""}
-                              </option>
-                            ))}
-                          </optgroup>
-                        );
-                      })}
-                    </select>
-                    <label className="flex items-center gap-1.5 px-1 text-[11px] text-text-muted">
-                      <input
-                        type="checkbox"
-                        checked={showLegacySmartHomeDevices}
-                        onChange={toggleShowLegacySmartHomeDevices}
-                        className="h-3.5 w-3.5 rounded border-border"
-                      />
-                      Legacy-Geräte anzeigen
-                    </label>
-                  </div>
+                  <p className="mx-1 px-1 text-[11px] text-text-muted">
+                    Gerät oberhalb des Grundrisses auswählen.
+                  </p>
                 )}
                 {tool.id === "consumer" && activeTool === "consumer" && (
                   <div className="mx-1 flex flex-col gap-1.5">

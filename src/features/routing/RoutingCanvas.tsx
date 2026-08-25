@@ -1,6 +1,7 @@
 "use client";
 
 import type { Cable, CableType } from "@/domain";
+import { findSmartHomeModel } from "@/domain";
 import { useEditorStore } from "@/features/editor/store";
 import { floorExtentBox, devicePosition } from "@/features/editor/geometry-utils";
 
@@ -29,7 +30,10 @@ export function RoutingCanvas({
 }) {
   const rooms = useEditorStore((state) => state.rooms);
   const devices = useEditorStore((state) => state.devices);
+  const smartHomeDevices = useEditorStore((state) => state.smartHomeDevices);
+  const fixedConsumers = useEditorStore((state) => state.fixedConsumers);
   const backgroundImage = useEditorStore((state) => state.backgroundImage);
+  const backgroundImageOpacity = useEditorStore((state) => state.backgroundImageOpacity);
   const distributionBoard = useEditorStore((state) => state.distributionBoard);
   const cables = useEditorStore((state) => state.cables);
 
@@ -53,12 +57,30 @@ export function RoutingCanvas({
       className="h-full w-full"
       onClick={() => onSelectCable(null)}
     >
-      <g opacity={0.5}>
+      {/* §Phase17.1 — the uploaded/locked plan image was missing from this
+       * canvas entirely (only room-zone fills rendered), so the plan
+       * "disappeared" the moment a user opened Routing. Rendered first,
+       * behind every room/device/cable layer above it. */}
+      {backgroundImage && (
+        <image
+          href={backgroundImage.dataUrl}
+          x={backgroundImage.x}
+          y={backgroundImage.y}
+          width={backgroundImage.width}
+          height={backgroundImage.height}
+          opacity={backgroundImageOpacity}
+          preserveAspectRatio="none"
+        />
+      )}
+
+      <g opacity={0.4}>
         {rooms.map((room) => (
           <polygon
             key={room.id}
             points={room.polygon.map((p) => `${p.x},${p.y}`).join(" ")}
             fill="#EFE7D8"
+            stroke="#C9BFA8"
+            strokeWidth={8}
           />
         ))}
       </g>
@@ -138,6 +160,48 @@ export function RoutingCanvas({
             r={110}
             fill="#FFFFFF"
             stroke="#6B6459"
+            strokeWidth={16}
+            opacity={dimmed ? 0.3 : 1}
+          />
+        );
+      })}
+
+      {/* §Phase17.1 — standalone Smart-Home devices and fixed consumers
+       * were placed on the plan but never drawn here at all, so anything
+       * that wasn't a plain ElectricalDevice silently vanished on this
+       * canvas even though it's part of what was actually planned. */}
+      {smartHomeDevices.map((device) => {
+        const model = findSmartHomeModel(device.modelId);
+        const color = model?.color ?? "#4A8FA8";
+        const cable = cablesByDeviceId.get(device.id);
+        const dimmed = selectedCableId !== null && cable?.id !== selectedCableId;
+        return (
+          <circle
+            key={device.id}
+            cx={device.position.x}
+            cy={device.position.y}
+            r={110}
+            fill={color}
+            fillOpacity={0.18}
+            stroke={color}
+            strokeWidth={16}
+            opacity={dimmed ? 0.3 : 1}
+          />
+        );
+      })}
+
+      {fixedConsumers.map((consumer) => {
+        const cable = cablesByDeviceId.get(consumer.id);
+        const dimmed = selectedCableId !== null && cable?.id !== selectedCableId;
+        return (
+          <rect
+            key={consumer.id}
+            x={consumer.position.x - 100}
+            y={consumer.position.y - 100}
+            width={200}
+            height={200}
+            fill="#FFFFFF"
+            stroke="#C4534A"
             strokeWidth={16}
             opacity={dimmed ? 0.3 : 1}
           />

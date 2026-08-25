@@ -1,10 +1,8 @@
 import { LayoutGrid } from "lucide-react";
 import { getProjects, getProject } from "@/lib/mock-data";
-import { getGeometriesForProject } from "@/features/editor/mock-geometry";
 import { getAnalysisForProject } from "@/features/plan-analysis/mock-analysis";
 import { EntityProjectPicker } from "@/components/shell/EntityProjectPicker";
-import { EditorWorkspace } from "@/features/editor/EditorWorkspace";
-import { NoGeometryYet } from "@/features/editor/NoGeometryYet";
+import { EditorGate } from "@/features/editor/EditorGate";
 
 export default async function EditorPage({
   searchParams,
@@ -33,18 +31,10 @@ export default async function EditorPage({
     );
   }
 
-  const geometries = await getGeometriesForProject(project.id);
-  if (!geometries) {
-    return <NoGeometryYet project={project} />;
-  }
-
   const analysis = review === "1" ? await getAnalysisForProject(project.id) : undefined;
 
-  return (
-    <EditorWorkspace
-      project={project}
-      geometries={geometries}
-      reviewAreas={analysis?.flaggedAreas}
-    />
-  );
+  // Whether this project already has a floor is client-only state (see
+  // EditorGate) — never decided here, since the server has no persisted
+  // geometry to check against.
+  return <EditorGate project={project} reviewAreas={analysis?.flaggedAreas} />;
 }

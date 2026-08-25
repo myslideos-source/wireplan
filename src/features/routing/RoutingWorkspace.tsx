@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { AlertTriangle, Cable as CableIcon, Zap, GitBranch, Network } from "lucide-react";
 import type { CableType, Project, RoutingMode } from "@/domain";
 import { SPEAKER_CABLE_TYPES } from "@/domain";
@@ -65,18 +65,14 @@ export function RoutingWorkspace({ project }: { project: Project }) {
           ))}
         </div>
       )}
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <p className="text-sm text-text-secondary">{project.name}</p>
           <h1 className="text-2xl font-semibold text-text">Kabelrouting</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-end gap-3">
           {floors.length > 1 && (
-            <select
-              value={floorId ?? ""}
-              onChange={(event) => switchFloor(event.target.value)}
-              className="rounded-[var(--radius-sm)] border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-primary/60"
-            >
+            <LabeledSelect label="Etage" value={floorId ?? ""} onChange={switchFloor}>
               {[...floors]
                 .sort((a, b) => a.floor.level - b.floor.level)
                 .map((f) => (
@@ -84,40 +80,50 @@ export function RoutingWorkspace({ project }: { project: Project }) {
                     {f.floor.name}
                   </option>
                 ))}
-            </select>
+            </LabeledSelect>
           )}
-          <select
+          <LabeledSelect
+            label="Verlegeart"
             value={routingMode}
-            onChange={(event) => setRoutingMode(event.target.value as RoutingMode)}
-            className="rounded-[var(--radius-sm)] border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-primary/60"
+            onChange={(value) => setRoutingMode(value as RoutingMode)}
           >
             {ROUTING_MODES.map((mode) => (
               <option key={mode} value={mode}>
                 {mode}
               </option>
             ))}
-          </select>
-          <select
+          </LabeledSelect>
+          <LabeledSelect
+            label="Lautsprecherkabel"
             value={speakerCableType}
-            onChange={(event) => setSpeakerCableType(event.target.value as CableType)}
-            title="Lautsprecherkabel-Typ (§12)"
-            className="rounded-[var(--radius-sm)] border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-primary/60"
+            onChange={(value) => setSpeakerCableType(value as CableType)}
+            title="Betrifft nur Audio-Lautsprecher — gilt nicht für Strom-, Netzwerk- oder Tree-Leitungen"
           >
             {SPEAKER_CABLE_TYPES.map((type) => (
               <option key={type} value={type}>
                 {type}
               </option>
             ))}
-          </select>
-          <Button
-            disabled={!distributionBoard}
-            title={!distributionBoard ? "Zuerst Schaltschrank im Editor platzieren" : undefined}
-            onClick={() => calculateRouting()}
-          >
+          </LabeledSelect>
+          <Button disabled={!distributionBoard} onClick={() => calculateRouting()}>
             Kabelwege berechnen
           </Button>
         </div>
       </div>
+
+      {!distributionBoard && (
+        <div className="flex items-start gap-1.5 rounded-[var(--radius-lg)] border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            <strong>Kabelwege berechnen</strong> ist erst verfügbar, sobald ein
+            Schaltschrank platziert ist — er ist der Startpunkt jeder Leitung.
+            Öffnen Sie den <strong>Editor</strong>, legen Sie einen
+            Technikraum fest und platzieren Sie dort einen Schaltschrank.
+            Danach werden hier alle Leitungen auf einmal berechnet: Strom,
+            Netzwerk, Tree-Bus, Audio und feste Verbraucher.
+          </span>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <KpiCard label="Leitungen" value={String(cables.length)} icon={<CableIcon className="h-4 w-4" />} />
@@ -220,5 +226,40 @@ function Row({ label, value }: { label: string; value: string }) {
       <span className="text-text-secondary">{label}</span>
       <span className="font-medium text-text">{value}</span>
     </div>
+  );
+}
+
+/**
+ * A `<select>` with a visible caption above it instead of a hover-only
+ * `title` — the previous unlabeled Lautsprecherkabel dropdown sitting
+ * right next to "Kabelwege berechnen" read as if it scoped what the
+ * button calculates, when it only ever configures the audio cable type.
+ */
+function LabeledSelect({
+  label,
+  value,
+  onChange,
+  title,
+  children,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  title?: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className="flex flex-col gap-1" title={title}>
+      <span className="text-[11px] font-medium uppercase tracking-wide text-text-muted">
+        {label}
+      </span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="rounded-[var(--radius-sm)] border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-primary/60"
+      >
+        {children}
+      </select>
+    </label>
   );
 }
